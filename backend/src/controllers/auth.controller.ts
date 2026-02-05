@@ -5,10 +5,11 @@ import { sendSuccess, sendCreated, sendError, sendUnauthorized } from '../utils/
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
+const isProduction = process.env.NODE_ENV === 'production';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  secure: isProduction,
+  sameSite: (isProduction ? 'none' : 'strict') as 'none' | 'strict',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
 };
