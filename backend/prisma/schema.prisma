@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  username     String?
+  age          Int?
+  weight       Decimal?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  preferences    UserPreferences?
+  scheduleBlocks ScheduleBlock[]
+  completions    Completion[]
+  supplements    Supplement[]
+  supplementLogs SupplementLog[]
+  mealTemplates  MealTemplate[]
+  mealLogs       MealLog[]
+  dailyLogs      DailyLog[]
+  refreshTokens  RefreshToken[]
+  userFoods      UserFood[]
+}
+
+model UserPreferences {
+  id              String @id @default(uuid())
+  userId          String @unique
+  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone        String @default("Europe/Belgrade")
+  caffeineCutoff  String @default("15:40")
+  sleepTarget     String @default("23:00")
+  proteinTarget   String @default("140-150 g/day")
+  hydrationTarget String @default(">=2.5 L/day")
+  selectedProgramId     String?
+  selectedProgramDayId  String?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+// ============================================
+// SCHEDULE & COMPLETION TRACKING
+// ============================================
+
+model ScheduleBlock {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  start     String  // "HH:MM"
+  end       String  // "HH:MM"
+  title     String
+  purpose   String?
+  good      String?
+  tag       String?
+  readonly  Boolean @default(false)
+  source    String  @default("schedule") // schedule|supplement|program|nutrition
+  sortOrder Int?
+
+  completions Completion[]
+
+  @@index([userId])
+}
+
+model Completion {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blockId     String
+  block       ScheduleBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  date        String    // "YYYY-MM-DD"
+  isComplete  Boolean   @default(false)
+  completedAt DateTime?
+
+  @@unique([userId, blockId, date])
+  @@index([userId, date])
+}
+
+// ============================================
+// SUPPLEMENTS
+// ============================================
+
+model Supplement {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier      String?
+  item      String
+  goal      String
+  dose      String
+  rule      String?
+  timeAt    String  @default("08:00")
+  sortOrder Int?
+
+  logs SupplementLog[]
+
+  @@index([userId])
+}
+
+model SupplementLog {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplementId String
+  supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+  date         String     // "YYYY-MM-DD"
+  isTaken      Boolean    @default(false)
+  takenAt      DateTime?
+
+  @@unique([userId, supplementId, date])
+  @@index([userId, date])
+}
+
+// ============================================
+// MEALS & NUTRITION
+// ============================================
+
+model MealTemplate {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek String  // Monday, Tuesday, etc. or "training", "rest", "cardio"
+  name      String
+  examples  String?
+  grams     Decimal?
+  foodId    String?
+  sortOrder Int?
+
+  tags MealTemplateTag[]
+  logs MealLog[]
+
+  @@index([userId])
+  @@index([userId, dayOfWeek])
+}
+
+model MealTemplateTag {
+  id             String       @id @default(uuid())
+  mealTemplateId String
+  mealTemplate   MealTemplate @relation(fields: [mealTemplateId], references: [id], onDelete: Cascade)
+  label          String
+  value          String
+}
+
+model MealLog {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealTemplateId String
+  mealTemplate   MealTemplate @relation(fields: [mealTemplateId], references: [id], onDelete: Cascade)
+  date           String       // "YYYY-MM-DD"
+  isEaten        Boolean      @default(false)
+  eatenAt        DateTime?
+
+  @@unique([userId, mealTemplateId, date])
+  @@index([userId, date])
+}
+
+// ============================================
+// DAILY LOGS
+// ============================================
+
+model DailyLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // "YYYY-MM-DD"
+  day       String?  // Push, Pull, Legs+Shoulders, Rest, Cardio+Abs
+  bw        String?  // bodyweight
+  sleep     String?
+  steps     String?
+  top       String?  // top sets
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// ============================================
+// FOOD DATABASE (Reference Data)
+// ============================================
+
+model Food {
+  id              String   @id @default(uuid())
+  name            String
+  brand           String?
+  caloriesPer100g Decimal?
+  proteinPer100g  Decimal?
+  carbsPer100g    Decimal?
+  fatPer100g      Decimal?
+  fiberPer100g    Decimal?
+  sugarPer100g    Decimal?
+  sodiumMgPer100g Decimal?
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  userFoods UserFood[]
+
+  @@index([name])
+}
+
+// ============================================
+// USER FOODS (Saved Food List)
+// ============================================
+
+model UserFood {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId    String
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, foodId])
+  @@index([userId])
+}
+
+// ============================================
+// SUPPLEMENT DATABASE (Reference Data)
+// ============================================
+
+model SupplementDatabase {
+  id                   String  @id @default(uuid())
+  name                 String
+  category             String?
+  typicalDose          String?
+  timingRecommendation String?
+  benefits             String?
+  precautions          String?
+}
+
+// ============================================
+// GYM PROGRAMS
+// ============================================
+
+model GymProgram {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  goal        String  // bulk, cut, strength, general, recomp
+  isSystem    Boolean @default(true)
+  userId      String? // null for system programs
+
+  days ProgramDay[]
+}
+
+model ProgramDay {
+  id        String     @id @default(uuid())
+  programId String
+  program   GymProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name      String
+  dayOrder  Int
+
+  exercises ProgramExercise[]
+}
+
+model ProgramExercise {
+  id           String     @id @default(uuid())
+  programDayId String
+  programDay   ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
+  exerciseName String
+  sets         String
+  reps         String
+  rir          String?
+  restSeconds  String?
+  notes        String?
+  progression  String?
+  sortOrder    Int
+}
