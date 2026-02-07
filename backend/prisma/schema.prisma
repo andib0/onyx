@@ -158,6 +158,8 @@ model MealTemplateTag {
   mealTemplate   MealTemplate @relation(fields: [mealTemplateId], references: [id], onDelete: Cascade)
   label          String
   value          String
+
+  @@index([mealTemplateId])
 }
 
 model MealLog {

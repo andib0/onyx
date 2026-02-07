@@ -8,8 +8,6 @@ type TopbarProps = {
   onExport: () => void;
   onImport: () => void;
   onFocus: () => void;
-  userEmail?: string;
-  onLogout?: () => void;
 };
 
 function Topbar({
@@ -20,8 +18,6 @@ function Topbar({
   onExport,
   onImport,
   onFocus,
-  userEmail,
-  onLogout,
 }: TopbarProps) {
   return (
     <div className="topbar">
@@ -43,14 +39,6 @@ function Topbar({
         <button onClick={onImport} type="button">
           Import
         </button>
-        {userEmail && onLogout && (
-          <>
-            <span className="user-email">{userEmail}</span>
-            <button onClick={onLogout} type="button" className="logout-btn">
-              Logout
-            </button>
-          </>
-        )}
       </div>
     </div>
   );

@@ -36,21 +36,23 @@ export class SyncService {
       }
 
       if (state.completion) {
+        const completionRows: { userId: string; blockId: string; date: string; isComplete: boolean; completedAt: Date }[] = [];
         for (const [date, blocks] of Object.entries(state.completion)) {
           for (const [oldBlockId, isComplete] of Object.entries(blocks)) {
             const newBlockId = idMappings[oldBlockId];
             if (newBlockId && isComplete) {
-              await tx.completion.create({
-                data: {
-                  userId,
-                  blockId: newBlockId,
-                  date,
-                  isComplete: true,
-                  completedAt: new Date(),
-                },
+              completionRows.push({
+                userId,
+                blockId: newBlockId,
+                date,
+                isComplete: true,
+                completedAt: new Date(),
               });
             }
           }
+        }
+        if (completionRows.length) {
+          await tx.completion.createMany({ data: completionRows });
         }
       }
 
@@ -74,21 +76,23 @@ export class SyncService {
       }
 
       if (state.suppLog) {
+        const suppLogRows: { userId: string; supplementId: string; date: string; isTaken: boolean; takenAt: Date }[] = [];
         for (const [date, supplements] of Object.entries(state.suppLog)) {
           for (const [oldSuppId, isTaken] of Object.entries(supplements)) {
             const newSuppId = idMappings[oldSuppId];
             if (newSuppId && isTaken) {
-              await tx.supplementLog.create({
-                data: {
-                  userId,
-                  supplementId: newSuppId,
-                  date,
-                  isTaken: true,
-                  takenAt: new Date(),
-                },
+              suppLogRows.push({
+                userId,
+                supplementId: newSuppId,
+                date,
+                isTaken: true,
+                takenAt: new Date(),
               });
             }
           }
+        }
+        if (suppLogRows.length) {
+          await tx.supplementLog.createMany({ data: suppLogRows });
         }
       }
 
@@ -121,21 +125,23 @@ export class SyncService {
       }
 
       if (state.mealLog) {
+        const mealLogRows: { userId: string; mealTemplateId: string; date: string; isEaten: boolean; eatenAt: Date }[] = [];
         for (const [date, meals] of Object.entries(state.mealLog)) {
           for (const [oldMealId, isEaten] of Object.entries(meals)) {
             const newMealId = idMappings[oldMealId];
             if (newMealId && isEaten) {
-              await tx.mealLog.create({
-                data: {
-                  userId,
-                  mealTemplateId: newMealId,
-                  date,
-                  isEaten: true,
-                  eatenAt: new Date(),
-                },
+              mealLogRows.push({
+                userId,
+                mealTemplateId: newMealId,
+                date,
+                isEaten: true,
+                eatenAt: new Date(),
               });
             }
           }
+        }
+        if (mealLogRows.length) {
+          await tx.mealLog.createMany({ data: mealLogRows });
         }
       }
 

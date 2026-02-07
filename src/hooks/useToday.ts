@@ -2,6 +2,7 @@
 
 import { getCurrentNextBlocks, getNowMinutes, toMinutes } from '../utils/time';
 import type { ScheduleBlock } from '../types/appTypes';
+import { TIMELINE_POLL_INTERVAL_MS } from '../constants';
 
 function useToday(scheduleBlocks: ScheduleBlock[], showAllTimeline: boolean) {
   const [nowMinutes, setNowMinutes] = useState(() => getNowMinutes());
@@ -9,7 +10,7 @@ function useToday(scheduleBlocks: ScheduleBlock[], showAllTimeline: boolean) {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setNowMinutes(getNowMinutes());
-    }, 60 * 1000);
+    }, TIMELINE_POLL_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, []);
 

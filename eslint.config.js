@@ -7,7 +7,7 @@ import tsParser from '@typescript-eslint/parser';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '**/._*']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -60,6 +60,7 @@ export default defineConfig([
       '@typescript-eslint': tsPlugin,
     },
     rules: {
+      'no-undef': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',

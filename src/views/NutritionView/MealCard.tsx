@@ -9,6 +9,13 @@ type MealCardProps = {
   onRemove: (mealId: string) => void;
 };
 
+const computeMacro = (per100: string | undefined, grams: number): number => {
+  if (per100 == null) return 0;
+  const base = parseFloat(per100);
+  if (isNaN(base)) return 0;
+  return Math.round(base * (grams / 100));
+};
+
 function MealCard({
   meal,
   isTaken,
@@ -19,10 +26,12 @@ function MealCard({
   const [localGrams, setLocalGrams] = useState<string>(
     meal.grams != null ? String(meal.grams) : '100'
   );
+  const [isEditingGrams, setIsEditingGrams] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (meal.grams != null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync prop to local state
       setLocalGrams(String(meal.grams));
     }
   }, [meal.grams]);
@@ -44,6 +53,14 @@ function MealCard({
     };
   }, []);
 
+  // Build macros summary from tags
+  const grams = parseFloat(localGrams) || 100;
+  const tags = meal.tags || [];
+  const proteinTag = tags.find((t) => t.label === 'Protein');
+  const carbsTag = tags.find((t) => t.label === 'Carbs');
+  const caloriesTag = tags.find((t) => t.label === 'Calories');
+  const hasMacros = meal.foodId && (proteinTag || carbsTag || caloriesTag);
+
   return (
     <div
       className={`mealItem${isTaken ? ' isTaken' : ''}`}
@@ -62,7 +79,35 @@ function MealCard({
     >
       <div className="mealHeader">
         <div className="mealMain">
-          <div className="mealNameText">{meal.name}</div>
+          <div className="mealNameRow">
+            <div className="mealNameText">{meal.name}</div>
+            {meal.foodId ? (
+              <button
+                className="mealEditGramsBtn"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsEditingGrams((prev) => !prev);
+                }}
+              >
+                {isEditingGrams ? 'Done' : 'Edit'}
+              </button>
+            ) : null}
+          </div>
+          {hasMacros ? (
+            <div className="mealMacrosSummary">
+              {`${grams}g`}
+              {proteinTag
+                ? ` · ${computeMacro(proteinTag.value, grams)}g P`
+                : ''}
+              {carbsTag
+                ? ` · ${computeMacro(carbsTag.value, grams)}g C`
+                : ''}
+              {caloriesTag
+                ? ` · ${computeMacro(caloriesTag.value, grams)} kcal`
+                : ''}
+            </div>
+          ) : null}
           {meal.examples ? (
             <div className="mealExamples">
               <span>
@@ -70,7 +115,7 @@ function MealCard({
               </span>
             </div>
           ) : null}
-          {meal.foodId ? (
+          {meal.foodId && isEditingGrams ? (
             <div
               className="mealGramsRow"
               onClick={(event) => event.stopPropagation()}
@@ -90,7 +135,7 @@ function MealCard({
             </div>
           ) : null}
           <div className="mealTags">
-            {(meal.tags || []).map((tag, index) => (
+            {tags.map((tag, index) => (
               <div className="mealTag" key={`${meal.id}-${index}`}>
                 <span className="mealTagLabel">{tag.label}:</span>
                 <span className="mealTagValue">{tag.value}</span>

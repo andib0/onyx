@@ -33,7 +33,7 @@ type RegisterProfile = {
 };
 
 export async function register(email: string, password: string, profile?: RegisterProfile) {
-  const response = await api.post<AuthResponse>('/auth/register', { email, password, ...profile });
+  const response = await api.post<AuthResponse>('/auth/register', Object.assign({ email, password }, profile || {}));
 
   if (response.success && response.data) {
     setAccessToken(response.data.accessToken);

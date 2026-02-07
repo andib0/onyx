@@ -46,19 +46,20 @@ function useCompletion(
       showToast(result.error || 'Failed to update schedule block.');
       return;
     }
+    const data = result.data;
     setAppState((prev) => {
       const next = ensureState(Object.assign({}, prev));
       next.schedule = (next.schedule || []).map((item) =>
         item.id === blockId
           ? Object.assign({}, item, {
-              start: result.data.start,
-              end: result.data.end,
-              title: result.data.title,
-              purpose: result.data.purpose || '',
-              good: result.data.good || '',
-              tag: result.data.tag || '',
-              readonly: result.data.readonly,
-              source: result.data.source as ScheduleBlock['source'],
+              start: data.start,
+              end: data.end,
+              title: data.title,
+              purpose: data.purpose || '',
+              good: data.good || '',
+              tag: data.tag || '',
+              readonly: data.readonly,
+              source: data.source as ScheduleBlock['source'],
             })
           : item
       );
@@ -94,20 +95,21 @@ function useCompletion(
       showToast(result.error || 'Failed to add schedule block.');
       return;
     }
+    const data = result.data;
     setAppState((prev) => {
       const next = ensureState(Object.assign({}, prev));
       const list = next.schedule || [];
       next.schedule = list.concat([
         {
-          id: result.data.id,
-          start: result.data.start,
-          end: result.data.end,
-          title: result.data.title,
-          purpose: result.data.purpose || '',
-          good: result.data.good || '',
-          tag: result.data.tag || '',
-          readonly: result.data.readonly,
-          source: result.data.source as ScheduleBlock['source'],
+          id: data.id,
+          start: data.start,
+          end: data.end,
+          title: data.title,
+          purpose: data.purpose || '',
+          good: data.good || '',
+          tag: data.tag || '',
+          readonly: data.readonly,
+          source: data.source as ScheduleBlock['source'],
         },
       ]);
       return next;

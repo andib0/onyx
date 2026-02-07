@@ -1,53 +1,19 @@
-﻿import { useRef } from 'react';
-import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
-
+import { useState, type ChangeEvent, type RefObject } from 'react';
+import { exportUserData, importLocalStorageData } from '../api/sync';
+import { normalizeState } from '../utils/normalize';
 import type { AppState } from '../types/appTypes';
 
-function useImportExport(
-  appState: AppState,
-  setAppState: Dispatch<SetStateAction<AppState>>,
-  normalizeState: (state: Partial<AppState>) => AppState,
-  showToast: (message: string) => void
+export default function useImportExport(
+  setAppState: (state: AppState) => void,
+  showToast: (message: string) => void,
+  importInputRef: RefObject<HTMLInputElement | null>
 ) {
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-
-  const exportJson = () => {
-    const ok = window.confirm('Export your data to JSON?');
-    if (!ok) return;
-    const blob = new Blob([JSON.stringify(appState, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'andi_weekday_os_data.json';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    showToast('Exported JSON.');
-  };
-
-  const importJson = async (file: File) => {
-    try {
-      const text = await file.text();
-      const obj = JSON.parse(text) as Partial<AppState>;
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-        throw new Error('Invalid data.');
-      }
-      setAppState(normalizeState(obj));
-      showToast('Imported locally. Sync to backend is not automatic yet.');
-    } catch (error) {
-      const message =
-        error && error instanceof Error
-          ? `Import failed: ${error.message}`
-          : 'Import failed.';
-      showToast(message);
-    }
-  };
+  const [importPendingState, setImportPendingState] = useState<AppState | null>(
+    null
+  );
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const handleImportClick = () => {
-    showToast('Import is currently local-only and will not sync to backend.');
     if (importInputRef.current) importInputRef.current.click();
   };
 
@@ -60,24 +26,75 @@ function useImportExport(
       event.target.value = '';
       return;
     }
-    const ok = window.confirm(
-      'Import will replace your current in-memory data. It will not sync to backend automatically. Continue?'
-    );
-    if (!ok) {
-      showToast('Import canceled.');
+    try {
+      const text = await file.text();
+      const obj = JSON.parse(text) as Partial<AppState>;
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+        throw new Error('Invalid data.');
+      }
+      setImportPendingState(normalizeState(obj));
+      setShowImportModal(true);
+    } catch (error) {
+      const message =
+        error && error instanceof Error
+          ? `Import failed: ${error.message}`
+          : 'Import failed.';
+      showToast(message);
+    } finally {
       event.target.value = '';
+    }
+  };
+
+  const exportJson = async () => {
+    const result = await exportUserData();
+    if (!result.success || !result.data) {
+      showToast(result.error || 'Export failed.');
       return;
     }
-    await importJson(file);
-    event.target.value = '';
+    const blob = new Blob([JSON.stringify(result.data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'daily_tracker_data.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    showToast('Exported JSON.');
+  };
+
+  const cancelImport = () => {
+    setImportPendingState(null);
+    setShowImportModal(false);
+  };
+
+  const confirmImport = async () => {
+    if (!importPendingState) return;
+    setShowImportModal(false);
+    const result = await importLocalStorageData(
+      importPendingState as Parameters<typeof importLocalStorageData>[0]
+    );
+    if (!result.success) {
+      showToast(result.error || 'Import failed.');
+      setImportPendingState(null);
+      return;
+    }
+    const refreshed = await exportUserData();
+    if (refreshed.success && refreshed.data) {
+      setAppState(normalizeState(refreshed.data));
+    }
+    showToast('Import complete. Backend data replaced.');
+    setImportPendingState(null);
   };
 
   return {
-    importInputRef,
-    exportJson,
+    showImportModal,
     handleImportClick,
     handleImportFile,
+    exportJson,
+    cancelImport,
+    confirmImport,
   };
 }
-
-export default useImportExport;

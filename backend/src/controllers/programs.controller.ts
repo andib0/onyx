@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import { programsService } from '../services/programs.service.js';
 import { sendError, sendNotFound, sendSuccess } from '../utils/response.js';
+import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function listPrograms(req: AuthenticatedRequest, res: Response) {
@@ -8,8 +9,8 @@ export async function listPrograms(req: AuthenticatedRequest, res: Response) {
     const programs = await programsService.listPrograms(req.userId!);
     return sendSuccess(res, programs);
   } catch (error) {
-    console.error('List programs error:', error);
-    return sendError(res, 'Failed to get programs', 500);
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
   }
 }
 
@@ -19,7 +20,7 @@ export async function getProgram(req: AuthenticatedRequest, res: Response) {
     if (!program) return sendNotFound(res, 'Program not found');
     return sendSuccess(res, program);
   } catch (error) {
-    console.error('Get program error:', error);
-    return sendError(res, 'Failed to get program', 500);
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
   }
 }

@@ -9,6 +9,8 @@ import type { MealTag, MealTemplate } from '../../types/appTypes';
 import { searchFoods, type Food } from '../../api/foods';
 import { updateMealGrams } from '../../api/meals';
 import { addUserFood, getUserFoods, removeUserFood, type UserFood } from '../../api/userFoods';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
+import { SEARCH_DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '../../constants';
 
 type NutritionTarget = {
   k: string;
@@ -48,6 +50,7 @@ function NutritionView({
   onSelectMealDay,
 }: NutritionViewProps) {
   const [foodQuery, setFoodQuery] = useState('');
+  const debouncedFoodQuery = useDebouncedValue(foodQuery, SEARCH_DEBOUNCE_MS);
   const [foodResults, setFoodResults] = useState<Food[]>([]);
   const [foodLoading, setFoodLoading] = useState(false);
   const [userFoods, setUserFoods] = useState<UserFood[]>([]);
@@ -95,8 +98,9 @@ function NutritionView({
   });
 
   useEffect(() => {
-    const query = foodQuery.trim();
-    if (query.length < 2) {
+    const query = debouncedFoodQuery.trim();
+    if (query.length < MIN_SEARCH_LENGTH) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results for short query
       setFoodResults([]);
       return;
     }
@@ -117,10 +121,11 @@ function NutritionView({
     return () => {
       cancelled = true;
     };
-  }, [foodQuery]);
+  }, [debouncedFoodQuery]);
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- set loading before async fetch
     setUserFoodsLoading(true);
     getUserFoods()
       .then((result) => {
@@ -166,7 +171,7 @@ function NutritionView({
   const handleSaveFood = async (foodId: string) => {
     const result = await addUserFood(foodId);
     if (result.success && result.data) {
-      setUserFoods((prev) => [result.data!, ...prev.filter((item) => item.id !== result.data!.id)]);
+      setUserFoods((prev) => [result.data!].concat(prev.filter((item) => item.id !== result.data!.id)));
     }
   };
 
@@ -239,7 +244,7 @@ function NutritionView({
           </div>
         </div>
         {foodLoading ? <div className="small">Loading...</div> : null}
-        {!foodLoading && foodQuery.trim().length >= 2 && !foodResults.length ? (
+        {!foodLoading && debouncedFoodQuery.trim().length >= MIN_SEARCH_LENGTH && !foodResults.length ? (
           <div className="small">No foods found.</div>
         ) : null}
         <div className="list">

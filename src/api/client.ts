@@ -57,32 +57,33 @@ export async function apiClient<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-    ...options.headers,
-  };
+  const headers: HeadersInit = Object.assign(
+    { 'Content-Type': 'application/json' },
+    accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    options.headers || {}
+  );
 
   try {
-    let response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: 'include',
-    });
+    let response = await fetch(
+      `${API_BASE}${endpoint}`,
+      Object.assign({}, options, { headers, credentials: 'include' as const })
+    );
 
     // If unauthorized, try to refresh token
     if (response.status === 401 && !endpoint.includes('/auth/')) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         // Retry with new token
-        response = await fetch(`${API_BASE}${endpoint}`, {
-          ...options,
-          headers: {
-            ...headers,
-            Authorization: `Bearer ${newToken}`,
-          },
-          credentials: 'include',
+        const retryHeaders = Object.assign({}, headers, {
+          Authorization: `Bearer ${newToken}`,
         });
+        response = await fetch(
+          `${API_BASE}${endpoint}`,
+          Object.assign({}, options, {
+            headers: retryHeaders,
+            credentials: 'include' as const,
+          })
+        );
       }
     }
 

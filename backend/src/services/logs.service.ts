@@ -1,7 +1,7 @@
 import { prisma } from '../config/database.js';
 
 export class LogsService {
-  async getLogs(userId: string, startDate?: string, endDate?: string) {
+  async getLogs(userId: string, startDate?: string, endDate?: string, limit = 50, offset = 0) {
     const where: { userId: string; date?: { gte?: string; lte?: string } } = { userId };
     if (startDate || endDate) {
       where.date = {};
@@ -12,6 +12,8 @@ export class LogsService {
     return prisma.dailyLog.findMany({
       where,
       orderBy: { date: 'desc' },
+      take: limit,
+      skip: offset,
     });
   }
 

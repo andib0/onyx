@@ -4,18 +4,6 @@ import { ensureState } from '../utils/storage';
 import type { AppState, LogEntry } from '../types/appTypes';
 import * as logsApi from '../api/logs';
 
-function matchesLogEntry(entryA: LogEntry, entryB: LogEntry) {
-  return (
-    entryA.date === entryB.date &&
-    entryA.day === entryB.day &&
-    entryA.bw === entryB.bw &&
-    entryA.sleep === entryB.sleep &&
-    entryA.steps === entryB.steps &&
-    entryA.top === entryB.top &&
-    entryA.notes === entryB.notes
-  );
-}
-
 function useLog(
   appState: AppState,
   setAppState: Dispatch<SetStateAction<AppState>>,
@@ -31,21 +19,22 @@ function useLog(
       showToast(result.error || 'Failed to save entry.');
       return;
     }
+    const data = result.data;
     setAppState((prev) => {
       const next = ensureState(Object.assign({}, prev));
-      const rest = next.log.filter((item) => item.date !== result.data!.date);
-      next.log = [
+      const rest = next.log.filter((item) => item.date !== data.date);
+      next.log = ([
         {
-          id: result.data.id,
-          date: result.data.date,
-          day: result.data.day || '',
-          bw: result.data.bw || '',
-          sleep: result.data.sleep || '',
-          steps: result.data.steps || '',
-          top: result.data.top || '',
-          notes: result.data.notes || '',
+          id: data.id,
+          date: data.date,
+          day: data.day || '',
+          bw: data.bw || '',
+          sleep: data.sleep || '',
+          steps: data.steps || '',
+          top: data.top || '',
+          notes: data.notes || '',
         },
-      ].concat(rest);
+      ] as LogEntry[]).concat(rest);
       return next;
     });
     showToast('Entry saved.');

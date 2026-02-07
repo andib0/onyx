@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { sendServerError } from '../utils/response.js';
+import { sendError, sendServerError } from '../utils/response.js';
+import { AppError } from '../utils/errors.js';
 
 export function errorHandler(
   err: Error,
@@ -7,6 +8,10 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
+  if (err instanceof AppError) {
+    return sendError(res, err.message, err.statusCode);
+  }
+
   console.error('Error:', err);
 
   if (process.env.NODE_ENV === 'development') {

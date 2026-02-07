@@ -7,6 +7,8 @@ import SupplementCard from './SupplementCard';
 import SupplementForm from './SupplementForm';
 import TierSection from './TierSection';
 import { searchSupplementDb, type SupplementDbItem } from '../../api/supplementDb';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
+import { SEARCH_DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '../../constants';
 
 type SupplementsViewProps = {
   supplementsList: SupplementItem[];
@@ -34,6 +36,25 @@ const EMPTY_DRAFT: SupplementDraft = {
   timeAt: '08:00',
 };
 
+function getDateKey(date: Date) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function shiftDate(key: string, days: number) {
+  const parts = String(key || '').split('-');
+  if (parts.length !== 3) return '';
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (!year || !month || !day) return '';
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+  return getDateKey(date);
+}
+
 function SupplementsView({
   supplementsList,
   supplementChecks,
@@ -52,6 +73,7 @@ function SupplementsView({
   >({});
   const [showAddSupplement, setShowAddSupplement] = useState(false);
   const [libraryQuery, setLibraryQuery] = useState('');
+  const debouncedLibraryQuery = useDebouncedValue(libraryQuery, SEARCH_DEBOUNCE_MS);
   const [libraryResults, setLibraryResults] = useState<SupplementDbItem[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
 
@@ -115,25 +137,6 @@ function SupplementsView({
     setNewSupplementDraft(EMPTY_DRAFT);
   };
 
-  const getDateKey = (date: Date) => {
-    const year = String(date.getFullYear());
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const shiftDate = (key: string, days: number) => {
-    const parts = String(key || '').split('-');
-    if (parts.length !== 3) return '';
-    const year = Number(parts[0]);
-    const month = Number(parts[1]);
-    const day = Number(parts[2]);
-    if (!year || !month || !day) return '';
-    const date = new Date(year, month - 1, day);
-    date.setDate(date.getDate() + days);
-    return getDateKey(date);
-  };
-
   const summary = useMemo(() => {
     const total = supplementsList.length;
     const takenToday = supplementsList.reduce((count, supplementItem) => {
@@ -182,8 +185,9 @@ function SupplementsView({
   const tierKeys = Object.keys(groupedByTier);
 
   useEffect(() => {
-    const query = libraryQuery.trim();
-    if (query.length < 2) {
+    const query = debouncedLibraryQuery.trim();
+    if (query.length < MIN_SEARCH_LENGTH) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results for short query
       setLibraryResults([]);
       return;
     }
@@ -204,7 +208,7 @@ function SupplementsView({
     return () => {
       cancelled = true;
     };
-  }, [libraryQuery]);
+  }, [debouncedLibraryQuery]);
 
   const buildSupplementFromLibrary = (item: SupplementDbItem): SupplementItem => {
     return {
@@ -293,7 +297,7 @@ function SupplementsView({
         </div>
       </div>
       {libraryLoading ? <div className="small">Loading...</div> : null}
-      {!libraryLoading && libraryQuery.trim().length >= 2 && !libraryResults.length ? (
+      {!libraryLoading && debouncedLibraryQuery.trim().length >= MIN_SEARCH_LENGTH && !libraryResults.length ? (
         <div className="small">No supplements found.</div>
       ) : null}
       <div className="list">

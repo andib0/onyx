@@ -68,6 +68,9 @@ export async function refresh(req: Request, res: Response) {
 
     const result = await authService.refresh(refreshToken);
 
+    // Set rotated refresh token cookie
+    res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
+
     return sendSuccess(res, {
       accessToken: result.accessToken,
       user: result.user,
@@ -89,7 +92,7 @@ export async function logout(req: AuthenticatedRequest, res: Response) {
 
     res.clearCookie(REFRESH_TOKEN_COOKIE);
     return sendSuccess(res, null, 'Logged out successfully');
-  } catch (error) {
+  } catch {
     res.clearCookie(REFRESH_TOKEN_COOKIE);
     return sendSuccess(res, null, 'Logged out');
   }

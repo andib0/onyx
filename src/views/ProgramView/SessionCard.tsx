@@ -1,8 +1,9 @@
-﻿import Card from '../../components/ui/Card';
+import Card from '../../components/ui/Card';
 
 type SessionCardProps = {
   programDayLabel: string;
   trainingDayActive: boolean;
+  timerMode: 'session' | 'rest';
   workoutSeconds: number;
   workoutRunning: boolean;
   restRemainingSeconds: number;
@@ -14,12 +15,14 @@ type SessionCardProps = {
   onResetWorkout: () => void;
   onToggleRest: () => void;
   onResetRest: () => void;
+  onSwitchToSession: () => void;
   formatTime: (seconds: number) => string;
 };
 
 function SessionCard({
   programDayLabel,
   trainingDayActive,
+  timerMode,
   workoutSeconds,
   workoutRunning,
   restRemainingSeconds,
@@ -31,8 +34,34 @@ function SessionCard({
   onResetWorkout,
   onToggleRest,
   onResetRest,
+  onSwitchToSession,
   formatTime,
 }: SessionCardProps) {
+  const isSessionMode = timerMode === 'session';
+  const isRestMode = timerMode === 'rest';
+
+  const timerDisplay = isSessionMode
+    ? formatTime(workoutSeconds)
+    : formatTime(restRemainingSeconds);
+
+  const isRunning = isSessionMode ? workoutRunning : restRunning;
+
+  const handleToggle = () => {
+    if (isSessionMode) {
+      onToggleWorkout();
+    } else {
+      onToggleRest();
+    }
+  };
+
+  const handleReset = () => {
+    if (isSessionMode) {
+      onResetWorkout();
+    } else {
+      onResetRest();
+    }
+  };
+
   return (
     <Card>
       <div className="row">
@@ -49,35 +78,36 @@ function SessionCard({
         <b>Today:</b> {programDayLabel}
       </p>
       {trainingDayActive ? (
-        <div className="timerRow">
-          <div className="timerBlock">
-            <div className="small">Session timer</div>
-            <div className="timerValue">{formatTime(workoutSeconds)}</div>
-            <div className="timerActions">
-              <button onClick={onToggleWorkout} type="button">
-                {workoutRunning ? 'Pause' : 'Start'}
-              </button>
-              <button onClick={onResetWorkout} type="button">
-                Reset
-              </button>
-            </div>
+        <div
+          className={`sessionTimerWrap${isSessionMode ? ' sessionMode' : ' restMode'}`}
+        >
+          <div className="sessionTimerLabel">
+            {isSessionMode
+              ? 'Session'
+              : `Rest — ${restLabel || 'waiting'}`}
           </div>
-          <div className="timerBlock">
-            <div className="small">Rest timer</div>
-            <div className="timerValue">{formatTime(restRemainingSeconds)}</div>
-            <div className="timerSub">
-              {restLabel
-                ? `${restLabel} (${formatTime(restTotalSeconds)})`
-                : 'Pick a set to start rest.'}
+          <div className="sessionTimerValue">{timerDisplay}</div>
+          {isRestMode && restTotalSeconds > 0 ? (
+            <div className="sessionTimerSub">
+              {formatTime(restTotalSeconds)} total
             </div>
-            <div className="timerActions">
-              <button onClick={onToggleRest} type="button" disabled={!restTotalSeconds}>
-                {restRunning ? 'Pause' : 'Start'}
+          ) : null}
+          <div className="sessionTimerActions">
+            <button
+              onClick={handleToggle}
+              type="button"
+              disabled={isRestMode && !restTotalSeconds}
+            >
+              {isRunning ? 'Pause' : 'Start'}
+            </button>
+            <button onClick={handleReset} type="button">
+              Reset
+            </button>
+            {isRestMode ? (
+              <button onClick={onSwitchToSession} type="button">
+                Back to session
               </button>
-              <button onClick={onResetRest} type="button">
-                Reset
-              </button>
-            </div>
+            ) : null}
           </div>
         </div>
       ) : null}

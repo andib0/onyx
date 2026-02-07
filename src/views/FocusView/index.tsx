@@ -1,17 +1,35 @@
 import useActiveContext from '../../hooks/useActiveContext';
 import type { FocusBlock } from '../../hooks/useActiveContext';
-import type { ScheduleBlock, SupplementItem } from '../../types/appTypes';
+import type { ScheduleBlock, SupplementItem, MealTemplate } from '../../types/appTypes';
 import { useAuth } from '../../contexts/AuthContext';
 import { toMinutes } from '../../utils/time';
 import GymFocus from './GymFocus';
 import MealFocus from './MealFocus';
 import SupplementFocus from './SupplementFocus';
+import ProgramFocusSection from './ProgramFocusSection';
+import NutritionFocusSection from './NutritionFocusSection';
+
+type ProgramRow = {
+  ex: string;
+  sets: string;
+  reps: string;
+  rir: string;
+  rest: string;
+  notes: string;
+  prog: string;
+};
 
 type FocusViewProps = {
   scheduleBlocks: ScheduleBlock[];
   supplementsList: SupplementItem[];
   supplementChecksForToday: Record<string, boolean>;
   onToggleSupplement: (supplementId: string, isChecked: boolean) => void;
+  programRows: ProgramRow[];
+  programDayLabel: string;
+  trainingDayActive: boolean;
+  mealTemplates: MealTemplate[];
+  mealCheckMap: Record<string, boolean>;
+  onToggleMealCheck: (mealId: string, isChecked: boolean) => void;
 };
 
 type FocusPanelBlock = FocusBlock & {
@@ -93,6 +111,12 @@ function FocusView({
   supplementsList,
   supplementChecksForToday,
   onToggleSupplement,
+  programRows,
+  programDayLabel,
+  trainingDayActive,
+  mealTemplates,
+  mealCheckMap,
+  onToggleMealCheck,
 }: FocusViewProps) {
   const { user } = useAuth();
   const {
@@ -182,6 +206,28 @@ function FocusView({
             onToggleSupplement={onToggleSupplement}
           />
         ) : null}
+
+        <div className="focusSectionDivider" />
+
+        <ProgramFocusSection
+          programDayLabel={programDayLabel}
+          programRows={programRows}
+          trainingDayActive={trainingDayActive}
+        />
+
+        <NutritionFocusSection
+          mealTemplates={mealTemplates}
+          mealCheckMap={mealCheckMap}
+          onToggleMealCheck={onToggleMealCheck}
+        />
+
+        <SupplementFocus
+          pendingSupplements={supplementsList.filter(
+            (s) => !supplementChecksForToday[s.id || '']
+          )}
+          totalInWindow={supplementsList.length}
+          onToggleSupplement={onToggleSupplement}
+        />
       </div>
     </main>
   );

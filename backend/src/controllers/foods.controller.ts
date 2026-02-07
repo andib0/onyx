@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import { foodsService } from '../services/foods.service.js';
 import { sendSuccess, sendCreated, sendError, sendNotFound } from '../utils/response.js';
+import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function searchFoods(req: AuthenticatedRequest, res: Response) {
@@ -13,7 +14,8 @@ export async function searchFoods(req: AuthenticatedRequest, res: Response) {
     const foods = await foodsService.search(query, limit);
     return sendSuccess(res, foods);
   } catch (error) {
-    return sendError(res, 'Failed to search foods', 500);
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
   }
 }
 
@@ -25,7 +27,8 @@ export async function getFood(req: AuthenticatedRequest, res: Response) {
     }
     return sendSuccess(res, food);
   } catch (error) {
-    return sendError(res, 'Failed to get food', 500);
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
   }
 }
 
@@ -34,6 +37,7 @@ export async function createFood(req: AuthenticatedRequest, res: Response) {
     const food = await foodsService.create(req.body);
     return sendCreated(res, food);
   } catch (error) {
-    return sendError(res, 'Failed to create food');
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
   }
 }

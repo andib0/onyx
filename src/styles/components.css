@@ -251,24 +251,6 @@
   font-size: 13px;
   margin: 2px 0 0 0;
 }
-.user-email {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.logout-btn {
-  color: #ef4444 !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
-}
-.logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
-}
 .card {
   border: 1px solid var(--border);
   border-radius: var(--radius2);
@@ -402,7 +384,7 @@
   );
   background-size: 220% 100%;
   opacity: 0.55;
-  animation: blockWave 3.8s ease-in-out infinite;
+  animation: wave 3.8s ease-in-out infinite;
 }
 .time {
   font-family: var(--mono);
@@ -727,7 +709,7 @@ td.muted {
   );
   background-size: 220% 100%;
   opacity: 0.55;
-  animation: mealWave 3.8s ease-in-out infinite;
+  animation: wave 3.8s ease-in-out infinite;
 }
 .mealHeader {
   display: flex;
@@ -756,6 +738,36 @@ td.muted {
   font-weight: 700;
   font-size: 13.5px;
   width: 100%;
+}
+.mealNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.mealEditGramsBtn {
+  padding: 2px 8px;
+  font-size: 10px;
+  min-height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+  color: rgba(251, 191, 36, 0.95);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+}
+.mealEditGramsBtn:hover {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(251, 191, 36, 0.14);
+}
+.mealMacrosSummary {
+  font-size: 12px;
+  font-family: var(--mono);
+  color: rgba(251, 191, 36, 0.88);
+  letter-spacing: 0.01em;
 }
 .mealExamples {
   color: var(--muted);
@@ -985,7 +997,7 @@ td.muted {
   );
   background-size: 220% 100%;
   opacity: 0.55;
-  animation: supplementWave 3.8s ease-in-out infinite;
+  animation: wave 3.8s ease-in-out infinite;
 }
 .supplementTaken {
   font-size: 10px;
@@ -1325,7 +1337,7 @@ td.muted {
     transparent 65%
   );
   background-size: 220% 100%;
-  animation: blockWave 3.8s ease-in-out infinite;
+  animation: wave 3.8s ease-in-out infinite;
 }
 .focusPanelHeader {
   display: flex;
@@ -1436,41 +1448,130 @@ td.muted {
   font-size: 13px;
   color: var(--muted);
 }
+.focusSectionDivider {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+.focusCompactList {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+.focusCompactItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 13px;
+}
+.focusCompactIndex {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 18px;
+  text-align: center;
+}
+.focusCompactName {
+  flex: 1;
+  font-weight: 600;
+}
+.focusCompactDetail {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.focusListItemDone {
+  opacity: 0.55;
+  border-color: rgba(54, 211, 153, 0.25);
+}
+.focusListItemDone .focusListAction {
+  color: var(--good);
+}
 .footerNote {
   margin-top: 12px;
   color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
   line-height: 1.35;
 }
-.timerRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 10px 0 14px 0;
-}
-.timerBlock {
+.sessionTimerWrap {
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.18);
-  padding: 10px 12px;
+  padding: 16px;
+  margin: 10px 0 14px 0;
+  text-align: center;
+  transition: border-color 300ms ease;
 }
-.timerValue {
+.sessionTimerWrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background-size: 220% 100%;
+  animation: wave 3.8s ease-in-out infinite;
+}
+.sessionTimerWrap > * {
+  position: relative;
+  z-index: 1;
+}
+.sessionTimerWrap.sessionMode {
+  border-color: rgba(122, 162, 255, 0.35);
+}
+.sessionTimerWrap.sessionMode::after {
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(122, 162, 255, 0.22) 35%,
+    rgba(122, 162, 255, 0.08) 50%,
+    transparent 65%
+  );
+  opacity: 0.55;
+}
+.sessionTimerWrap.restMode {
+  border-color: rgba(54, 211, 153, 0.35);
+}
+.sessionTimerWrap.restMode::after {
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(54, 211, 153, 0.22) 35%,
+    rgba(54, 211, 153, 0.08) 50%,
+    transparent 65%
+  );
+  background-size: 220% 100%;
+  opacity: 0.55;
+}
+.sessionTimerLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.sessionTimerValue {
   font-family: var(--mono);
-  font-size: 20px;
+  font-size: 32px;
   font-weight: 700;
   margin-top: 4px;
 }
-.timerSub {
+.sessionTimerSub {
   color: var(--muted);
   font-size: 11px;
   margin-top: 4px;
 }
-.timerActions {
+.sessionTimerActions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 10px;
+  justify-content: center;
 }
-@keyframes supplementWave {
+@keyframes wave {
   0% {
     background-position: 0% 50%;
     opacity: 0.35;
@@ -1482,39 +1583,6 @@ td.muted {
   100% {
     background-position: 0% 50%;
     opacity: 0.35;
-  }
-}
-@keyframes mealWave {
-  0% {
-    background-position: 0% 50%;
-    opacity: 0.35;
-  }
-  50% {
-    background-position: 100% 50%;
-    opacity: 0.55;
-  }
-  100% {
-    background-position: 0% 50%;
-    opacity: 0.35;
-  }
-}
-@keyframes blockWave {
-  0% {
-    background-position: 0% 50%;
-    opacity: 0.35;
-  }
-  50% {
-    background-position: 100% 50%;
-    opacity: 0.55;
-  }
-  100% {
-    background-position: 0% 50%;
-    opacity: 0.35;
-  }
-}
-@media (max-width: 980px) {
-  .timerRow {
-    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 980px) {
@@ -1556,4 +1624,29 @@ td.muted {
   .supplementList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Error boundary */
+.errorBoundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.errorBoundary h2 {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+.errorBoundary button {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
 }

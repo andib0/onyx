@@ -48,18 +48,19 @@ function useSupplements(
       showToast(result.error || 'Failed to add supplement.');
       return;
     }
+    const data = result.data;
     setAppState((prev) => {
       const next = ensureState(Object.assign({}, prev));
       const list = next.supplementsList || [];
       next.supplementsList = list.concat([
         {
-          id: result.data.id,
-          item: result.data.item,
-          goal: result.data.goal,
-          dose: result.data.dose,
-          tier: result.data.tier || undefined,
-          rule: result.data.rule || undefined,
-          timeAt: result.data.timeAt,
+          id: data.id,
+          item: data.item,
+          goal: data.goal,
+          dose: data.dose,
+          tier: data.tier || undefined,
+          rule: data.rule || undefined,
+          timeAt: data.timeAt,
         },
       ]);
       return next;
@@ -73,17 +74,18 @@ function useSupplements(
       showToast(result.error || 'Failed to update supplement.');
       return;
     }
+    const data = result.data;
     setAppState((prev) => {
       const next = ensureState(Object.assign({}, prev));
       next.supplementsList = (next.supplementsList || []).map((item) =>
         item.id === supplementId
           ? Object.assign({}, item, {
-              item: result.data.item,
-              goal: result.data.goal,
-              dose: result.data.dose,
-              tier: result.data.tier || undefined,
-              rule: result.data.rule || undefined,
-              timeAt: result.data.timeAt,
+              item: data.item,
+              goal: data.goal,
+              dose: data.dose,
+              tier: data.tier || undefined,
+              rule: data.rule || undefined,
+              timeAt: data.timeAt,
             })
           : item
       );

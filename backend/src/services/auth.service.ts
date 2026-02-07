@@ -112,6 +112,9 @@ export class AuthService {
     }
 
     if (!validToken) {
+      // Possible replay attack — a rotated token was reused.
+      // Invalidate all refresh tokens for this user as a precaution.
+      await prisma.refreshToken.deleteMany({ where: { userId: payload.sub } });
       throw new Error('Refresh token not found or expired');
     }
 
@@ -124,10 +127,22 @@ export class AuthService {
       throw new Error('User not found');
     }
 
-    // Generate new access token (optionally rotate refresh token)
-    const newAccessToken = generateAccessToken(user.id, user.email);
+    // Rotate: delete old token, issue new pair
+    await prisma.refreshToken.delete({ where: { id: validToken.id } });
 
-    return { accessToken: newAccessToken, user };
+    const newAccessToken = generateAccessToken(user.id, user.email);
+    const newRefreshToken = generateRefreshToken(user.id, user.email);
+
+    const tokenHash = await bcrypt.hash(newRefreshToken, 10);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: getRefreshTokenExpiry(),
+      },
+    });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken, user };
   }
 
   async logout(userId: string, refreshToken?: string) {

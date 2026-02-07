@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Card from '../../components/ui/Card';
 import MovementList from './MovementList';
@@ -45,6 +45,7 @@ function ProgramView({
   const [restTotalSeconds, setRestTotalSeconds] = useState(0);
   const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
   const [restLabel, setRestLabel] = useState('');
+  const [timerMode, setTimerMode] = useState<'session' | 'rest'>('session');
 
   useEffect(() => {
     if (!workoutRunning) return undefined;
@@ -60,6 +61,7 @@ function ProgramView({
       setRestRemainingSeconds((prev) => {
         if (prev <= 1) {
           setRestRunning(false);
+          setTimerMode('session');
           return 0;
         }
         return prev - 1;
@@ -75,6 +77,7 @@ function ProgramView({
     setRestRemainingSeconds(seconds);
     setRestLabel(programRow.ex);
     setRestRunning(true);
+    setTimerMode('rest');
   };
 
   const resetRest = () => {
@@ -82,6 +85,7 @@ function ProgramView({
     setRestTotalSeconds(0);
     setRestRemainingSeconds(0);
     setRestLabel('');
+    setTimerMode('session');
   };
 
   const toggleWorkout = () => {
@@ -140,6 +144,7 @@ function ProgramView({
       <SessionCard
         programDayLabel={programDayLabel}
         trainingDayActive={trainingDayActive}
+        timerMode={timerMode}
         workoutSeconds={workoutSeconds}
         workoutRunning={workoutRunning}
         restRemainingSeconds={restRemainingSeconds}
@@ -151,8 +156,19 @@ function ProgramView({
         onResetWorkout={resetWorkout}
         onToggleRest={() => setRestRunning((prev) => !prev)}
         onResetRest={resetRest}
+        onSwitchToSession={() => setTimerMode('session')}
         formatTime={formatTime}
       />
+
+      {trainingDayActive ? (
+        <Card style={{ marginTop: 14 }}>
+          <MovementList
+            programRows={programRows}
+            onStartRest={startRest}
+            parseRestSeconds={parseRestSeconds}
+          />
+        </Card>
+      ) : null}
 
       {trainingDayActive ? (
         <Card style={{ marginTop: 14 }}>
@@ -165,16 +181,6 @@ function ProgramView({
             <b>Stop condition:</b> if form breaks, stop the set and reduce load.
             Repeatable progress wins.
           </p>
-        </Card>
-      ) : null}
-
-      {trainingDayActive ? (
-        <Card style={{ marginTop: 14 }}>
-          <MovementList
-            programRows={programRows}
-            onStartRest={startRest}
-            parseRestSeconds={parseRestSeconds}
-          />
         </Card>
       ) : null}
     </>

@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react';
+import { TOAST_DURATION_MS } from '../constants';
 
 function useToast() {
   const [toastMessage, setToastMessage] = useState('');
@@ -21,7 +22,7 @@ function useToast() {
     }
     timerRef.current = window.setTimeout(() => {
       setToastVisible(false);
-    }, 1800);
+    }, TOAST_DURATION_MS);
   };
 
   return {
