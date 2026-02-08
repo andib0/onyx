@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-import Card from '../../components/ui/Card';
-import Pill from '../../components/ui/Pill';
-import MacroBar from './MacroBar';
-import MealCard from './MealCard';
-import { parseRangeValue } from '../../utils/formatting';
-import type { MealTag, MealTemplate } from '../../types/appTypes';
-import { searchFoods, type Food } from '../../api/foods';
-import { updateMealGrams } from '../../api/meals';
-import { addUserFood, getUserFoods, removeUserFood, type UserFood } from '../../api/userFoods';
-import useDebouncedValue from '../../hooks/useDebouncedValue';
-import { SEARCH_DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '../../constants';
+import Card from "../../components/ui/Card";
+import Pill from "../../components/ui/Pill";
+import MacroBar from "./MacroBar";
+import MealCard from "./MealCard";
+import { parseRangeValue } from "../../utils/formatting";
+import type { MealTag, MealTemplate } from "../../types/appTypes";
+import { searchFoods, type Food } from "../../api/foods";
+import { updateMealGrams } from "../../api/meals";
+import {
+  addUserFood,
+  getUserFoods,
+  removeUserFood,
+  type UserFood,
+} from "../../api/userFoods";
+import useDebouncedValue from "../../hooks/useDebouncedValue";
+import { SEARCH_DEBOUNCE_MS, MIN_SEARCH_LENGTH } from "../../constants";
+import { getGoalLabel } from "../../utils/nutrition";
 
 type NutritionTarget = {
   k: string;
@@ -20,6 +26,7 @@ type NutritionTarget = {
 
 type NutritionViewProps = {
   nutritionTargets: NutritionTarget[];
+  programGoal?: string;
   mealTemplates: MealTemplate[];
   weekdayName: string;
   selectedMealDay: string;
@@ -38,6 +45,7 @@ type NutritionViewProps = {
 
 function NutritionView({
   nutritionTargets,
+  programGoal,
   mealTemplates,
   weekdayName,
   selectedMealDay,
@@ -49,7 +57,7 @@ function NutritionView({
   onAddMealTemplate,
   onSelectMealDay,
 }: NutritionViewProps) {
-  const [foodQuery, setFoodQuery] = useState('');
+  const [foodQuery, setFoodQuery] = useState("");
   const debouncedFoodQuery = useDebouncedValue(foodQuery, SEARCH_DEBOUNCE_MS);
   const [foodResults, setFoodResults] = useState<Food[]>([]);
   const [foodLoading, setFoodLoading] = useState(false);
@@ -59,29 +67,29 @@ function NutritionView({
   const getTagValue = (meal: MealTemplate, label: string) => {
     const tags = Array.isArray(meal.tags) ? meal.tags : [];
     const found = tags.find(
-      (tag) => String(tag.label || '').toLowerCase() === label.toLowerCase()
+      (tag) => String(tag.label || "").toLowerCase() === label.toLowerCase()
     );
     return found ? parseRangeValue(found.value) : 0;
   };
 
   const getTargetValue = (label: string) => {
     const found = nutritionTargets.find(
-      (target) => String(target.k || '').toLowerCase() === label.toLowerCase()
+      (target) => String(target.k || "").toLowerCase() === label.toLowerCase()
     );
     return found ? parseRangeValue(found.v) : 0;
   };
 
   const sumMeals = (label: string, onlyTaken: boolean) => {
     return mealTemplates.reduce((sum, meal) => {
-      if (onlyTaken && !mealCheckMap[meal.id || '']) return sum;
+      if (onlyTaken && !mealCheckMap[meal.id || ""]) return sum;
       return sum + getTagValue(meal, label);
     }, 0);
   };
 
   const macroDefinitions = [
-    { key: 'Protein', unit: 'g' },
-    { key: 'Carbs', unit: 'g' },
-    { key: 'Calories', unit: 'kcal' },
+    { key: "Protein", unit: "g" },
+    { key: "Carbs", unit: "g" },
+    { key: "Calories", unit: "kcal" },
   ];
 
   const macroData = macroDefinitions.map((macro) => {
@@ -146,12 +154,15 @@ function NutritionView({
 
   const buildMealFromFood = (food: Food): MealTemplate => {
     const tags: MealTag[] = [];
-    if (food.proteinPer100g != null) tags.push({ label: 'Protein', value: `${food.proteinPer100g}` });
-    if (food.carbsPer100g != null) tags.push({ label: 'Carbs', value: `${food.carbsPer100g}` });
-    if (food.caloriesPer100g != null) tags.push({ label: 'Calories', value: `${food.caloriesPer100g}` });
+    if (food.proteinPer100g != null)
+      tags.push({ label: "Protein", value: `${food.proteinPer100g}` });
+    if (food.carbsPer100g != null)
+      tags.push({ label: "Carbs", value: `${food.carbsPer100g}` });
+    if (food.caloriesPer100g != null)
+      tags.push({ label: "Calories", value: `${food.caloriesPer100g}` });
     return {
       name: food.brand ? `${food.name} (${food.brand})` : food.name,
-      examples: 'Per 100g. Adjust grams to your serving.',
+      examples: "Per 100g. Adjust grams to your serving.",
       grams: 100,
       foodId: food.id,
       tags,
@@ -171,7 +182,9 @@ function NutritionView({
   const handleSaveFood = async (foodId: string) => {
     const result = await addUserFood(foodId);
     if (result.success && result.data) {
-      setUserFoods((prev) => [result.data!].concat(prev.filter((item) => item.id !== result.data!.id)));
+      setUserFoods((prev) =>
+        [result.data!].concat(prev.filter((item) => item.id !== result.data!.id))
+      );
     }
   };
 
@@ -214,7 +227,7 @@ function NutritionView({
             <MealCard
               key={meal.id || meal.name}
               meal={meal}
-              isTaken={!!mealCheckMap[meal.id || '']}
+              isTaken={!!mealCheckMap[meal.id || ""]}
               onToggleTaken={onToggleMealCheck}
               onGramsChange={handleGramsChange}
               onRemove={(mealId) => onRemoveMealTemplate(selectedMealDay, mealId)}
@@ -222,8 +235,8 @@ function NutritionView({
           ))}
         </div>
         <div className="footerNote">
-          If the family meal is low-protein, add a "protein patch": 250-300 g
-          skyr/cottage cheese.
+          If the family meal is low-protein, add a "protein patch": 250-300 g skyr/cottage
+          cheese.
         </div>
       </Card>
 
@@ -244,7 +257,9 @@ function NutritionView({
           </div>
         </div>
         {foodLoading ? <div className="small">Loading...</div> : null}
-        {!foodLoading && debouncedFoodQuery.trim().length >= MIN_SEARCH_LENGTH && !foodResults.length ? (
+        {!foodLoading &&
+        debouncedFoodQuery.trim().length >= MIN_SEARCH_LENGTH &&
+        !foodResults.length ? (
           <div className="small">No foods found.</div>
         ) : null}
         <div className="list">
@@ -256,18 +271,20 @@ function NutritionView({
               food.fatPer100g != null ? `${food.fatPer100g} g fat` : null,
             ]
               .filter(Boolean)
-              .join(' \u2022 ');
+              .join(" \u2022 ");
             return (
               <div key={food.id} className="item">
                 <div className="top">
                   <div className="name">
                     {food.name}
-                    {food.brand ? ` (${food.brand})` : ''}
+                    {food.brand ? ` (${food.brand})` : ""}
                   </div>
                   <div className="controls">
                     <button
                       type="button"
-                      onClick={() => onAddMealTemplate(selectedMealDay, buildMealFromFood(food))}
+                      onClick={() =>
+                        onAddMealTemplate(selectedMealDay, buildMealFromFood(food))
+                      }
                     >
                       Add
                     </button>
@@ -304,18 +321,20 @@ function NutritionView({
               food.fatPer100g != null ? `${food.fatPer100g} g fat` : null,
             ]
               .filter(Boolean)
-              .join(' \u2022 ');
+              .join(" \u2022 ");
             return (
               <div key={item.id} className="item">
                 <div className="top">
                   <div className="name">
                     {food.name}
-                    {food.brand ? ` (${food.brand})` : ''}
+                    {food.brand ? ` (${food.brand})` : ""}
                   </div>
                   <div className="controls">
                     <button
                       type="button"
-                      onClick={() => onAddMealTemplate(selectedMealDay, buildMealFromFood(food))}
+                      onClick={() =>
+                        onAddMealTemplate(selectedMealDay, buildMealFromFood(food))
+                      }
                     >
                       Add
                     </button>
@@ -332,7 +351,7 @@ function NutritionView({
       </Card>
 
       <Card>
-        <h2>Targets (lean bulk)</h2>
+        <h2>Targets ({getGoalLabel(programGoal).toLowerCase()})</h2>
         <div className="list">
           {nutritionTargets.map((target) => (
             <div className="item" key={target.k}>

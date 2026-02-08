@@ -1,35 +1,36 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import useCompletion from './hooks/useCompletion';
-import useLog from './hooks/useLog';
-import useSupplements from './hooks/useSupplements';
-import useToday from './hooks/useToday';
-import useToast from './hooks/useToast';
-import useProgram from './hooks/useProgram';
-import useMeals from './hooks/useMeals';
-import useImportExport from './hooks/useImportExport';
-import { useAuth } from './contexts/AuthContext';
-import { exportUserData } from './api/sync';
+import useCompletion from "./hooks/useCompletion";
+import useLog from "./hooks/useLog";
+import useSupplements from "./hooks/useSupplements";
+import useToday from "./hooks/useToday";
+import useToast from "./hooks/useToast";
+import useProgram from "./hooks/useProgram";
+import useMeals from "./hooks/useMeals";
+import useImportExport from "./hooks/useImportExport";
+import useWorkout from "./hooks/useWorkout";
+import { useAuth } from "./contexts/AuthContext";
+import { exportUserData } from "./api/sync";
 
-import Sidebar from './components/layout/Sidebar';
-import Topbar from './components/layout/Topbar';
-import ViewContainer from './components/layout/ViewContainer';
-import Toast from './components/ui/Toast';
-import ConfirmModal from './components/ui/ConfirmModal';
-import ProgramSetupModal from './components/ui/ProgramSetupModal';
-import ErrorBoundary from './components/ErrorBoundary';
-import LogView from './views/LogView';
-import NutritionView from './views/NutritionView';
-import ProgramView from './views/ProgramView';
-import SupplementsView from './views/SupplementsView';
-import TodayView from './views/TodayView';
-import FocusView from './views/FocusView';
-import { AuthView } from './views/AuthView';
+import Sidebar from "./components/layout/Sidebar";
+import Topbar from "./components/layout/Topbar";
+import ViewContainer from "./components/layout/ViewContainer";
+import Toast from "./components/ui/Toast";
+import ConfirmModal from "./components/ui/ConfirmModal";
+import ProgramSetupModal from "./components/ui/ProgramSetupModal";
+import ErrorBoundary from "./components/ErrorBoundary";
+import LogView from "./views/LogView";
+import NutritionView from "./views/NutritionView";
+import ProgramView from "./views/ProgramView";
+import SupplementsView from "./views/SupplementsView";
+import TodayView from "./views/TodayView";
+import FocusView from "./views/FocusView";
+import { AuthView } from "./views/AuthView";
 
-import { DATA } from './data/weekdayData';
-import { loadPrefs, savePrefs, todayKey } from './utils/storage';
-import { toMinutes } from './utils/time';
+import { DATA } from "./data/weekdayData";
+import { loadPrefs, savePrefs, todayKey } from "./utils/storage";
+import { toMinutes } from "./utils/time";
 import {
   normalizeState,
   getMealTemplatesForDay,
@@ -37,32 +38,30 @@ import {
   createProgramBlocks,
   createNutritionBlocks,
   MEAL_DAYS,
-} from './utils/normalize';
-import { SUPPLEMENT_BLOCK_DURATION_MINUTES } from './constants';
-import type { AppState, ScheduleBlock } from './types/appTypes';
+} from "./utils/normalize";
+import { SUPPLEMENT_BLOCK_DURATION_MINUTES } from "./constants";
+import { buildNutritionTargets } from "./utils/nutrition";
+import type { AppState, ScheduleBlock } from "./types/appTypes";
 
 const TITLES: Record<string, [string, string]> = {
-  focus: ['Focus', 'Only what matters right now.'],
+  focus: ["Focus", "Only what matters right now."],
   today: [
-    'Today',
-    'Execute the timeline. Mark blocks as done. Keep caffeine controlled.',
+    "Today",
+    "Execute the timeline. Mark blocks as done. Keep caffeine controlled.",
   ],
-  program: [
-    'Program',
-    '3-day split with progression rules (double progression).',
-  ],
-  nutrition: ['Nutrition', 'Lean bulk targets + packed lunch templates.'],
-  supplements: ['Supplements', 'Current stack. Sleep and safety first.'],
-  log: ['Log', 'Track bodyweight, sleep, steps, and top sets.'],
+  program: ["Program", "3-day split with progression rules (double progression)."],
+  nutrition: ["Nutrition", "Lean bulk targets + packed lunch templates."],
+  supplements: ["Supplements", "Current stack. Sleep and safety first."],
+  log: ["Log", "Track bodyweight, sleep, steps, and top sets."],
 };
 
 function App() {
   const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
-  const [view, setView] = useState('today');
+  const [view, setView] = useState("today");
   const location = useLocation();
   const navigate = useNavigate();
-  const isFocusRoute = location.pathname === '/focus';
-  const lastNonFocusView = useRef('today');
+  const isFocusRoute = location.pathname === "/focus";
+  const lastNonFocusView = useRef("today");
   const didInit = useRef(false);
   const [showAllTimeline, setShowAllTimeline] = useState(() => {
     const prefs = loadPrefs();
@@ -77,6 +76,8 @@ function App() {
 
   // Extracted hooks
   const program = useProgram(isAuthenticated, authLoading, user);
+  const { workout, startWorkout, togglePauseWorkout, stopWorkout, skipWorkoutInterval } =
+    useWorkout(program.programRows);
 
   const meals = useMeals(appState, setAppState, todayKeyValue, showToast);
 
@@ -136,44 +137,33 @@ function App() {
     clearSupplementChecks,
   } = useSupplements(appState, setAppState, todayKeyValue, showToast);
 
-  const mealTemplatesForDay = getMealTemplatesForDay(
-    meals.selectedMealDay,
-    appState
-  );
-  const mealTemplatesForToday = getMealTemplatesForDay(
-    meals.weekdayName,
-    appState
-  );
+  const mealTemplatesForDay = getMealTemplatesForDay(meals.selectedMealDay, appState);
+  const mealTemplatesForToday = getMealTemplatesForDay(meals.weekdayName, appState);
 
   // Build timeline
   const timelineBlocks = useMemo(() => {
     const baseBlocks = (scheduleBlocks || []).map((block) =>
       Object.assign({}, block, {
         readonly: false,
-        source: 'schedule' as const,
+        source: "schedule" as const,
       })
     );
-    const supplementBlocks = (supplementsList || []).map(
-      (supplementItem, index) => {
-        const start = supplementItem.timeAt || '08:00';
-        const end = addMinutesToTime(start, SUPPLEMENT_BLOCK_DURATION_MINUTES);
-        return {
-          id: `supp_block_${supplementItem.id || index}`,
-          start,
-          end,
-          title: supplementItem.item,
-          purpose: supplementItem.goal || 'Supplement',
-          good: supplementItem.dose || '',
-          tag: 'Supplement',
-          readonly: true,
-          source: 'supplement' as const,
-        };
-      }
-    );
-    const nutritionBlocks = createNutritionBlocks(
-      baseBlocks,
-      mealTemplatesForDay
-    );
+    const supplementBlocks = (supplementsList || []).map((supplementItem, index) => {
+      const start = supplementItem.timeAt || "08:00";
+      const end = addMinutesToTime(start, SUPPLEMENT_BLOCK_DURATION_MINUTES);
+      return {
+        id: `supp_block_${supplementItem.id || index}`,
+        start,
+        end,
+        title: supplementItem.item,
+        purpose: supplementItem.goal || "Supplement",
+        good: supplementItem.dose || "",
+        tag: "Supplement",
+        readonly: true,
+        source: "supplement" as const,
+      };
+    });
+    const nutritionBlocks = createNutritionBlocks(baseBlocks, mealTemplatesForDay);
     const programBlocks = createProgramBlocks(
       baseBlocks,
       program.programLabel,
@@ -212,14 +202,14 @@ function App() {
     if (isFocusRoute) return undefined;
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const tag = target && target.tagName ? target.tagName : '';
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      const tag = target && target.tagName ? target.tagName : "";
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
       const keyMap: Record<string, string> = {
-        '1': 'today',
-        '2': 'program',
-        '3': 'nutrition',
-        '4': 'supplements',
-        '5': 'log',
+        "1": "today",
+        "2": "program",
+        "3": "nutrition",
+        "4": "supplements",
+        "5": "log",
       };
       const nextView = keyMap[event.key];
       if (nextView) {
@@ -227,61 +217,61 @@ function App() {
         setView(nextView);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [isFocusRoute]);
 
   // Initial redirect
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
-    if (location.pathname === '/') {
-      navigate('/focus', { replace: true });
+    if (location.pathname === "/") {
+      navigate("/focus", { replace: true });
     }
   }, [location.pathname, navigate]);
 
   const handleChangeView = (nextView: string) => {
-    if (nextView === 'focus') {
-      navigate('/focus');
+    if (nextView === "focus") {
+      navigate("/focus");
       return;
     }
     lastNonFocusView.current = nextView;
     setView(nextView);
-    if (isFocusRoute) navigate('/');
+    if (isFocusRoute) navigate("/");
   };
 
   const copyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      showToast('Copied.');
+      showToast("Copied.");
     } catch {
-      showToast('Copy failed.');
+      showToast("Copy failed.");
     }
   };
 
   const programToText = () => {
     if (!program.programDetail || !program.selectedProgramDay)
-      return 'No program selected.';
+      return "No program selected.";
     const header = [
       `${program.programDetail.name} - ${program.selectedProgramDay.name}`,
-      'Progression: follow the plan guidance and progress weekly.',
-      '',
+      "Progression: follow the plan guidance and progress weekly.",
+      "",
     ];
     const lines = program.selectedProgramDay.exercises.map(
       (exercise, index) =>
-        `${index + 1}) ${exercise.exerciseName} - ${exercise.sets}x${exercise.reps} (RIR ${exercise.rir || '-'}), rest ${exercise.restSeconds || '-'}s. Notes: ${exercise.notes || '-'}${exercise.progression ? `. Prog: ${exercise.progression}` : ''}`
+        `${index + 1}) ${exercise.exerciseName} - ${exercise.sets}x${exercise.reps} (RIR ${exercise.rir || "-"}), rest ${exercise.restSeconds || "-"}s. Notes: ${exercise.notes || "-"}${exercise.progression ? `. Prog: ${exercise.progression}` : ""}`
     );
-    return header.concat(lines).join('\n');
+    return header.concat(lines).join("\n");
   };
 
   // Derived values
   const navDayLabel =
     program.trainingDayActive && program.selectedProgramDay
       ? program.selectedProgramDay.name
-      : 'Rest';
+      : "Rest";
   const timelineTotalBlocks = timelineBlocks.length;
   const timelineDoneCount = timelineBlocks.reduce((count, block) => {
-    const blockId = block.id || '';
+    const blockId = block.id || "";
     return completionByBlockId[blockId] ? count + 1 : count;
   }, 0);
   const timelineProgressPercent = timelineTotalBlocks
@@ -289,6 +279,13 @@ function App() {
     : 0;
   const timelineRemainingCount = timelineTotalBlocks - timelineDoneCount;
   const meta = user?.preferences || DATA.meta;
+  const programGoal = program.programDetail?.goal;
+  const nutritionTargets = buildNutritionTargets(
+    user?.weight,
+    meta.proteinTarget,
+    meta.hydrationTarget,
+    programGoal
+  );
 
   // Loading state
   if (authLoading || (isAuthenticated && stateLoading)) {
@@ -302,10 +299,12 @@ function App() {
   return (
     <div className="app">
       <Sidebar
-        view={isFocusRoute ? 'focus' : view}
+        view={isFocusRoute ? "focus" : view}
         navProgress={timelineProgressPercent}
         navDay={navDayLabel}
         meta={meta}
+        programGoal={programGoal}
+        userWeight={user?.weight}
         onChangeView={handleChangeView}
         onLogout={logout}
       />
@@ -319,11 +318,11 @@ function App() {
             onToggleTimeline={() => setShowAllTimeline((prev) => !prev)}
             onExport={importExport.exportJson}
             onImport={importExport.handleImportClick}
-            onFocus={() => handleChangeView('focus')}
+            onFocus={() => handleChangeView("focus")}
           />
         ) : null}
 
-        <ViewContainer active={!isFocusRoute && view === 'today'}>
+        <ViewContainer active={!isFocusRoute && view === "today"}>
           <ErrorBoundary>
             <TodayView
               timelineBlocks={visibleBlocks}
@@ -341,7 +340,7 @@ function App() {
           </ErrorBoundary>
         </ViewContainer>
 
-        <ViewContainer active={!isFocusRoute && view === 'program'}>
+        <ViewContainer active={!isFocusRoute && view === "program"}>
           <ErrorBoundary>
             <ProgramView
               programDayLabel={program.programLabel}
@@ -353,14 +352,16 @@ function App() {
               selectedProgramDayId={program.selectedProgramDayId}
               onSelectProgram={program.handleSelectProgram}
               onSelectProgramDay={program.setSelectedProgramDayId}
+              completedExercises={workout.completedExercises}
             />
           </ErrorBoundary>
         </ViewContainer>
 
-        <ViewContainer active={!isFocusRoute && view === 'nutrition'}>
+        <ViewContainer active={!isFocusRoute && view === "nutrition"}>
           <ErrorBoundary>
             <NutritionView
-              nutritionTargets={DATA.nutritionTargets}
+              nutritionTargets={nutritionTargets}
+              programGoal={programGoal}
               mealTemplates={mealTemplatesForDay}
               weekdayName={meals.weekdayName}
               selectedMealDay={meals.selectedMealDay}
@@ -375,7 +376,7 @@ function App() {
           </ErrorBoundary>
         </ViewContainer>
 
-        <ViewContainer active={!isFocusRoute && view === 'supplements'}>
+        <ViewContainer active={!isFocusRoute && view === "supplements"}>
           <ErrorBoundary>
             <SupplementsView
               supplementsList={supplementsList}
@@ -391,7 +392,7 @@ function App() {
           </ErrorBoundary>
         </ViewContainer>
 
-        <ViewContainer active={!isFocusRoute && view === 'log'}>
+        <ViewContainer active={!isFocusRoute && view === "log"}>
           <ErrorBoundary>
             <LogView
               logEntries={logEntries}
@@ -412,9 +413,22 @@ function App() {
               programRows={program.programRows}
               programDayLabel={program.programLabel}
               trainingDayActive={program.trainingDayActive}
+              workout={workout}
+              onStartWorkout={startWorkout}
+              onTogglePauseWorkout={togglePauseWorkout}
+              onStopWorkout={stopWorkout}
+              onSkipWorkoutInterval={skipWorkoutInterval}
               mealTemplates={mealTemplatesForToday}
               mealCheckMap={appState.mealLog[todayKeyValue] || {}}
               onToggleMealCheck={meals.setMealChecked}
+              timelineBlocks={timelineBlocks}
+              completionByBlockId={completionByBlockId}
+              progressLabel={`${timelineDoneCount}/${timelineTotalBlocks}`}
+              progressPercent={timelineProgressPercent}
+              remainingCount={timelineRemainingCount}
+              nextStartBlock={nextStartBlock}
+              nextStartInMinutes={nextStartInMinutes}
+              onToggleBlockCompletion={setBlockCompletion}
             />
           </ErrorBoundary>
         </ViewContainer>
@@ -444,7 +458,7 @@ function App() {
         ref={importInputRef}
         type="file"
         accept="application/json"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         onChange={importExport.handleImportFile}
       />
     </div>

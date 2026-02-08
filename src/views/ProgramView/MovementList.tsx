@@ -1,4 +1,4 @@
-﻿type ProgramRow = {
+type ProgramRow = {
   ex: string;
   sets: string;
   reps: string;
@@ -10,11 +10,10 @@
 
 type MovementListProps = {
   programRows: ProgramRow[];
-  onStartRest: (row: ProgramRow) => void;
-  parseRestSeconds: (value: string) => number;
+  completedExercises: Set<number>;
 };
 
-function MovementList({ programRows, onStartRest, parseRestSeconds }: MovementListProps) {
+function MovementList({ programRows, completedExercises }: MovementListProps) {
   return (
     <div>
       <table>
@@ -28,31 +27,27 @@ function MovementList({ programRows, onStartRest, parseRestSeconds }: MovementLi
             <th style={{ width: 92 }}>Rest</th>
             <th>Notes</th>
             <th>Progression</th>
-            <th style={{ width: 86 }}></th>
           </tr>
         </thead>
         <tbody>
-          {programRows.map((programRow, index) => (
-            <tr key={`${programRow.ex}-${index}`}>
-              <td className="muted">{index + 1}</td>
-              <td>{programRow.ex}</td>
-              <td className="muted">{programRow.sets}</td>
-              <td className="muted">{programRow.reps}</td>
-              <td className="muted">{programRow.rir}</td>
-              <td className="muted">{programRow.rest}</td>
-              <td className="muted">{programRow.notes}</td>
-              <td className="muted">{programRow.prog}</td>
-              <td>
-                <button
-                  type="button"
-                  onClick={() => onStartRest(programRow)}
-                  disabled={!parseRestSeconds(programRow.rest)}
-                >
-                  Rest
-                </button>
-              </td>
-            </tr>
-          ))}
+          {programRows.map((programRow, index) => {
+            const isDone = completedExercises.has(index);
+            return (
+              <tr
+                key={`${programRow.ex}-${index}`}
+                className={isDone ? "exerciseRowDone" : ""}
+              >
+                <td className={isDone ? "" : "muted"}>{isDone ? "\u2713" : index + 1}</td>
+                <td>{programRow.ex}</td>
+                <td className="muted">{programRow.sets}</td>
+                <td className="muted">{programRow.reps}</td>
+                <td className="muted">{programRow.rir}</td>
+                <td className="muted">{programRow.rest}</td>
+                <td className="muted">{programRow.notes}</td>
+                <td className="muted">{programRow.prog}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

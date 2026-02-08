@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from "react";
 
-import Card from '../../components/ui/Card';
-import MovementList from './MovementList';
-import SessionCard from './SessionCard';
-import { formatTime, parseRestSeconds } from '../../utils/formatting';
-import type { ProgramSummary } from '../../api/programs';
+import Card from "../../components/ui/Card";
+import MovementList from "./MovementList";
+import type { ProgramSummary } from "../../api/programs";
 
 type ProgramRow = {
   ex: string;
@@ -26,6 +24,7 @@ type ProgramViewProps = {
   selectedProgramDayId: string;
   onSelectProgram: (id: string) => void;
   onSelectProgramDay: (id: string) => void;
+  completedExercises: Set<number>;
 };
 
 function ProgramView({
@@ -38,65 +37,8 @@ function ProgramView({
   selectedProgramDayId,
   onSelectProgram,
   onSelectProgramDay,
+  completedExercises,
 }: ProgramViewProps) {
-  const [workoutRunning, setWorkoutRunning] = useState(false);
-  const [workoutSeconds, setWorkoutSeconds] = useState(0);
-  const [restRunning, setRestRunning] = useState(false);
-  const [restTotalSeconds, setRestTotalSeconds] = useState(0);
-  const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
-  const [restLabel, setRestLabel] = useState('');
-  const [timerMode, setTimerMode] = useState<'session' | 'rest'>('session');
-
-  useEffect(() => {
-    if (!workoutRunning) return undefined;
-    const intervalId = setInterval(() => {
-      setWorkoutSeconds((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, [workoutRunning]);
-
-  useEffect(() => {
-    if (!restRunning) return undefined;
-    const intervalId = setInterval(() => {
-      setRestRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          setRestRunning(false);
-          setTimerMode('session');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, [restRunning]);
-
-  const startRest = (programRow: ProgramRow) => {
-    const seconds = parseRestSeconds(programRow.rest);
-    if (!seconds) return;
-    setRestTotalSeconds(seconds);
-    setRestRemainingSeconds(seconds);
-    setRestLabel(programRow.ex);
-    setRestRunning(true);
-    setTimerMode('rest');
-  };
-
-  const resetRest = () => {
-    setRestRunning(false);
-    setRestTotalSeconds(0);
-    setRestRemainingSeconds(0);
-    setRestLabel('');
-    setTimerMode('session');
-  };
-
-  const toggleWorkout = () => {
-    setWorkoutRunning((prev) => !prev);
-  };
-
-  const resetWorkout = () => {
-    setWorkoutRunning(false);
-    setWorkoutSeconds(0);
-  };
-
   const selectedProgram = useMemo(
     () => programs.find((program) => program.id === selectedProgramId) || null,
     [programs, selectedProgramId]
@@ -141,31 +83,36 @@ function ProgramView({
         </div>
       </Card>
 
-      <SessionCard
-        programDayLabel={programDayLabel}
-        trainingDayActive={trainingDayActive}
-        timerMode={timerMode}
-        workoutSeconds={workoutSeconds}
-        workoutRunning={workoutRunning}
-        restRemainingSeconds={restRemainingSeconds}
-        restTotalSeconds={restTotalSeconds}
-        restRunning={restRunning}
-        restLabel={restLabel}
-        onCopyProgramDay={onCopyProgramDay}
-        onToggleWorkout={toggleWorkout}
-        onResetWorkout={resetWorkout}
-        onToggleRest={() => setRestRunning((prev) => !prev)}
-        onResetRest={resetRest}
-        onSwitchToSession={() => setTimerMode('session')}
-        formatTime={formatTime}
-      />
+      <Card>
+        <div className="row">
+          <h2>Training program (4 days/week)</h2>
+          {trainingDayActive ? (
+            <div className="controls">
+              <button onClick={onCopyProgramDay} type="button">
+                Copy session
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <p>
+          <b>Today:</b> {programDayLabel}
+        </p>
+        {!trainingDayActive ? (
+          <div className="footerNote">Rest day. Focus on recovery, steps, and sleep.</div>
+        ) : null}
+        {trainingDayActive ? (
+          <p>
+            <b>Progression:</b> double progression. Compounds 6-10; accessories 10-15+.
+            Most sets 1-3 RIR; last accessory set can be 0-1 RIR.
+          </p>
+        ) : null}
+      </Card>
 
       {trainingDayActive ? (
         <Card style={{ marginTop: 14 }}>
           <MovementList
             programRows={programRows}
-            onStartRest={startRest}
-            parseRestSeconds={parseRestSeconds}
+            completedExercises={completedExercises}
           />
         </Card>
       ) : null}
@@ -174,8 +121,8 @@ function ProgramView({
         <Card style={{ marginTop: 14 }}>
           <h2>Warm-up + rules</h2>
           <p>
-            <b>Warm-up:</b> 3-5 min cardio, 2 mobility drills, then 3-5 ramp sets
-            for first compound.
+            <b>Warm-up:</b> 3-5 min cardio, 2 mobility drills, then 3-5 ramp sets for
+            first compound.
           </p>
           <p>
             <b>Stop condition:</b> if form breaks, stop the set and reduce load.
