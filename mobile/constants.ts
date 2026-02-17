@@ -1,0 +1,5 @@
+export const SUPPLEMENT_BLOCK_DURATION_MINUTES = 15;
+export const TIMELINE_POLL_INTERVAL_MS = 60_000;
+export const TOAST_DURATION_MS = 1800;
+export const SEARCH_DEBOUNCE_MS = 300;
+export const MIN_SEARCH_LENGTH = 2;

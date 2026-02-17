@@ -29,6 +29,7 @@ export async function register(req: Request, res: Response) {
     return sendCreated(res, {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }, 'Account created successfully');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Registration failed';
@@ -51,6 +52,7 @@ export async function login(req: Request, res: Response) {
     return sendSuccess(res, {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }, 'Login successful');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Login failed';
@@ -73,6 +75,7 @@ export async function refresh(req: Request, res: Response) {
 
     return sendSuccess(res, {
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       user: result.user,
     });
   } catch (error) {
