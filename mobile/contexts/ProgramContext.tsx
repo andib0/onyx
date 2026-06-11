@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import useProgramHook from "../hooks/useProgram";
 import useWorkout from "../hooks/useWorkout";
-import type { WorkoutState } from "../hooks/useWorkout";
+import type { WorkoutState, LoggedSetValues } from "../hooks/useWorkout";
 import type { ProgramRow, UserWithPreferences } from "../types/appTypes";
 import type { ProgramSummary, ProgramDetail, ProgramDay } from "../api/programs";
 
@@ -24,7 +24,8 @@ interface ProgramContextType {
   startWorkout: () => void;
   togglePauseWorkout: () => void;
   stopWorkout: () => void;
-  skipWorkoutInterval: () => void;
+  completeWorkoutSet: (values?: LoggedSetValues) => void;
+  skipWorkoutRest: () => void;
 }
 
 const ProgramContext = createContext<ProgramContextType | null>(null);
@@ -41,8 +42,14 @@ export function ProgramProvider({
   user: UserWithPreferences | null | undefined;
 }) {
   const program = useProgramHook(isAuthenticated, authLoading, user);
-  const { workout, startWorkout, togglePauseWorkout, stopWorkout, skipWorkoutInterval } =
-    useWorkout(program.programRows);
+  const {
+    workout,
+    startWorkout,
+    togglePauseWorkout,
+    stopWorkout,
+    completeWorkoutSet,
+    skipWorkoutRest,
+  } = useWorkout(program.programRows, program.programLabel);
 
   return (
     <ProgramContext.Provider
@@ -65,7 +72,8 @@ export function ProgramProvider({
         startWorkout,
         togglePauseWorkout,
         stopWorkout,
-        skipWorkoutInterval,
+        completeWorkoutSet,
+        skipWorkoutRest,
       }}
     >
       {children}

@@ -143,6 +143,47 @@ export function getGoalLabel(programGoal: string | undefined): string {
   return "General";
 }
 
+// -- Consumed macros from checked meals --
+
+export type ConsumedMacros = {
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+};
+
+// Tag values on food-based templates are per 100g; scale by grams when set.
+export function computeConsumedMacros(
+  meals: MealTemplate[],
+  checkMap: Record<string, boolean>
+): ConsumedMacros {
+  const totals: ConsumedMacros = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+  for (const meal of meals) {
+    if (!checkMap[meal.id || ""]) continue;
+    const factor = meal.grams != null && meal.grams > 0 ? meal.grams / 100 : 1;
+    for (const tag of meal.tags || []) {
+      const label = tag.label.toLowerCase();
+      const value = parseFloat(tag.value) || 0;
+      if (label.includes("protein") || label === "p") totals.protein += value * factor;
+      else if (label.includes("carb") || label === "c") totals.carbs += value * factor;
+      else if (label.includes("fat") || label === "f") totals.fat += value * factor;
+      else if (label.includes("cal") || label === "kcal")
+        totals.calories += value * factor;
+    }
+  }
+  return totals;
+}
+
+// "126-154 g/day" -> 140 (midpoint); "150 g" -> 150; no number -> 0
+export function parseTargetNumber(value: string): number {
+  const matches = String(value || "").match(/\d+(\.\d+)?/g);
+  if (!matches || matches.length === 0) return 0;
+  if (matches.length >= 2) {
+    return Math.round((Number(matches[0]) + Number(matches[1])) / 2);
+  }
+  return Math.round(Number(matches[0]));
+}
+
 // -- Food-to-MealTemplate conversion --
 
 export function foodToMealTemplate(food: Food): MealTemplate {

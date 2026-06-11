@@ -9,14 +9,23 @@ import { useSupplements } from "../../contexts/SupplementsContext";
 import { useProgram } from "../../contexts/ProgramContext";
 import { useTimeline } from "../../contexts/TimelineContext";
 import useActiveContext from "../../hooks/useActiveContext";
-import type { FocusPanelBlock } from "../../types/appTypes";
+import type {
+  FocusPanelBlock,
+  MealTemplate,
+  NutritionTarget,
+} from "../../types/appTypes";
 import { toMinutes } from "../../utils/time";
+import { computeConsumedMacros, parseTargetNumber } from "../../utils/nutrition";
+import Card from "../../components/ui/Card";
+import ProgressBar from "../../components/ui/ProgressBar";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import ChecklistSection from "../../components/shared/ChecklistSection";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import TimelineSummary from "../../components/focus/TimelineSummary";
+import RecapCard from "../../components/focus/RecapCard";
+import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
 import { colors, spacing, fontSizes, fonts } from "../../theme";
 
 const formatClockTime = (nowMinutes: number) => {
@@ -34,8 +43,39 @@ const getGreeting = (minutes: number): string => {
   return "Good night";
 };
 
+function MacroSummaryCard({
+  mealTemplates,
+  mealCheckMap,
+  nutritionTargets,
+}: {
+  mealTemplates: MealTemplate[];
+  mealCheckMap: Record<string, boolean>;
+  nutritionTargets: NutritionTarget[];
+}) {
+  const consumed = computeConsumedMacros(mealTemplates, mealCheckMap);
+  const proteinTarget = parseTargetNumber(
+    nutritionTargets.find((t) => t.k.toLowerCase().includes("protein"))?.v || ""
+  );
+  if (!proteinTarget) return null;
+  const proteinPercent = Math.round((consumed.protein / proteinTarget) * 100);
+  return (
+    <Card title="Protein today">
+      <ProgressBar
+        label={`${Math.round(consumed.protein)}g / ${proteinTarget}g`}
+        sublabel={
+          consumed.calories > 0 ? `${Math.round(consumed.calories)} kcal eaten` : ""
+        }
+        progress={proteinPercent}
+        color={colors.accent}
+        height={6}
+        showPercent
+      />
+    </Card>
+  );
+}
+
 export default function FocusScreen() {
-  const { stateLoading } = useData();
+  const { stateLoading, nutritionTargets, appState } = useData();
   const { showToast } = useToastContext();
   const { scheduleBlocks } = useSchedule();
   const { supplementsList, supplementChecksForToday, setSupplementChecked } =
@@ -49,7 +89,8 @@ export default function FocusScreen() {
     startWorkout,
     togglePauseWorkout,
     stopWorkout,
-    skipWorkoutInterval,
+    completeWorkoutSet,
+    skipWorkoutRest,
   } = useProgram();
   const {
     timelineBlocks,
@@ -144,6 +185,9 @@ export default function FocusScreen() {
     (s) => supplementChecksForToday[s.id || ""]
   ).length;
 
+  const recap = buildYesterdayRecap(appState, supplementsList);
+  const streak = supplementStreak(appState, supplementsList);
+
   return (
     <ScreenContainer>
       {/* Header */}
@@ -159,6 +203,9 @@ export default function FocusScreen() {
             : "No scheduled blocks right now."}
         </Text>
       </View>
+
+      {/* Yesterday recap + streak */}
+      <RecapCard recap={recap} streak={streak} />
 
       {/* Timeline summary */}
       <TimelineSummary
@@ -195,8 +242,18 @@ export default function FocusScreen() {
         onStart={startWorkout}
         onTogglePause={togglePauseWorkout}
         onStop={stopWorkout}
-        onSkip={skipWorkoutInterval}
+        onCompleteSet={completeWorkoutSet}
+        onSkipRest={skipWorkoutRest}
       />
+
+      {/* Macro progress from checked meals */}
+      {mealTemplatesForToday.length > 0 ? (
+        <MacroSummaryCard
+          mealTemplates={mealTemplatesForToday}
+          mealCheckMap={mealCheckMap}
+          nutritionTargets={nutritionTargets}
+        />
+      ) : null}
 
       {/* Meals */}
       {mealTemplatesForToday.length > 0 ? (

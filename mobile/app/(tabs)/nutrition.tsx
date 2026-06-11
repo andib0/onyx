@@ -22,7 +22,11 @@ import {
   removeUserFood,
   type UserFood,
 } from "../../api/userFoods";
-import { foodToMealTemplate } from "../../utils/nutrition";
+import {
+  foodToMealTemplate,
+  computeConsumedMacros,
+  parseTargetNumber,
+} from "../../utils/nutrition";
 import { colors, spacing, fontSizes } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
@@ -144,32 +148,24 @@ export default function NutritionScreen() {
     }
   };
 
-  // Calculate macro totals from meal templates for the selected day
-  const macroTotals = mealTemplatesForDay.reduce(
-    (acc, meal) => {
-      if (!mealCheckMap[meal.id || ""]) return acc;
-      for (const tag of meal.tags || []) {
-        const lbl = tag.label.toLowerCase();
-        const val = parseFloat(tag.value) || 0;
-        if (lbl.includes("protein") || lbl === "p") acc.protein += val;
-        if (lbl.includes("carb") || lbl === "c") acc.carbs += val;
-        if (lbl.includes("cal") || lbl === "kcal") acc.calories += val;
-      }
-      return acc;
-    },
-    { protein: 0, carbs: 0, calories: 0 }
-  );
+  // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
+  const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
 
-  // Parse targets
-  const proteinTarget = Number(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("protein"))?.v || 0
+  // Parse targets ("126-154 g/day" -> midpoint)
+  const proteinTarget = parseTargetNumber(
+    nutritionTargets.find((t) => t.k.toLowerCase().includes("protein"))?.v || ""
   );
-  const carbTarget = Number(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("carb"))?.v || 0
+  const carbTarget = parseTargetNumber(
+    nutritionTargets.find((t) => t.k.toLowerCase().includes("carb"))?.v || ""
   );
-  const calTarget = Number(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("cal"))?.v || 0
+  const fatTarget = parseTargetNumber(
+    nutritionTargets.find((t) => t.k.toLowerCase().includes("fat"))?.v || ""
   );
+  // Calorie target string is relative ("+200-300 kcal/day"); derive from macros
+  const calTarget =
+    proteinTarget && fatTarget && carbTarget
+      ? proteinTarget * 4 + fatTarget * 9 + carbTarget * 4
+      : 0;
 
   const handleGramsChange = (mealId: string, text: string) => {
     const grams = text === "" ? null : Number(text);
@@ -222,6 +218,12 @@ export default function NutritionScreen() {
             current={Math.round(macroTotals.carbs)}
             target={carbTarget}
             color={colors.warning}
+          />
+          <MacroBar
+            label="Fat"
+            current={Math.round(macroTotals.fat)}
+            target={fatTarget}
+            color={colors.supplement}
           />
           <MacroBar
             label="Calories"

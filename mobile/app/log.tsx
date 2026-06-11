@@ -16,6 +16,8 @@ import Pill from "../components/ui/Pill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import type { LogEntry } from "../types/appTypes";
 import { todayKey } from "../utils/storage";
+import { buildWeightTrend } from "../utils/trends";
+import WeightTrend from "../components/log/WeightTrend";
 import { colors, spacing, radii, fontSizes, fonts } from "../theme";
 
 const DAY_OPTIONS = ["Push", "Pull", "Legs+Shoulders", "Rest"];
@@ -93,6 +95,8 @@ export default function LogScreen() {
     return logEntries.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [logEntries]);
 
+  const weightTrend = useMemo(() => buildWeightTrend(logEntries), [logEntries]);
+
   if (stateLoading) {
     return (
       <ScreenContainer>
@@ -144,6 +148,9 @@ export default function LogScreen() {
           </Pressable>
         }
       />
+
+      {/* Bodyweight trend */}
+      <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
 
       {/* Entry form */}
       <Card title="Quick Log">

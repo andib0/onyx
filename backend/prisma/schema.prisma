@@ -31,6 +31,8 @@ model User {
   dailyLogs      DailyLog[]
   refreshTokens  RefreshToken[]
   userFoods      UserFood[]
+  workoutSessions WorkoutSession[]
+  workoutSetLogs  WorkoutSetLog[]
 }
 
 model UserPreferences {
@@ -248,6 +250,42 @@ model SupplementDatabase {
   timingRecommendation String?
   benefits             String?
   precautions          String?
+}
+
+// ============================================
+// WORKOUT LOGGING
+// ============================================
+
+model WorkoutSession {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String    // "YYYY-MM-DD"
+  programDayName  String?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+
+  sets WorkoutSetLog[]
+
+  @@index([userId, date])
+}
+
+model WorkoutSetLog {
+  id           String         @id @default(uuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId    String
+  session      WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseName String
+  setNumber    Int
+  weightKg     Decimal?
+  reps         Int?
+  rir          String?
+  createdAt    DateTime       @default(now())
+
+  @@index([userId, exerciseName])
+  @@index([sessionId])
 }
 
 // ============================================

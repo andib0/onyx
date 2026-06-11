@@ -142,7 +142,8 @@ export function useAppState() {
     startWorkout: program.startWorkout,
     togglePauseWorkout: program.togglePauseWorkout,
     stopWorkout: program.stopWorkout,
-    skipWorkoutInterval: program.skipWorkoutInterval,
+    completeWorkoutSet: program.completeWorkoutSet,
+    skipWorkoutRest: program.skipWorkoutRest,
 
     // Schedule
     scheduleBlocks: schedule.scheduleBlocks,

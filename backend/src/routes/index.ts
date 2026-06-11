@@ -10,6 +10,7 @@ import supplementDbRoutes from './supplementDb.routes.js';
 import syncRoutes from './sync.routes.js';
 import preferencesRoutes from './preferences.routes.js';
 import userFoodsRoutes from './userFoods.routes.js';
+import workoutsRoutes from './workouts.routes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/supplement-db', supplementDbRoutes);
 router.use('/sync', syncRoutes);
 router.use('/preferences', preferencesRoutes);
 router.use('/user-foods', userFoodsRoutes);
+router.use('/workouts', workoutsRoutes);
 
 // Health check
 router.get('/health', (_, res) => {

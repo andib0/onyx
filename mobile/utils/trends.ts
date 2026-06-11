@@ -1,0 +1,115 @@
+import type { AppState, LogEntry, SupplementItem } from "../types/appTypes";
+
+export type WeightPoint = { date: string; weightKg: number };
+
+export type WeightTrend = {
+  points: WeightPoint[];
+  currentKg: number | null;
+  weeklyRateKg: number | null;
+};
+
+export function dateKeyDaysAgo(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const year = String(d.getFullYear());
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Bodyweight points (last `windowDays`) plus weekly rate of change from a
+// least-squares fit, so a single odd weigh-in doesn't dominate the rate.
+export function buildWeightTrend(logEntries: LogEntry[], windowDays = 28): WeightTrend {
+  const cutoff = dateKeyDaysAgo(windowDays);
+  const points: WeightPoint[] = logEntries
+    .filter((entry) => entry.date >= cutoff)
+    .map((entry) => ({
+      date: entry.date,
+      weightKg: parseFloat(String(entry.bw).replace(",", ".")),
+    }))
+    .filter((p) => !isNaN(p.weightKg) && p.weightKg > 0)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+
+  if (points.length === 0) {
+    return { points: [], currentKg: null, weeklyRateKg: null };
+  }
+
+  const currentKg = points[points.length - 1].weightKg;
+  if (points.length < 3) {
+    return { points, currentKg, weeklyRateKg: null };
+  }
+
+  const dayOf = (date: string) =>
+    Math.floor(new Date(date + "T00:00:00").getTime() / 86400000);
+  const xs = points.map((p) => dayOf(p.date));
+  const ys = points.map((p) => p.weightKg);
+  const n = points.length;
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    den += (xs[i] - meanX) * (xs[i] - meanX);
+  }
+  const slopePerDay = den === 0 ? 0 : num / den;
+  return { points, currentKg, weeklyRateKg: slopePerDay * 7 };
+}
+
+// -- Yesterday recap --
+
+export type YesterdayRecap = {
+  dateKey: string;
+  blocksDone: number;
+  blocksTotal: number;
+  missedSupplements: string[];
+  mealsEaten: number;
+};
+
+export function buildYesterdayRecap(
+  appState: AppState,
+  supplementsList: SupplementItem[]
+): YesterdayRecap | null {
+  const dateKey = dateKeyDaysAgo(1);
+  const completion = appState.completion[dateKey] || {};
+  const suppChecks = appState.suppLog[dateKey] || {};
+  const mealChecks = appState.mealLog[dateKey] || {};
+
+  const hasAnyData =
+    Object.keys(completion).length > 0 ||
+    Object.keys(suppChecks).length > 0 ||
+    Object.keys(mealChecks).length > 0;
+  if (!hasAnyData) return null;
+
+  const blocksTotal = appState.schedule.length;
+  const blocksDone = appState.schedule.reduce(
+    (count, block) => (completion[block.id || ""] ? count + 1 : count),
+    0
+  );
+  const missedSupplements = supplementsList
+    .filter((s) => !suppChecks[s.id || ""])
+    .map((s) => s.item);
+  const mealsEaten = Object.values(mealChecks).filter(Boolean).length;
+
+  return { dateKey, blocksDone, blocksTotal, missedSupplements, mealsEaten };
+}
+
+// Consecutive days (ending yesterday) where every supplement was taken.
+export function supplementStreak(
+  appState: AppState,
+  supplementsList: SupplementItem[],
+  maxDays = 365
+): number {
+  if (supplementsList.length === 0) return 0;
+  let streak = 0;
+  for (let daysAgo = 1; daysAgo <= maxDays; daysAgo++) {
+    const checks = appState.suppLog[dateKeyDaysAgo(daysAgo)] || {};
+    const allTaken = supplementsList.every((s) => checks[s.id || ""]);
+    if (!allTaken) break;
+    streak++;
+  }
+  // Today counts too once everything is checked.
+  const todayChecks = appState.suppLog[dateKeyDaysAgo(0)] || {};
+  if (supplementsList.every((s) => todayChecks[s.id || ""])) streak++;
+  return streak;
+}
