@@ -1,6 +1,16 @@
-import { View, Text, StyleSheet } from "react-native";
-import { useState } from "react";
+import { View, Text, Switch, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { useSupplements } from "../../contexts/SupplementsContext";
+import { useToastContext } from "../../contexts/ToastContext";
+import {
+  loadNotificationPrefs,
+  saveNotificationPrefs,
+  ensurePermission,
+  syncSupplementReminders,
+  syncCheckInReminder,
+  type NotificationPrefs,
+} from "../../utils/notifications";
 import { useAuth } from "../../contexts/AuthContext";
 import { useData } from "../../contexts/DataContext";
 import ScreenContainer from "../../components/layout/ScreenContainer";
@@ -27,6 +37,32 @@ export default function SettingsScreen() {
 
   const [showLogout, setShowLogout] = useState(false);
   const weightTrend = buildWeightTrend(logEntries);
+  const { showToast } = useToastContext();
+  const { supplementsList } = useSupplements();
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+
+  useEffect(() => {
+    loadNotificationPrefs().then(setNotifPrefs);
+  }, []);
+
+  const toggleNotif = async (key: keyof NotificationPrefs, value: boolean) => {
+    if (!notifPrefs) return;
+    if (value) {
+      const granted = await ensurePermission();
+      if (!granted) {
+        showToast("Enable notifications in iOS Settings first");
+        return;
+      }
+    }
+    const next = Object.assign({}, notifPrefs, { [key]: value });
+    setNotifPrefs(next);
+    await saveNotificationPrefs(next);
+    if (key === "supplements") {
+      await syncSupplementReminders(value, supplementsList);
+    } else if (key === "checkIn") {
+      await syncCheckInReminder(value);
+    }
+  };
 
   const handleLogout = async () => {
     setShowLogout(false);
@@ -68,6 +104,48 @@ export default function SettingsScreen() {
         variant="secondary"
         onPress={() => router.push("/log")}
       />
+
+      {/* Notifications */}
+      <SectionTitle label="Notifications" />
+      <Card>
+        {notifPrefs ? (
+          <>
+            <View style={styles.notifRow}>
+              <View style={styles.notifText}>
+                <Text style={styles.notifLabel}>Supplement reminders</Text>
+                <Text style={styles.notifSub}>Daily, at each supplement's time</Text>
+              </View>
+              <Switch
+                value={notifPrefs.supplements}
+                onValueChange={(value) => toggleNotif("supplements", value)}
+                trackColor={{ true: colors.accent }}
+              />
+            </View>
+            <View style={[styles.notifRow, styles.notifRowBorder]}>
+              <View style={styles.notifText}>
+                <Text style={styles.notifLabel}>Evening check-in</Text>
+                <Text style={styles.notifSub}>Daily at 20:00</Text>
+              </View>
+              <Switch
+                value={notifPrefs.checkIn}
+                onValueChange={(value) => toggleNotif("checkIn", value)}
+                trackColor={{ true: colors.accent }}
+              />
+            </View>
+            <View style={[styles.notifRow, styles.notifRowBorder]}>
+              <View style={styles.notifText}>
+                <Text style={styles.notifLabel}>Rest timer</Text>
+                <Text style={styles.notifSub}>Buzz when rest ends, even locked</Text>
+              </View>
+              <Switch
+                value={notifPrefs.rest}
+                onValueChange={(value) => toggleNotif("rest", value)}
+                trackColor={{ true: colors.accent }}
+              />
+            </View>
+          </>
+        ) : null}
+      </Card>
 
       {/* Data */}
       <SectionTitle label="Data" />
@@ -160,6 +238,30 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.text,
     fontWeight: "600",
+  },
+  notifRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  notifRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  notifText: {
+    flex: 1,
+  },
+  notifLabel: {
+    fontSize: fontSizes.md,
+    color: colors.text,
+    fontWeight: "500",
+  },
+  notifSub: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    marginTop: 1,
   },
   dataButtons: {
     flexDirection: "row",

@@ -20,6 +20,7 @@ import type {
 import { toMinutes } from "../../utils/time";
 import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutrition";
 import Card from "../../components/ui/Card";
+import Ring from "../../components/ui/Ring";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
@@ -335,21 +336,33 @@ export default function FocusScreen() {
         </>
       ) : null}
 
-      {/* Compact day progress, links to Schedule */}
+      {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
       <Pressable onPress={() => router.push("/(tabs)/schedule")}>
         <Card>
           <View style={styles.dayRow}>
-            <Text style={styles.dayRowText}>
-              Day{" "}
-              <Text style={styles.dayRowStrong}>
-                {timelineBlocks.length - timelineRemainingCount}/
-                {timelineBlocks.length}
+            <Ring
+              size={64}
+              strokeWidth={6}
+              progress={timelineProgressPercent}
+              color={colors.good}
+              value={`${timelineProgressPercent}%`}
+            />
+            <View style={styles.dayRowInfo}>
+              <Text style={styles.dayRowTitle}>Day score</Text>
+              <Text style={styles.dayRowText}>
+                <Text style={styles.dayRowStrong}>
+                  {timelineBlocks.length - timelineRemainingCount}/
+                  {timelineBlocks.length}
+                </Text>{" "}
+                done
+                {nextStartBlock
+                  ? ` · next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
+                  : ""}
               </Text>
-              {nextStartBlock
-                ? `  ·  next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
-                : ""}
-            </Text>
-            <Text style={styles.dayRowPercent}>{timelineProgressPercent}%</Text>
+              {streak > 0 ? (
+                <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
+              ) : null}
+            </View>
           </View>
         </Card>
       </Pressable>
@@ -401,8 +414,17 @@ const styles = StyleSheet.create({
   },
   dayRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.lg,
+  },
+  dayRowInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  dayRowTitle: {
+    fontSize: fontSizes.md,
+    fontWeight: "600",
+    color: colors.text,
   },
   dayRowText: {
     fontSize: fontSizes.sm,
@@ -412,9 +434,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "700",
   },
-  dayRowPercent: {
+  dayRowStreak: {
     fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "700",
+    color: colors.good,
+    fontWeight: "600",
   },
 });

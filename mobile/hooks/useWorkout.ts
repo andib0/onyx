@@ -5,6 +5,11 @@ import * as Haptics from "expo-haptics";
 import type { ProgramRow } from "../types/appTypes";
 import { todayKey } from "../utils/storage";
 import {
+  loadNotificationPrefs,
+  scheduleRestEndNotification,
+  cancelNotification,
+} from "../utils/notifications";
+import {
   startWorkoutSession,
   logWorkoutSet,
   finishWorkoutSession,
@@ -101,6 +106,15 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const pausedAccumMsRef = useRef(0);
   const pauseStartedAtRef = useRef<number | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const restNotificationRef = useRef<string | null>(null);
+  const restNotifyEnabledRef = useRef(false);
+
+  // Load rest-notification preference once
+  useEffect(() => {
+    loadNotificationPrefs().then((prefs) => {
+      restNotifyEnabledRef.current = prefs.rest;
+    });
+  }, []);
 
   const rowCount = programRows.length;
   const currentRow = programRows[exerciseIndex];
@@ -123,6 +137,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     const next = pendingNextRef.current;
     pendingNextRef.current = null;
     restEndsAtRef.current = null;
+    cancelNotification(restNotificationRef.current);
+    restNotificationRef.current = null;
     if (!next) return;
     setExerciseIndex(next.exerciseIndex);
     setCurrentSet(next.currentSet);
@@ -161,6 +177,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   })();
 
   const resetAll = useCallback(() => {
+    cancelNotification(restNotificationRef.current);
+    restNotificationRef.current = null;
     setIsActive(false);
     setIsPaused(false);
     setIsFinished(false);
@@ -269,6 +287,19 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       restEndsAtRef.current = Date.now() + restSeconds * 1000;
       setMode("rest");
       setNow(Date.now());
+
+      // Notify when rest ends if the phone is locked/backgrounded
+      if (restNotifyEnabledRef.current) {
+        const next = pendingNextRef.current;
+        const nextRow = next ? programRows[next.exerciseIndex] : null;
+        scheduleRestEndNotification(
+          nextRow ? nextRow.ex : row.ex,
+          next ? next.currentSet : currentSet,
+          restSeconds
+        ).then((identifier) => {
+          restNotificationRef.current = identifier;
+        });
+      }
     },
     [
       isActive,
@@ -302,6 +333,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
             0
           );
         }
+        cancelNotification(restNotificationRef.current);
+        restNotificationRef.current = null;
       } else {
         if (pauseStartedAtRef.current !== null) {
           pausedAccumMsRef.current += nowMs - pauseStartedAtRef.current;
@@ -309,13 +342,22 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         }
         if (mode === "rest" && pausedRestRemainingMsRef.current !== null) {
           restEndsAtRef.current = nowMs + pausedRestRemainingMsRef.current;
+          if (restNotifyEnabledRef.current) {
+            scheduleRestEndNotification(
+              "Next set",
+              currentSet,
+              pausedRestRemainingMsRef.current / 1000
+            ).then((identifier) => {
+              restNotificationRef.current = identifier;
+            });
+          }
           pausedRestRemainingMsRef.current = null;
         }
       }
       return next;
     });
     setNow(Date.now());
-  }, [mode]);
+  }, [mode, currentSet]);
 
   const stop = useCallback(() => {
     if (isActive && sessionIdRef.current) {

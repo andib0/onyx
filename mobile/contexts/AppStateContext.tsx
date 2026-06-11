@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
 import { ToastProvider, useToastContext } from "./ToastContext";
@@ -8,13 +8,26 @@ import { ScheduleProvider, useSchedule } from "./ScheduleContext";
 import { MealsProvider, useMeals } from "./MealsContext";
 import { SupplementsProvider, useSupplements } from "./SupplementsContext";
 import { TimelineProvider, useTimeline } from "./TimelineContext";
+import {
+  loadNotificationPrefs,
+  syncSupplementReminders,
+} from "../utils/notifications";
 
 // ── Composed provider tree ──
 
 function InnerProviders({ children }: { children: ReactNode }) {
   const { scheduleBlocks, completionByBlockId } = useSchedule();
-  const { supplementsList } = useSupplements();
-  const { mealTemplatesForDay } = useMeals();
+  const { supplementsList, supplementChecksForToday } = useSupplements();
+
+  // Keep daily supplement reminders aligned with the current stack
+  useEffect(() => {
+    loadNotificationPrefs().then((prefs) => {
+      if (prefs.supplements) {
+        syncSupplementReminders(true, supplementsList).catch(() => {});
+      }
+    });
+  }, [supplementsList]);
+  const { mealTemplatesForDay, mealCheckMap } = useMeals();
   const { programLabel, trainingDayActive, workoutCompletedToday } = useProgram();
 
   return (
@@ -26,6 +39,8 @@ function InnerProviders({ children }: { children: ReactNode }) {
       trainingDayActive={trainingDayActive}
       completionByBlockId={completionByBlockId}
       workoutCompletedToday={workoutCompletedToday}
+      supplementChecks={supplementChecksForToday}
+      mealCheckMap={mealCheckMap}
     >
       {children}
     </TimelineProvider>
