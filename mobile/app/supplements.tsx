@@ -7,10 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useAppState } from "../contexts/AppStateContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
-import Header from "../components/layout/Header";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
 import ConfirmModal from "../components/ui/ConfirmModal";
@@ -177,7 +175,6 @@ function SupplementForm({
 }
 
 export default function SupplementsScreen() {
-  const router = useRouter();
   const {
     stateLoading,
     supplementsList,
@@ -299,7 +296,7 @@ export default function SupplementsScreen() {
 
   if (stateLoading) {
     return (
-      <ScreenContainer>
+      <ScreenContainer hasNativeHeader>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.supplement} />
         </View>
@@ -308,15 +305,7 @@ export default function SupplementsScreen() {
   }
 
   return (
-    <ScreenContainer>
-      <Header
-        title="Supplements"
-        right={
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>{"\u2190"} Back</Text>
-          </Pressable>
-        }
-      />
+    <ScreenContainer hasNativeHeader>
 
       {/* Stats */}
       <View style={styles.statsRow}>

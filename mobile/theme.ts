@@ -5,7 +5,8 @@ export const colors = {
   surface: "rgba(255, 255, 255, 0.04)",
   surfaceHover: "rgba(255, 255, 255, 0.06)",
   text: "rgba(255, 255, 255, 0.92)",
-  muted: "rgba(255, 255, 255, 0.68)",
+  muted: "rgba(255, 255, 255, 0.75)",
+  faint: "rgba(255, 255, 255, 0.5)",
   border: "rgba(255, 255, 255, 0.1)",
   borderLight: "rgba(255, 255, 255, 0.18)",
   shadow: "rgba(0, 0, 0, 0.35)",
@@ -14,7 +15,7 @@ export const colors = {
   good: "#36d399",
   warning: "#fbbf24",
   danger: "#ef4444",
-  supplement: "#baFFF8",
+  supplement: "#2dd4bf",
 };
 
 export const spacing = {
@@ -24,6 +25,7 @@ export const spacing = {
   lg: 16,
   xl: 20,
   xxl: 28,
+  xxxl: 40,
 };
 
 export const radii = {
@@ -46,7 +48,16 @@ export const fontSizes = {
   lg: 16,
   xl: 18,
   xxl: 24,
+  title: 30,
   hero: 44,
+};
+
+// Soft tints for colored chips/fills on dark bg
+export const tints = {
+  accent: "rgba(122, 162, 255, 0.14)",
+  good: "rgba(54, 211, 153, 0.14)",
+  warning: "rgba(251, 191, 36, 0.14)",
+  danger: "rgba(239, 68, 68, 0.12)",
 };
 
 export const TAG_COLORS: Record<string, string> = {

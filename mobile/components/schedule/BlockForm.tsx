@@ -7,6 +7,7 @@ import { colors, spacing, radii, fontSizes, TAG_COLORS } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 const TAG_OPTIONS = ["Work", "Training", "Nutrition", "Recovery", "Sleep"];
+const CUSTOM_TAG_OPTION = "Custom…";
 
 const EMPTY_BLOCK: ScheduleBlock = {
   start: "",
@@ -30,20 +31,31 @@ export default function BlockForm({
   onSubmit,
   onCancel,
 }: BlockFormProps) {
+  const initialIsPreset =
+    !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
   const [draft, setDraft] = useState<ScheduleBlock>(
     Object.assign({}, initialBlock || EMPTY_BLOCK)
   );
-  const [selectedTag, setSelectedTag] = useState(initialBlock?.tag || "Work");
+  const [selectedTag, setSelectedTag] = useState(
+    initialIsPreset ? initialBlock?.tag || "Work" : CUSTOM_TAG_OPTION
+  );
+  const [customTag, setCustomTag] = useState(
+    initialIsPreset ? "" : initialBlock?.tag || ""
+  );
+
+  const usingCustom = selectedTag === CUSTOM_TAG_OPTION;
+  const effectiveTag = usingCustom ? customTag.trim() : selectedTag;
 
   const handleSubmit = () => {
     if (!draft.start || !draft.end || !draft.title.trim()) return;
+    if (!effectiveTag) return;
     const cleaned = {
       start: draft.start,
       end: draft.end,
       title: draft.title.trim(),
       purpose: draft.purpose.trim(),
       good: draft.good.trim(),
-      tag: selectedTag,
+      tag: effectiveTag,
     };
 
     if (mode === "add") {
@@ -60,7 +72,7 @@ export default function BlockForm({
   const getTagColor = (tag: string) => TAG_COLORS[tag] || colors.muted;
 
   return (
-    <Card title={mode === "add" ? "Add Block" : "Edit Block"}>
+    <Card title={mode === "add" ? "Add task" : "Edit task"}>
       <View style={sharedStyles.formGrid}>
         <View style={sharedStyles.formRow}>
           <View style={sharedStyles.formField}>
@@ -88,7 +100,7 @@ export default function BlockForm({
           <Text style={sharedStyles.formLabel}>Title</Text>
           <TextInput
             style={sharedStyles.formInput}
-            placeholder="Block title"
+            placeholder="Task title"
             placeholderTextColor={colors.muted}
             value={draft.title}
             onChangeText={(t) => updateField("title", t)}
@@ -117,11 +129,22 @@ export default function BlockForm({
         <View style={sharedStyles.formField}>
           <Text style={sharedStyles.formLabel}>Tag</Text>
           <ChipSelector
-            options={TAG_OPTIONS}
+            options={TAG_OPTIONS.concat([CUSTOM_TAG_OPTION])}
             selected={selectedTag}
             onSelect={setSelectedTag}
             getColor={getTagColor}
           />
+          {usingCustom ? (
+            <TextInput
+              style={[sharedStyles.formInput, styles.customTagInput]}
+              placeholder="Your tag name"
+              placeholderTextColor={colors.muted}
+              value={customTag}
+              onChangeText={setCustomTag}
+              maxLength={20}
+              autoFocus
+            />
+          ) : null}
         </View>
         <View style={sharedStyles.formButtons}>
           <Pressable
@@ -129,7 +152,7 @@ export default function BlockForm({
             onPress={handleSubmit}
           >
             <Text style={styles.submitBtnText}>
-              {mode === "add" ? "Add Block" : "Save"}
+              {mode === "add" ? "Add task" : "Save"}
             </Text>
           </Pressable>
           <Pressable
@@ -145,6 +168,9 @@ export default function BlockForm({
 }
 
 const styles = StyleSheet.create({
+  customTagInput: {
+    marginTop: spacing.sm,
+  },
   submitBtn: {
     flex: 1,
     backgroundColor: colors.accent,

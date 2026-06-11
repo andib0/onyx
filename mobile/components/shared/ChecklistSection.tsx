@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import * as Haptics from "expo-haptics";
 import Card from "../ui/Card";
 import Checkbox from "./Checkbox";
 import { colors, spacing, fontSizes } from "../../theme";
@@ -34,15 +35,27 @@ export default function ChecklistSection({
     );
   }
 
+  const handleToggle = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onToggle(id);
+  };
+
   return (
     <Card title={title}>
       {items.map((item) => {
         const isChecked = checkMap[item.id] || false;
         return (
-          <Pressable key={item.id} style={styles.row} onPress={() => onToggle(item.id)}>
+          <Pressable
+            key={item.id}
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            onPress={() => handleToggle(item.id)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isChecked }}
+            accessibilityLabel={item.label}
+          >
             <Checkbox
               checked={isChecked}
-              onToggle={() => onToggle(item.id)}
+              onToggle={() => handleToggle(item.id)}
               color={checkColor}
               size={22}
             />
@@ -71,10 +84,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    minHeight: 44,
+    minHeight: 52,
+  },
+  rowPressed: {
+    opacity: 0.7,
   },
   textContainer: {
     flex: 1,

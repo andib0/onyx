@@ -32,6 +32,7 @@ export function TimelineProvider({
   programLabel,
   trainingDayActive,
   completionByBlockId,
+  workoutCompletedToday = false,
 }: {
   children: ReactNode;
   scheduleBlocks: ScheduleBlock[];
@@ -40,6 +41,7 @@ export function TimelineProvider({
   programLabel: string;
   trainingDayActive: boolean;
   completionByBlockId: Record<string, boolean>;
+  workoutCompletedToday?: boolean;
 }) {
   const [showAllTimeline, setShowAllTimeline] = useState(true);
 
@@ -88,8 +90,12 @@ export function TimelineProvider({
   );
 
   const timelineTotalBlocks = timelineBlocks.length;
+  // Program blocks complete via the workout flow, not the completion API
   const timelineDoneCount = timelineBlocks.reduce((count, block) => {
     const blockId = block.id || "";
+    if (block.source === "program") {
+      return workoutCompletedToday ? count + 1 : count;
+    }
     return completionByBlockId[blockId] ? count + 1 : count;
   }, 0);
   const timelineProgressPercent = timelineTotalBlocks

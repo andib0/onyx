@@ -1,9 +1,21 @@
 import { View, Text, StyleSheet } from "react-native";
 import ProgressBar from "../ui/ProgressBar";
+import Button from "../ui/Button";
 import type { FocusPanelBlock } from "../../types/appTypes";
 import { colors, spacing, radii, fontSizes, TAG_COLORS } from "../../theme";
 
-export default function FocusBlockPanel({ focusBlock }: { focusBlock: FocusPanelBlock }) {
+export interface FocusPanelAction {
+  label: string;
+  onPress: () => void;
+}
+
+export default function FocusBlockPanel({
+  focusBlock,
+  action,
+}: {
+  focusBlock: FocusPanelBlock;
+  action?: FocusPanelAction | null;
+}) {
   const block = focusBlock.block;
   const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
 
@@ -36,6 +48,9 @@ export default function FocusBlockPanel({ focusBlock }: { focusBlock: FocusPanel
             <Text style={styles.focusGoodLabel}>Done: </Text>
             {block.good}
           </Text>
+        ) : null}
+        {action ? (
+          <Button label={action.label} onPress={action.onPress} style={styles.action} />
         ) : null}
       </View>
     </View>
@@ -100,5 +115,8 @@ const styles = StyleSheet.create({
   focusGoodLabel: {
     fontWeight: "600",
     color: colors.text,
+  },
+  action: {
+    marginTop: spacing.xs,
   },
 });

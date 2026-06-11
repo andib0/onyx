@@ -1,15 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useMeals } from "../../contexts/MealsContext";
 import { useProgram } from "../../contexts/ProgramContext";
+import { useSupplements } from "../../contexts/SupplementsContext";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
-import ProgressBar from "../../components/ui/ProgressBar";
 import ChipSelector from "../../components/shared/ChipSelector";
+import SectionTitle from "../../components/ui/SectionTitle";
+import Button from "../../components/ui/Button";
+import ChecklistSection from "../../components/shared/ChecklistSection";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import MealCard from "../../components/nutrition/MealCard";
 import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
@@ -25,39 +29,19 @@ import {
 import {
   foodToMealTemplate,
   computeConsumedMacros,
-  parseTargetNumber,
+  computeMacroTargets,
 } from "../../utils/nutrition";
+import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import { colors, spacing, fontSizes } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
-function MacroBar({
-  label,
-  current,
-  target,
-  color,
-}: {
-  label: string;
-  current: number;
-  target: number;
-  color: string;
-}) {
-  const percent = target > 0 ? Math.round((current / target) * 100) : 0;
-  return (
-    <ProgressBar
-      label={label}
-      sublabel={`${current}/${target}`}
-      progress={percent}
-      color={color}
-      height={6}
-      showPercent
-    />
-  );
-}
-
 export default function NutritionScreen() {
+  const router = useRouter();
   const { stateLoading, nutritionTargets } = useData();
   const { showToast } = useToastContext();
   const { programGoal } = useProgram();
+  const { supplementsList, supplementChecksForToday, setSupplementChecked } =
+    useSupplements();
   const {
     selectedMealDay,
     setSelectedMealDay,
@@ -71,6 +55,7 @@ export default function NutritionScreen() {
   } = useMeals();
 
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [showFoodSearch, setShowFoodSearch] = useState(false);
 
   // Food search state
   const [foodQuery, setFoodQuery] = useState("");
@@ -150,22 +135,26 @@ export default function NutritionScreen() {
 
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
+  const macroTargets = computeMacroTargets(nutritionTargets);
 
-  // Parse targets ("126-154 g/day" -> midpoint)
-  const proteinTarget = parseTargetNumber(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("protein"))?.v || ""
+  const supplementItems = useMemo(
+    () =>
+      supplementsList.map((s) => ({
+        id: s.id || "",
+        label: s.item,
+        subline: `${s.dose}${s.timeAt ? ` · ${s.timeAt}` : ""}`,
+      })),
+    [supplementsList]
   );
-  const carbTarget = parseTargetNumber(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("carb"))?.v || ""
-  );
-  const fatTarget = parseTargetNumber(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("fat"))?.v || ""
-  );
-  // Calorie target string is relative ("+200-300 kcal/day"); derive from macros
-  const calTarget =
-    proteinTarget && fatTarget && carbTarget
-      ? proteinTarget * 4 + fatTarget * 9 + carbTarget * 4
-      : 0;
+  const suppDoneCount = supplementsList.filter(
+    (s) => supplementChecksForToday[s.id || ""]
+  ).length;
+
+  const handleSuppToggle = (id: string) => {
+    setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
+      showToast(err instanceof Error ? err.message : "Failed to update supplement");
+    });
+  };
 
   const handleGramsChange = (mealId: string, text: string) => {
     const grams = text === "" ? null : Number(text);
@@ -204,38 +193,11 @@ export default function NutritionScreen() {
         />
       </ScrollView>
 
-      {/* Macro bars */}
-      <Card title="Macros">
-        <View style={styles.macroGrid}>
-          <MacroBar
-            label="Protein"
-            current={Math.round(macroTotals.protein)}
-            target={proteinTarget}
-            color={colors.accent}
-          />
-          <MacroBar
-            label="Carbs"
-            current={Math.round(macroTotals.carbs)}
-            target={carbTarget}
-            color={colors.warning}
-          />
-          <MacroBar
-            label="Fat"
-            current={Math.round(macroTotals.fat)}
-            target={fatTarget}
-            color={colors.supplement}
-          />
-          <MacroBar
-            label="Calories"
-            current={Math.round(macroTotals.calories)}
-            target={calTarget}
-            color={colors.good}
-          />
-        </View>
-      </Card>
+      <MacroDashboard consumed={macroTotals} targets={macroTargets} />
 
       {/* Meals */}
-      <Card title={`Meals (${selectedMealDay})`}>
+      <SectionTitle label={`Meals · ${selectedMealDay}`} />
+      <Card>
         {mealTemplatesForDay.length > 0 ? (
           mealTemplatesForDay.map((meal) => {
             const mealId = meal.id || "";
@@ -257,22 +219,64 @@ export default function NutritionScreen() {
         )}
       </Card>
 
-      {/* Food Search */}
-      <FoodSearchSection
-        query={foodQuery}
-        onQueryChange={setFoodQuery}
-        results={foodResults}
-        searching={foodSearching}
-        debouncedQuery={debouncedFoodQuery}
-        onAddFood={handleAddFoodToDay}
-        onSaveFood={handleSaveFood}
-      />
+      {/* Food search behind progressive disclosure */}
+      {showFoodSearch ? (
+        <>
+          <FoodSearchSection
+            query={foodQuery}
+            onQueryChange={setFoodQuery}
+            results={foodResults}
+            searching={foodSearching}
+            debouncedQuery={debouncedFoodQuery}
+            onAddFood={handleAddFoodToDay}
+            onSaveFood={handleSaveFood}
+          />
+          <MyFoodsSection
+            myFoods={myFoods}
+            onAddFood={handleAddFoodToDay}
+            onRemoveFood={handleRemoveUserFood}
+          />
+          <Button
+            label="Done adding"
+            variant="ghost"
+            size="sm"
+            onPress={() => setShowFoodSearch(false)}
+          />
+        </>
+      ) : (
+        <Button
+          label="+ Add food"
+          variant="secondary"
+          onPress={() => setShowFoodSearch(true)}
+        />
+      )}
 
-      {/* My Foods */}
-      <MyFoodsSection
-        myFoods={myFoods}
-        onAddFood={handleAddFoodToDay}
-        onRemoveFood={handleRemoveUserFood}
+      {/* Supplements */}
+      <SectionTitle
+        label="Supplements"
+        meta={
+          supplementsList.length
+            ? `${suppDoneCount}/${supplementsList.length} taken`
+            : undefined
+        }
+      />
+      {supplementsList.length > 0 ? (
+        <ChecklistSection
+          title="Daily stack"
+          items={supplementItems}
+          checkMap={supplementChecksForToday}
+          onToggle={handleSuppToggle}
+          checkColor={colors.supplement}
+        />
+      ) : (
+        <Card>
+          <Text style={sharedStyles.emptyText}>No supplements yet.</Text>
+        </Card>
+      )}
+      <Button
+        label="Manage supplements"
+        variant="secondary"
+        onPress={() => router.push("/supplements")}
       />
 
       {/* Targets */}

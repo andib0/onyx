@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -15,24 +18,19 @@ import type {
   NutritionTarget,
 } from "../../types/appTypes";
 import { toMinutes } from "../../utils/time";
-import { computeConsumedMacros, parseTargetNumber } from "../../utils/nutrition";
+import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutrition";
 import Card from "../../components/ui/Card";
-import ProgressBar from "../../components/ui/ProgressBar";
+import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import ChecklistSection from "../../components/shared/ChecklistSection";
+import SectionTitle from "../../components/ui/SectionTitle";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
-import TimelineSummary from "../../components/focus/TimelineSummary";
 import RecapCard from "../../components/focus/RecapCard";
+import DayCheckInCard from "../../components/focus/DayCheckInCard";
 import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
-
-const formatClockTime = (nowMinutes: number) => {
-  const hours = Math.floor(nowMinutes / 60);
-  const minutes = nowMinutes % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-};
+import { colors, fontSizes, spacing } from "../../theme";
 
 const getGreeting = (minutes: number): string => {
   const hour = Math.floor(minutes / 60);
@@ -41,6 +39,24 @@ const getGreeting = (minutes: number): string => {
   if (hour >= 14 && hour < 17) return "Good afternoon";
   if (hour >= 17 && hour < 21) return "Good evening";
   return "Good night";
+};
+
+const getGreetingIcon = (
+  minutes: number
+): { name: keyof typeof Ionicons.glyphMap; color: string } => {
+  const hour = Math.floor(minutes / 60);
+  if (hour >= 5 && hour < 8) return { name: "partly-sunny", color: "#fbbf24" };
+  if (hour >= 8 && hour < 17) return { name: "sunny", color: "#fbbf24" };
+  if (hour >= 17 && hour < 21) return { name: "cloudy-night", color: "#a78bfa" };
+  return { name: "moon", color: "#a78bfa" };
+};
+
+const formatToday = (): string => {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 };
 
 function MacroSummaryCard({
@@ -53,29 +69,21 @@ function MacroSummaryCard({
   nutritionTargets: NutritionTarget[];
 }) {
   const consumed = computeConsumedMacros(mealTemplates, mealCheckMap);
-  const proteinTarget = parseTargetNumber(
-    nutritionTargets.find((t) => t.k.toLowerCase().includes("protein"))?.v || ""
-  );
-  if (!proteinTarget) return null;
-  const proteinPercent = Math.round((consumed.protein / proteinTarget) * 100);
-  return (
-    <Card title="Protein today">
-      <ProgressBar
-        label={`${Math.round(consumed.protein)}g / ${proteinTarget}g`}
-        sublabel={
-          consumed.calories > 0 ? `${Math.round(consumed.calories)} kcal eaten` : ""
-        }
-        progress={proteinPercent}
-        color={colors.accent}
-        height={6}
-        showPercent
-      />
-    </Card>
-  );
+  const targets = computeMacroTargets(nutritionTargets);
+  if (!targets.protein) return null;
+  return <MacroDashboard consumed={consumed} targets={targets} compact />;
 }
 
 export default function FocusScreen() {
-  const { stateLoading, nutritionTargets, appState } = useData();
+  const router = useRouter();
+  const {
+    stateLoading,
+    nutritionTargets,
+    appState,
+    todayKeyValue,
+    logEntries,
+    addLogEntry,
+  } = useData();
   const { showToast } = useToastContext();
   const { scheduleBlocks } = useSchedule();
   const { supplementsList, supplementChecksForToday, setSupplementChecked } =
@@ -86,6 +94,7 @@ export default function FocusScreen() {
     programLabel,
     trainingDayActive,
     workout,
+    workoutCompletedToday,
     startWorkout,
     togglePauseWorkout,
     stopWorkout,
@@ -131,37 +140,50 @@ export default function FocusScreen() {
     return [];
   }, [focusBlocks, nextBlock, minutesUntilNext, nowMinutes]);
 
-  // Build checklist items for meals
-  const mealItems = useMemo(
-    () =>
-      mealTemplatesForToday.map((m) => ({
-        id: m.id || "",
-        label: m.name,
-        subline: m.examples,
-      })),
-    [mealTemplatesForToday]
-  );
+  // Supplements due right now
+  const windowPendingIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of supplementWindow?.pending || []) ids.add(s.id || "");
+    return ids;
+  }, [supplementWindow]);
 
-  // Build checklist items for supplements
-  const supplementItems = useMemo(
-    () =>
-      supplementsList.map((s) => ({
-        id: s.id || "",
-        label: s.item,
-        subline: `${s.dose}${s.timeAt ? ` \u00B7 ${s.timeAt}` : ""}`,
-      })),
-    [supplementsList]
-  );
-
-  // Supplement window items
   const windowItems = useMemo(
     () =>
       (supplementWindow?.pending || []).map((s) => ({
         id: s.id || "",
         label: s.item,
-        subline: `${s.dose}${s.timeAt ? ` \u00B7 ${s.timeAt}` : ""}`,
+        subline: `${s.dose}${s.timeAt ? ` · ${s.timeAt}` : ""}`,
       })),
     [supplementWindow]
+  );
+
+  // Unchecked only — completed items live on the Nutrition tab (Focus = act, not review)
+  const supplementItems = useMemo(
+    () =>
+      supplementsList
+        .filter(
+          (s) =>
+            !windowPendingIds.has(s.id || "") &&
+            !supplementChecksForToday[s.id || ""]
+        )
+        .map((s) => ({
+          id: s.id || "",
+          label: s.item,
+          subline: `${s.dose}${s.timeAt ? ` · ${s.timeAt}` : ""}`,
+        })),
+    [supplementsList, windowPendingIds, supplementChecksForToday]
+  );
+
+  const mealItems = useMemo(
+    () =>
+      mealTemplatesForToday
+        .filter((m) => !mealCheckMap[m.id || ""])
+        .map((m) => ({
+          id: m.id || "",
+          label: m.name,
+          subline: m.examples,
+        })),
+    [mealTemplatesForToday, mealCheckMap]
   );
 
   const handleMealToggle = (id: string) => {
@@ -190,39 +212,64 @@ export default function FocusScreen() {
 
   return (
     <ScreenContainer>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.clockTime}>{formatClockTime(nowMinutes)}</Text>
-        <Text style={styles.greeting}>
-          {greeting}
-          {displayName ? `, ${displayName}` : ""}.
-        </Text>
-        <Text style={styles.subtitle}>
-          {blocksToShow.length
-            ? "Only what matters right now."
-            : "No scheduled blocks right now."}
-        </Text>
+      {/* Header: greeting + date, no clock (status bar has one) */}
+      <View style={styles.headerRow}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.headerText}>
+          <Text style={styles.greeting}>
+            {greeting}
+            {displayName ? `, ${displayName}` : ""}
+          </Text>
+          <Text style={styles.dateLine}>{formatToday()}</Text>
+        </Animated.View>
+        <Animated.View entering={ZoomIn.delay(150).duration(450)}>
+          <Ionicons
+            name={getGreetingIcon(nowMinutes).name}
+            size={34}
+            color={getGreetingIcon(nowMinutes).color}
+          />
+        </Animated.View>
       </View>
 
-      {/* Yesterday recap + streak */}
-      <RecapCard recap={recap} streak={streak} />
+      {/* Hero: what matters right now, with the matching one-tap action */}
+      {blocksToShow.length > 0 ? (
+        blocksToShow.map((focusBlock) => {
+          const blockId = focusBlock.block.id || "";
+          let action = null;
+          if (!focusBlock.isUpcoming && focusBlock.context === "meal") {
+            const meal =
+              mealTemplatesForToday.find(
+                (m) => m.name === focusBlock.block.title && !mealCheckMap[m.id || ""]
+              ) || null;
+            if (meal) {
+              action = {
+                label: "Mark eaten",
+                onPress: () => handleMealToggle(meal.id || ""),
+              };
+            }
+          } else if (
+            focusBlock.context === "gym" &&
+            !workout.isActive &&
+            !workoutCompletedToday &&
+            programRows.length > 0
+          ) {
+            action = { label: "Start workout", onPress: startWorkout };
+          }
+          return (
+            <FocusBlockPanel
+              key={`focus-${blockId}`}
+              focusBlock={focusBlock}
+              action={action}
+            />
+          );
+        })
+      ) : (
+        <Card>
+          <Text style={styles.allClearTitle}>All clear</Text>
+          <Text style={styles.allClearText}>Nothing scheduled right now.</Text>
+        </Card>
+      )}
 
-      {/* Timeline summary */}
-      <TimelineSummary
-        timelineBlocks={timelineBlocks}
-        progressPercent={timelineProgressPercent}
-        remainingCount={timelineRemainingCount}
-        nextStartBlock={nextStartBlock}
-        nextStartInMinutes={nextStartInMinutes}
-      />
-
-      {/* Active / upcoming blocks */}
-      {blocksToShow.map((focusBlock) => {
-        const blockId = focusBlock.block.id || "";
-        return <FocusBlockPanel key={`focus-${blockId}`} focusBlock={focusBlock} />;
-      })}
-
-      {/* Supplement window alert */}
+      {/* Supplements due now */}
       {supplementWindow && supplementWindow.pending.length > 0 ? (
         <ChecklistSection
           title={`Take now (${supplementWindow.pending.length}/${supplementWindow.totalInWindow})`}
@@ -233,9 +280,11 @@ export default function FocusScreen() {
         />
       ) : null}
 
-      {/* Workout / Program */}
+      {/* Training */}
+      <SectionTitle label="Training" meta={programLabel} />
       <WorkoutSection
         workout={workout}
+        workoutCompletedToday={workoutCompletedToday}
         programRows={programRows}
         programLabel={programLabel}
         trainingDayActive={trainingDayActive}
@@ -246,58 +295,126 @@ export default function FocusScreen() {
         onSkipRest={skipWorkoutRest}
       />
 
-      {/* Macro progress from checked meals */}
+      {/* Nutrition */}
       {mealTemplatesForToday.length > 0 ? (
-        <MacroSummaryCard
-          mealTemplates={mealTemplatesForToday}
-          mealCheckMap={mealCheckMap}
-          nutritionTargets={nutritionTargets}
-        />
+        <>
+          <SectionTitle
+            label="Nutrition"
+            meta={`${mealDoneCount}/${mealTemplatesForToday.length} meals`}
+          />
+          <MacroSummaryCard
+            mealTemplates={mealTemplatesForToday}
+            mealCheckMap={mealCheckMap}
+            nutritionTargets={nutritionTargets}
+          />
+          {mealItems.length > 0 ? (
+            <ChecklistSection
+              title="Still to eat"
+              items={mealItems}
+              checkMap={mealCheckMap}
+              onToggle={handleMealToggle}
+            />
+          ) : null}
+        </>
       ) : null}
 
-      {/* Meals */}
-      {mealTemplatesForToday.length > 0 ? (
-        <ChecklistSection
-          title={`Meals (${mealDoneCount}/${mealTemplatesForToday.length})`}
-          items={mealItems}
-          checkMap={mealCheckMap}
-          onToggle={handleMealToggle}
-        />
+      {/* Supplements: unchecked only */}
+      {supplementItems.length > 0 ? (
+        <>
+          <SectionTitle
+            label="Supplements"
+            meta={`${suppDoneCount}/${supplementsList.length} taken`}
+          />
+          <ChecklistSection
+            title="Still to take"
+            items={supplementItems}
+            checkMap={supplementChecksForToday}
+            onToggle={handleSuppToggle}
+            checkColor={colors.supplement}
+          />
+        </>
       ) : null}
 
-      {/* All supplements */}
-      {supplementsList.length > 0 ? (
-        <ChecklistSection
-          title={`Supplements (${suppDoneCount}/${supplementsList.length})`}
-          items={supplementItems}
-          checkMap={supplementChecksForToday}
-          onToggle={handleSuppToggle}
-          checkColor={colors.supplement}
-        />
-      ) : null}
+      {/* Compact day progress, links to Schedule */}
+      <Pressable onPress={() => router.push("/(tabs)/schedule")}>
+        <Card>
+          <View style={styles.dayRow}>
+            <Text style={styles.dayRowText}>
+              Day{" "}
+              <Text style={styles.dayRowStrong}>
+                {timelineBlocks.length - timelineRemainingCount}/
+                {timelineBlocks.length}
+              </Text>
+              {nextStartBlock
+                ? `  ·  next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
+                : ""}
+            </Text>
+            <Text style={styles.dayRowPercent}>{timelineProgressPercent}%</Text>
+          </View>
+        </Card>
+      </Pressable>
+
+      {/* Contextual: check-in evenings (component gates itself), recap mornings only */}
+      <DayCheckInCard
+        nowMinutes={nowMinutes}
+        todayKeyValue={todayKeyValue}
+        dayLabel={trainingDayActive ? programLabel : "Rest"}
+        logEntries={logEntries}
+        onSave={addLogEntry}
+        showToast={showToast}
+      />
+      {nowMinutes < 12 * 60 ? <RecapCard recap={recap} streak={streak} /> : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingTop: spacing.sm,
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
   },
-  clockTime: {
-    fontSize: fontSizes.hero,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-    letterSpacing: 2,
+  headerText: {
+    flex: 1,
   },
   greeting: {
-    fontSize: fontSizes.xl,
+    fontSize: fontSizes.title,
+    fontWeight: "700",
     color: colors.text,
-    marginTop: spacing.xs,
+    letterSpacing: -0.5,
   },
-  subtitle: {
+  dateLine: {
     fontSize: fontSizes.md,
     color: colors.muted,
     marginTop: 2,
+  },
+  allClearTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: colors.good,
+  },
+  allClearText: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  dayRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dayRowText: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+  },
+  dayRowStrong: {
+    color: colors.text,
+    fontWeight: "700",
+  },
+  dayRowPercent: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
+    fontWeight: "700",
   },
 });

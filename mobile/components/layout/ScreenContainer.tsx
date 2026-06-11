@@ -1,4 +1,11 @@
-import { ScrollView, RefreshControl, StyleSheet, type ViewStyle } from "react-native";
+import {
+  ScrollView,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  type ViewStyle,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "../../theme";
 
@@ -9,6 +16,9 @@ interface ScreenContainerProps {
   onRefresh?: () => void;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  floatingAction?: React.ReactNode;
+  // Set when the screen renders under a native stack header (header owns the inset)
+  hasNativeHeader?: boolean;
 }
 
 export default function ScreenContainer({
@@ -18,34 +28,46 @@ export default function ScreenContainer({
   onRefresh,
   style,
   contentStyle,
+  floatingAction,
+  hasNativeHeader = false,
 }: ScreenContainerProps) {
+  const edges: Array<"top"> = hasNativeHeader ? [] : ["top"];
+
   if (!scrollable) {
     return (
-      <SafeAreaView style={[styles.safe, style]} edges={["top"]}>
+      <SafeAreaView style={[styles.safe, style]} edges={edges}>
         {children}
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, style]} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={[styles.content, contentStyle]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          ) : undefined
-        }
+    <SafeAreaView style={[styles.safe, style]} edges={edges}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
-        {children}
-      </ScrollView>
+        <ScrollView
+          contentContainerStyle={[styles.content, contentStyle]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
+              />
+            ) : undefined
+          }
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
+      {floatingAction}
     </SafeAreaView>
   );
 }
@@ -55,9 +77,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  flex: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
     gap: spacing.lg,
   },
 });

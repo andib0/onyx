@@ -1,4 +1,4 @@
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,7 +9,7 @@ import { AppStateProvider } from "../contexts/AppStateContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
 import { colors } from "../theme";
 
-function RootContent() {
+function RootStack() {
   const { isLoading } = useAuth();
 
   if (isLoading) {
@@ -20,7 +20,25 @@ function RootContent() {
     );
   }
 
-  return <Slot />;
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.bg },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: "600" },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="supplements" options={{ title: "Supplements" }} />
+      <Stack.Screen name="log" options={{ title: "History & Trends" }} />
+      <Stack.Screen name="program-editor" options={{ title: "Program editor" }} />
+      <Stack.Screen name="+not-found" options={{ title: "Not found" }} />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -31,7 +49,7 @@ export default function RootLayout() {
           <AppStateProvider>
             <ErrorBoundary>
               <StatusBar style="light" />
-              <RootContent />
+              <RootStack />
             </ErrorBoundary>
           </AppStateProvider>
         </AuthProvider>

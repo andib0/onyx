@@ -119,6 +119,25 @@ export default function useProgram(
     programs.length > 0 &&
     (!selectedProgramId || !selectedProgramDayId);
 
+  // Refetch after creating/editing/deleting a custom program
+  const refreshPrograms = useCallback(async () => {
+    const result = await listPrograms();
+    if (result.success && result.data) {
+      setPrograms(result.data);
+    }
+    if (selectedProgramId) {
+      const detail = await getProgram(selectedProgramId);
+      if (detail.success && detail.data) {
+        setProgramDetail(detail.data);
+      } else {
+        // Selected program was deleted
+        setSelectedProgramId("");
+        setSelectedProgramDayId("");
+        setProgramDetail(null);
+      }
+    }
+  }, [selectedProgramId]);
+
   const resetProgram = useCallback(() => {
     setPrograms([]);
     setProgramDetail(null);
@@ -141,5 +160,6 @@ export default function useProgram(
     setSelectedProgramDayId,
     setProgramSetupDismissed,
     resetProgram,
+    refreshPrograms,
   };
 }

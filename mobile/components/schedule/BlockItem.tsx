@@ -1,5 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import * as Haptics from "expo-haptics";
 import Checkbox from "../shared/Checkbox";
+import IconButton from "../ui/IconButton";
 import type { ScheduleBlock } from "../../types/appTypes";
 import { colors, spacing, radii, fontSizes, fonts, TAG_COLORS } from "../../theme";
 
@@ -21,38 +23,57 @@ export default function BlockItem({
   const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
   const isReadonly = block.readonly;
 
+  const handleToggle = () => {
+    if (isReadonly) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onToggle();
+  };
+
   return (
-    <View style={styles.blockItem}>
+    <Pressable
+      onPress={handleToggle}
+      disabled={isReadonly}
+      style={({ pressed }) => [
+        styles.blockItem,
+        pressed && !isReadonly && styles.pressed,
+      ]}
+      accessibilityRole={isReadonly ? "text" : "checkbox"}
+      accessibilityState={isReadonly ? undefined : { checked: isCompleted }}
+      accessibilityLabel={`${block.title}, ${block.start} to ${block.end}`}
+    >
       <View style={[styles.blockBorder, { backgroundColor: tagColor }]} />
       <View style={styles.blockContent}>
-        <View style={styles.blockTopRow}>
-          <Text style={styles.blockTime}>
-            {block.start} - {block.end}
-          </Text>
+        <View style={styles.mainRow}>
           {!isReadonly ? (
-            <Checkbox checked={isCompleted} onToggle={onToggle} size={22} />
+            <Checkbox checked={isCompleted} onToggle={handleToggle} size={22} />
+          ) : (
+            <View style={styles.readonlyDot} />
+          )}
+          <View style={styles.textWrap}>
+            <Text
+              style={[styles.blockTitle, isCompleted && styles.blockTitleDone]}
+              numberOfLines={1}
+            >
+              {block.title}
+            </Text>
+            <Text style={styles.blockTime}>
+              {block.start} – {block.end}
+              {block.purpose ? `  ·  ${block.purpose}` : ""}
+            </Text>
+          </View>
+          {!isReadonly ? (
+            <View style={styles.actions}>
+              <IconButton icon="pencil-outline" onPress={onEdit} label="Edit task" />
+              <IconButton
+                icon="trash-outline"
+                onPress={onDelete}
+                label="Delete task"
+              />
+            </View>
           ) : null}
         </View>
-        <Text style={[styles.blockTitle, isCompleted && styles.blockTitleDone]}>
-          {block.title}
-        </Text>
-        {block.purpose ? (
-          <Text style={styles.blockPurpose} numberOfLines={1}>
-            {block.purpose}
-          </Text>
-        ) : null}
-        {!isReadonly ? (
-          <View style={styles.blockActions}>
-            <Pressable onPress={onEdit} hitSlop={8}>
-              <Text style={styles.actionText}>Edit</Text>
-            </Pressable>
-            <Pressable onPress={onDelete} hitSlop={8}>
-              <Text style={[styles.actionText, { color: colors.danger }]}>Delete</Text>
-            </Pressable>
-          </View>
-        ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -65,23 +86,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     overflow: "hidden",
   },
+  pressed: {
+    opacity: 0.8,
+  },
   blockBorder: {
     width: 4,
   },
   blockContent: {
     flex: 1,
-    padding: spacing.md,
-    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: 56,
+    justifyContent: "center",
   },
-  blockTopRow: {
+  mainRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.md,
   },
-  blockTime: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
+  readonlyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+    marginHorizontal: 7,
+  },
+  textWrap: {
+    flex: 1,
   },
   blockTitle: {
     fontSize: fontSizes.md,
@@ -92,18 +123,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textDecorationLine: "line-through",
   },
-  blockPurpose: {
+  blockTime: {
     fontSize: fontSizes.xs,
     color: colors.muted,
+    fontFamily: fonts.mono,
+    marginTop: 1,
   },
-  blockActions: {
+  actions: {
     flexDirection: "row",
-    gap: spacing.lg,
-    marginTop: spacing.xs,
-  },
-  actionText: {
-    fontSize: fontSizes.xs,
-    color: colors.accent,
-    fontWeight: "500",
   },
 });

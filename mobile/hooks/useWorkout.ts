@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState as RNAppState } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import type { ProgramRow } from "../types/appTypes";
 import { todayKey } from "../utils/storage";
@@ -35,6 +36,7 @@ export type WorkoutState = {
 };
 
 const DEFAULT_REST_SECONDS = 90;
+const WORKOUT_DONE_KEY = "onyx_workout_done";
 
 function parseSetsCount(sets: string): number {
   const match = String(sets || "").match(/\d+/);
@@ -76,6 +78,20 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     Record<string, LoggedSetValues[]>
   >({});
   const [now, setNow] = useState(() => Date.now());
+  const [completedToday, setCompletedToday] = useState(false);
+
+  // Restore "workout done today" flag (persists across restarts, resets next day)
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(WORKOUT_DONE_KEY)
+      .then((value) => {
+        if (!cancelled && value === todayKey()) setCompletedToday(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Timestamp-based timers: survive backgrounding and app suspension.
   const restEndsAtRef = useRef<number | null>(null);
@@ -166,6 +182,9 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const start = useCallback(() => {
     if (programRows.length === 0) return;
     resetAll();
+    // Starting again un-counts the day until this session finishes
+    setCompletedToday(false);
+    AsyncStorage.removeItem(WORKOUT_DONE_KEY).catch(() => {});
     setIsActive(true);
     sessionStartRef.current = Date.now();
     setNow(Date.now());
@@ -236,6 +255,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         restEndsAtRef.current = null;
         pendingNextRef.current = null;
         finishSession(sessionSeconds);
+        setCompletedToday(true);
+        AsyncStorage.setItem(WORKOUT_DONE_KEY, todayKey()).catch(() => {});
         return;
       }
 
@@ -321,6 +342,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
 
   return {
     workout: state,
+    workoutCompletedToday: completedToday,
     startWorkout: start,
     completeWorkoutSet: completeSet,
     skipWorkoutRest: skipRest,

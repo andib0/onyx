@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
+import Button from "../ui/Button";
+import Stepper from "../ui/Stepper";
 import ProgressBar from "../ui/ProgressBar";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
+import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
 
 const formatSeconds = (totalSeconds: number) => {
   const m = Math.floor(totalSeconds / 60);
@@ -29,8 +30,30 @@ const formatLastSession = (
     .join(", ");
 };
 
+function SetDots({ total, current }: { total: number; current: number }) {
+  return (
+    <View style={styles.dotsRow}>
+      {Array.from({ length: total }).map((_, idx) => {
+        const done = idx < current - 1;
+        const active = idx === current - 1;
+        return (
+          <View
+            key={`dot-${idx}`}
+            style={[
+              styles.dot,
+              done && styles.dotDone,
+              active && styles.dotActive,
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 interface WorkoutSectionProps {
   workout: WorkoutState;
+  workoutCompletedToday?: boolean;
   programRows: ProgramRow[];
   programLabel: string;
   trainingDayActive: boolean;
@@ -43,6 +66,7 @@ interface WorkoutSectionProps {
 
 export default function WorkoutSection({
   workout,
+  workoutCompletedToday = false,
   programRows,
   programLabel,
   trainingDayActive,
@@ -54,6 +78,7 @@ export default function WorkoutSection({
 }: WorkoutSectionProps) {
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
+  const [showFullList, setShowFullList] = useState(false);
 
   const currentRow = programRows[workout.exerciseIndex];
   const exerciseName = currentRow ? currentRow.ex : "";
@@ -77,8 +102,11 @@ export default function WorkoutSection({
 
   if (!trainingDayActive) {
     return (
-      <Card title="Training">
-        <Text style={styles.restDayText}>Rest day - {programLabel}</Text>
+      <Card>
+        <Text style={styles.restDayTitle}>Rest day</Text>
+        <Text style={styles.restDayText}>
+          Recovery is training too. Eat well, walk, sleep.
+        </Text>
       </Card>
     );
   }
@@ -92,350 +120,460 @@ export default function WorkoutSection({
     });
   };
 
-  return (
-    <Card title="Training">
-      <Text style={styles.programDayLabel}>{programLabel}</Text>
+  const totalSetsLogged = Object.values(workout.setsThisSession).reduce(
+    (sum, sets) => sum + sets.length,
+    0
+  );
 
-      {workout.isActive && !workout.isFinished ? (
-        <View style={styles.workoutActiveSection}>
-          {workout.mode === "rest" ? (
-            /* ── Rest countdown ── */
-            <View style={styles.timerContainer}>
-              <Text style={[styles.timerText, { color: colors.good }]}>
-                {formatSeconds(workout.restSecondsRemaining)}
-              </Text>
-              <Text style={styles.timerMode}>REST</Text>
-              <ProgressBar
-                progress={
-                  workout.restTotalSeconds > 0
-                    ? ((workout.restTotalSeconds - workout.restSecondsRemaining) /
-                        workout.restTotalSeconds) *
-                      100
-                    : 0
-                }
-                color={colors.good}
-                height={4}
-              />
-              <Text style={styles.upNextText}>
-                Up next: {exerciseName} — set {workout.currentSet}/
-                {workout.totalSets}
-              </Text>
-            </View>
-          ) : (
-            /* ── Lifting: log weight x reps, tap Set done ── */
-            <View style={styles.liftingContainer}>
-              <Text style={styles.exerciseName}>{exerciseName}</Text>
-              <Text style={styles.exerciseStats}>
-                Set {workout.currentSet}/{workout.totalSets} | Target {currentRow?.reps}{" "}
-                reps | RIR {currentRow?.rir || "-"}
-              </Text>
-              {history ? (
-                <Text style={styles.lastSessionText}>
-                  Last ({history.date}): {formatLastSession(history.sets)}
-                </Text>
-              ) : (
-                <Text style={styles.lastSessionTextMuted}>
-                  No previous session for this exercise.
-                </Text>
-              )}
-              {currentRow?.notes ? (
-                <Text style={styles.exerciseNotes}>{currentRow.notes}</Text>
-              ) : null}
-
-              <View style={styles.setInputRow}>
-                <View style={styles.setInputWrap}>
-                  <Text style={styles.setInputLabel}>kg</Text>
-                  <TextInput
-                    style={styles.setInput}
-                    value={weightInput}
-                    onChangeText={setWeightInput}
-                    keyboardType="decimal-pad"
-                    placeholder="-"
-                    placeholderTextColor={colors.muted}
-                  />
-                </View>
-                <View style={styles.setInputWrap}>
-                  <Text style={styles.setInputLabel}>reps</Text>
-                  <TextInput
-                    style={styles.setInput}
-                    value={repsInput}
-                    onChangeText={setRepsInput}
-                    keyboardType="number-pad"
-                    placeholder="-"
-                    placeholderTextColor={colors.muted}
-                  />
-                </View>
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.setDoneBtn,
-                  pressed && sharedStyles.pressed,
-                ]}
-                onPress={handleSetDone}
-              >
-                <Text style={styles.setDoneBtnText}>
-                  Set done {"→"} rest {currentRow ? currentRow.rest : ""}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Controls */}
-          <View style={styles.workoutControls}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.workoutBtn,
-                styles.workoutBtnSecondary,
-                pressed && sharedStyles.pressed,
-              ]}
-              onPress={onTogglePause}
-            >
-              <Text style={styles.workoutBtnText}>
-                {workout.isPaused ? "Resume" : "Pause"}
-              </Text>
-            </Pressable>
-            {workout.mode === "rest" ? (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.workoutBtn,
-                  styles.workoutBtnSecondary,
-                  pressed && sharedStyles.pressed,
-                ]}
-                onPress={onSkipRest}
-              >
-                <Text style={styles.workoutBtnText}>Skip rest</Text>
-              </Pressable>
-            ) : null}
-            <Pressable
-              style={({ pressed }) => [
-                styles.workoutBtn,
-                styles.workoutBtnDanger,
-                pressed && sharedStyles.pressed,
-              ]}
-              onPress={onStop}
-            >
-              <Text style={[styles.workoutBtnText, { color: colors.danger }]}>Stop</Text>
-            </Pressable>
+  /* ── Done for today: collapse to a confirmation row ── */
+  if (!workout.isActive && workoutCompletedToday) {
+    return (
+      <Card>
+        <View style={styles.doneRow}>
+          <Text style={styles.doneCheck}>✓</Text>
+          <View style={styles.doneTextWrap}>
+            <Text style={styles.doneTitle}>Workout done</Text>
+            <Text style={styles.doneMeta} numberOfLines={1}>
+              {programLabel}
+            </Text>
           </View>
-
-          {/* Session time */}
-          <Text style={styles.sessionTime}>
-            Session: {formatSeconds(workout.sessionSeconds)}
-          </Text>
-
-          {/* Exercise list */}
-          <View style={styles.exerciseList}>
-            {programRows.map((row, idx) => {
-              const done = workout.completedExercises.has(idx);
-              const current = idx === workout.exerciseIndex;
-              const rowHistory = workout.historyByExercise[row.ex];
-              return (
-                <View
-                  key={`ex-${idx}`}
-                  style={[
-                    styles.exerciseListItem,
-                    current && styles.exerciseListItemCurrent,
-                    done && styles.exerciseListItemDone,
-                  ]}
-                >
-                  <View style={styles.exerciseListMain}>
-                    <Text
-                      style={[
-                        styles.exerciseListName,
-                        done && styles.exerciseListNameDone,
-                      ]}
-                    >
-                      {row.ex}
-                    </Text>
-                    {rowHistory ? (
-                      <Text style={styles.exerciseListLast}>
-                        Last: {formatLastSession(rowHistory.sets)}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.exerciseListStatus}>
-                    {done ? "✓" : `${row.sets}x${row.reps}`}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+          <Button label="Train again" variant="ghost" size="sm" onPress={onStart} />
         </View>
-      ) : workout.isFinished ? (
-        <View style={styles.workoutFinished}>
-          <Text style={styles.finishedText}>Workout complete!</Text>
-          <Text style={styles.sessionTime}>
-            Total: {formatSeconds(workout.sessionSeconds)}
+      </Card>
+    );
+  }
+
+  /* ── Idle ── */
+  if (!workout.isActive) {
+    return (
+      <Card>
+        <View style={styles.idleHeader}>
+          <Text style={styles.idleTitle}>{programLabel}</Text>
+          <Text style={styles.idleMeta}>{programRows.length} exercises</Text>
+        </View>
+        <View style={styles.previewList}>
+          {programRows.map((row, idx) => {
+            const rowHistory = workout.historyByExercise[row.ex];
+            return (
+              <View key={`preview-${idx}`} style={styles.previewRow}>
+                <View style={styles.previewMain}>
+                  <Text style={styles.previewName} numberOfLines={1}>
+                    {row.ex}
+                  </Text>
+                  {rowHistory ? (
+                    <Text style={styles.previewLast} numberOfLines={1}>
+                      Last: {formatLastSession(rowHistory.sets)}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={styles.previewSets}>
+                  {row.sets}×{row.reps}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        <Button label="Start Workout" size="lg" onPress={onStart} />
+      </Card>
+    );
+  }
+
+  /* ── Finished ── */
+  if (workout.isFinished) {
+    return (
+      <Card>
+        <View style={styles.finishedBox}>
+          <Text style={styles.finishedTitle}>Workout complete</Text>
+          <View style={styles.finishedStats}>
+            <View style={styles.finishedStat}>
+              <Text style={styles.finishedStatValue}>
+                {formatSeconds(workout.sessionSeconds)}
+              </Text>
+              <Text style={styles.finishedStatLabel}>duration</Text>
+            </View>
+            <View style={styles.finishedStat}>
+              <Text style={styles.finishedStatValue}>{totalSetsLogged}</Text>
+              <Text style={styles.finishedStatLabel}>sets logged</Text>
+            </View>
+            <View style={styles.finishedStat}>
+              <Text style={styles.finishedStatValue}>
+                {workout.completedExercises.size}
+              </Text>
+              <Text style={styles.finishedStatLabel}>exercises</Text>
+            </View>
+          </View>
+          <Button label="Done" variant="secondary" onPress={onStop} />
+        </View>
+      </Card>
+    );
+  }
+
+  /* ── Active ── */
+  return (
+    <Card>
+      {workout.mode === "rest" ? (
+        <View style={styles.restBox}>
+          <Text style={styles.restLabel}>REST</Text>
+          <Text style={styles.restTimer}>
+            {formatSeconds(workout.restSecondsRemaining)}
           </Text>
-          <Pressable
-            style={({ pressed }) => [styles.startBtn, pressed && sharedStyles.pressed]}
-            onPress={onStop}
-          >
-            <Text style={styles.startBtnText}>Reset</Text>
-          </Pressable>
+          <ProgressBar
+            progress={
+              workout.restTotalSeconds > 0
+                ? ((workout.restTotalSeconds - workout.restSecondsRemaining) /
+                    workout.restTotalSeconds) *
+                  100
+                : 0
+            }
+            color={colors.good}
+            height={6}
+          />
+          <Text style={styles.upNextText} numberOfLines={2}>
+            Up next: <Text style={styles.upNextName}>{exerciseName}</Text> — set{" "}
+            {workout.currentSet}/{workout.totalSets}
+          </Text>
+          <Button label="Skip rest" variant="secondary" onPress={onSkipRest} />
         </View>
       ) : (
-        <View style={styles.workoutIdle}>
-          <View style={styles.exercisePreview}>
-            {programRows.slice(0, 5).map((row, idx) => (
-              <Text key={`preview-${idx}`} style={styles.previewRow}>
-                {row.ex} - {row.sets}x{row.reps}
-              </Text>
-            ))}
-            {programRows.length > 5 ? (
-              <Text style={styles.previewMore}>+{programRows.length - 5} more</Text>
-            ) : null}
+        <View style={styles.liftBox}>
+          <View style={styles.liftHeader}>
+            <Text style={styles.liftExercise} numberOfLines={2}>
+              {exerciseName}
+            </Text>
+            <SetDots total={workout.totalSets} current={workout.currentSet} />
           </View>
-          <Pressable
-            style={({ pressed }) => [styles.startBtn, pressed && sharedStyles.pressed]}
-            onPress={onStart}
-          >
-            <Text style={styles.startBtnText}>Start Workout</Text>
-          </Pressable>
+          <Text style={styles.liftTarget}>
+            Target {currentRow?.reps} reps · RIR {currentRow?.rir || "-"} · rest{" "}
+            {currentRow?.rest || "-"}
+          </Text>
+          {history ? (
+            <View style={styles.lastBadge}>
+              <Text style={styles.lastBadgeText} numberOfLines={1}>
+                Last: {formatLastSession(history.sets)}
+              </Text>
+            </View>
+          ) : null}
+          {currentRow?.notes ? (
+            <Text style={styles.liftNotes}>{currentRow.notes}</Text>
+          ) : null}
+
+          <View style={styles.stepperRow}>
+            <Stepper
+              label="kg"
+              value={weightInput}
+              onChangeText={setWeightInput}
+              step={2.5}
+              min={0}
+              max={500}
+              decimals={1}
+            />
+            <Stepper
+              label="reps"
+              value={repsInput}
+              onChangeText={setRepsInput}
+              step={1}
+              min={0}
+              max={100}
+            />
+          </View>
+
+          <Button
+            label={`Set ${workout.currentSet} done`}
+            size="lg"
+            onPress={handleSetDone}
+          />
         </View>
       )}
+
+      {/* Secondary controls + session info */}
+      <View style={styles.controlsRow}>
+        <Button
+          label={workout.isPaused ? "Resume" : "Pause"}
+          variant="secondary"
+          size="sm"
+          onPress={onTogglePause}
+          style={styles.controlBtn}
+        />
+        <Text style={styles.sessionTime}>{formatSeconds(workout.sessionSeconds)}</Text>
+        <Button
+          label="End"
+          variant="danger"
+          size="sm"
+          onPress={onStop}
+          style={styles.controlBtn}
+        />
+      </View>
+
+      {/* Exercise progress: current ±1 by default, expandable (keeps one focal point) */}
+      <View style={styles.exerciseList}>
+        {programRows.map((row, idx) => {
+          const done = workout.completedExercises.has(idx);
+          const current = idx === workout.exerciseIndex;
+          const nearCurrent = Math.abs(idx - workout.exerciseIndex) <= 1;
+          if (!showFullList && !nearCurrent) return null;
+          return (
+            <View
+              key={`ex-${idx}`}
+              style={[
+                styles.exerciseListItem,
+                current && styles.exerciseListItemCurrent,
+                done && styles.exerciseListItemDone,
+              ]}
+            >
+              <Text
+                style={[styles.exerciseListName, done && styles.exerciseListNameDone]}
+                numberOfLines={1}
+              >
+                {row.ex}
+              </Text>
+              <Text style={styles.exerciseListStatus}>
+                {done ? "✓" : `${row.sets}×${row.reps}`}
+              </Text>
+            </View>
+          );
+        })}
+        {programRows.length > 3 ? (
+          <Pressable
+            onPress={() => setShowFullList((prev) => !prev)}
+            style={styles.listToggle}
+            hitSlop={8}
+          >
+            <Text style={styles.listToggleText}>
+              {showFullList
+                ? "Show less"
+                : `Show all ${programRows.length} exercises`}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  programDayLabel: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    marginBottom: spacing.sm,
+  restDayTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: colors.text,
   },
   restDayText: {
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.sm,
     color: colors.muted,
+    marginTop: 2,
   },
-  workoutActiveSection: {
+  /* done for today */
+  doneRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
-  timerContainer: {
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  timerText: {
-    fontSize: 48,
-    fontFamily: fonts.mono,
+  doneCheck: {
+    fontSize: fontSizes.xl,
+    color: colors.good,
     fontWeight: "700",
   },
-  timerMode: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  upNextText: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    marginTop: spacing.xs,
-  },
-  liftingContainer: {
-    backgroundColor: colors.bg,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  exerciseName: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  exerciseStats: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  lastSessionText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-  },
-  lastSessionTextMuted: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontStyle: "italic",
-  },
-  exerciseNotes: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontStyle: "italic",
-  },
-  setInputRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  setInputWrap: {
+  doneTextWrap: {
     flex: 1,
   },
-  setInputLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginBottom: 2,
-  },
-  setInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    color: colors.text,
-    fontSize: fontSizes.lg,
-    fontFamily: fonts.mono,
-    minHeight: 48,
-  },
-  setDoneBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    alignItems: "center",
-    minHeight: 52,
-    justifyContent: "center",
-    marginTop: spacing.sm,
-  },
-  setDoneBtnText: {
-    color: "#fff",
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
-  },
-  workoutControls: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  workoutBtn: {
-    flex: 1,
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  workoutBtnSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  workoutBtnDanger: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.danger + "44",
-  },
-  workoutBtnText: {
-    color: "#fff",
+  doneTitle: {
     fontSize: fontSizes.md,
     fontWeight: "600",
+    color: colors.text,
   },
-  sessionTime: {
+  doneMeta: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  /* idle */
+  idleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
+  },
+  idleTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  idleMeta: {
     fontSize: fontSizes.sm,
+    color: colors.muted,
+  },
+  previewList: {
+    gap: 2,
+    marginBottom: spacing.lg,
+  },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  previewMain: {
+    flex: 1,
+  },
+  previewName: {
+    fontSize: fontSizes.md,
+    color: colors.text,
+  },
+  previewLast: {
+    fontSize: fontSizes.xs,
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    marginTop: 1,
+  },
+  previewSets: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+  },
+  /* finished */
+  finishedBox: {
+    alignItems: "stretch",
+    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  finishedTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: "700",
+    color: colors.good,
+    textAlign: "center",
+  },
+  finishedStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  finishedStat: {
+    alignItems: "center",
+    gap: 2,
+  },
+  finishedStatValue: {
+    fontSize: fontSizes.xxl,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  finishedStatLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  /* rest */
+  restBox: {
+    alignItems: "stretch",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  restLabel: {
+    fontSize: fontSizes.sm,
+    color: colors.good,
+    letterSpacing: 3,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  restTimer: {
+    fontSize: 72,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    color: colors.good,
+    textAlign: "center",
+    lineHeight: 78,
+  },
+  upNextText: {
+    fontSize: fontSizes.md,
     color: colors.muted,
     textAlign: "center",
   },
+  upNextName: {
+    color: colors.text,
+    fontWeight: "600",
+  },
+  /* lifting */
+  liftBox: {
+    gap: spacing.sm,
+  },
+  liftHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  liftExercise: {
+    flex: 1,
+    fontSize: fontSizes.xl,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  dotsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.border,
+  },
+  dotDone: {
+    backgroundColor: colors.good,
+  },
+  dotActive: {
+    backgroundColor: colors.accent,
+    transform: [{ scale: 1.25 }],
+  },
+  liftTarget: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+  },
+  lastBadge: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    backgroundColor: tints.accent,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  lastBadgeText: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
+    fontFamily: fonts.mono,
+  },
+  liftNotes: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    fontStyle: "italic",
+  },
+  stepperRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  /* controls */
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  controlBtn: {
+    minWidth: 90,
+  },
+  sessionTime: {
+    fontSize: fontSizes.md,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+  },
+  /* exercise list */
   exerciseList: {
-    gap: spacing.xs,
+    marginTop: spacing.md,
+    gap: 2,
   },
   exerciseListItem: {
     flexDirection: "row",
@@ -444,18 +582,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
+    gap: spacing.md,
   },
   exerciseListItemCurrent: {
-    backgroundColor: colors.accent + "18",
+    backgroundColor: tints.accent,
   },
   exerciseListItemDone: {
-    opacity: 0.5,
-  },
-  exerciseListMain: {
-    flex: 1,
-    gap: 1,
+    opacity: 0.45,
   },
   exerciseListName: {
+    flex: 1,
     fontSize: fontSizes.md,
     color: colors.text,
   },
@@ -463,51 +599,18 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     color: colors.muted,
   },
-  exerciseListLast: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
   exerciseListStatus: {
     fontSize: fontSizes.sm,
     color: colors.muted,
     fontFamily: fonts.mono,
   },
-  workoutFinished: {
+  listToggle: {
     alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  finishedText: {
-    fontSize: fontSizes.xl,
-    fontWeight: "600",
-    color: colors.good,
-  },
-  workoutIdle: {
-    gap: spacing.md,
-  },
-  exercisePreview: {
-    gap: spacing.xs,
-  },
-  previewRow: {
+  listToggleText: {
     fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  previewMore: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontStyle: "italic",
-  },
-  startBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    alignItems: "center",
-    minHeight: 48,
-  },
-  startBtnText: {
-    color: "#fff",
-    fontSize: fontSizes.lg,
+    color: colors.accent,
     fontWeight: "600",
   },
 });

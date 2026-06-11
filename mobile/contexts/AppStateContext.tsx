@@ -15,7 +15,7 @@ function InnerProviders({ children }: { children: ReactNode }) {
   const { scheduleBlocks, completionByBlockId } = useSchedule();
   const { supplementsList } = useSupplements();
   const { mealTemplatesForDay } = useMeals();
-  const { programLabel, trainingDayActive } = useProgram();
+  const { programLabel, trainingDayActive, workoutCompletedToday } = useProgram();
 
   return (
     <TimelineProvider
@@ -25,6 +25,7 @@ function InnerProviders({ children }: { children: ReactNode }) {
       programLabel={programLabel}
       trainingDayActive={trainingDayActive}
       completionByBlockId={completionByBlockId}
+      workoutCompletedToday={workoutCompletedToday}
     >
       {children}
     </TimelineProvider>

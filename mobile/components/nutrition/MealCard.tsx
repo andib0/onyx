@@ -1,7 +1,10 @@
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Slider from "@react-native-community/slider";
 import Checkbox from "../shared/Checkbox";
+import IconButton from "../ui/IconButton";
 import type { MealTemplate } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
 
 interface MealCardProps {
   meal: MealTemplate;
@@ -11,6 +14,16 @@ interface MealCardProps {
   onDelete: () => void;
 }
 
+// Tag values are per 100g on food-based meals; scale shown values by grams.
+function scaledTagValue(value: string, factor: number): string {
+  const num = parseFloat(value);
+  if (isNaN(num)) return value;
+  const unit = value.replace(String(num), "").trim();
+  const scaled = num * factor;
+  const rounded = scaled >= 10 ? Math.round(scaled) : Number(scaled.toFixed(1));
+  return `${rounded}${unit}`;
+}
+
 export default function MealCard({
   meal,
   isChecked,
@@ -18,6 +31,18 @@ export default function MealCard({
   onGramsChange,
   onDelete,
 }: MealCardProps) {
+  const hasGrams = meal.grams != null;
+  const [localGrams, setLocalGrams] = useState(meal.grams != null ? meal.grams : 100);
+
+  // Sync when meal changes externally
+  useEffect(() => {
+    if (meal.grams != null) {
+      setLocalGrams(meal.grams);
+    }
+  }, [meal.grams]);
+
+  const factor = hasGrams ? localGrams / 100 : 1;
+
   return (
     <View style={styles.mealCard}>
       <View style={styles.mealTopRow}>
@@ -26,30 +51,42 @@ export default function MealCard({
           <Text style={[styles.mealName, isChecked && styles.mealNameDone]}>
             {meal.name}
           </Text>
-          {meal.examples ? (
+          {meal.examples && !hasGrams ? (
             <Text style={styles.mealExamples} numberOfLines={1}>
               {meal.examples}
             </Text>
           ) : null}
         </View>
-        <TextInput
-          style={styles.gramsInput}
-          value={meal.grams != null ? String(meal.grams) : ""}
-          onChangeText={onGramsChange}
-          placeholder="g"
-          placeholderTextColor={colors.muted}
-          keyboardType="numeric"
-        />
-        <Pressable onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteText}>x</Text>
-        </Pressable>
+        {hasGrams ? <Text style={styles.gramsValue}>{Math.round(localGrams)}g</Text> : null}
+        <IconButton icon="trash-outline" onPress={onDelete} label="Delete meal" />
       </View>
+
+      {/* Grams slider for food-based meals */}
+      {hasGrams ? (
+        <View style={styles.sliderRow}>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={500}
+            step={5}
+            value={localGrams}
+            onValueChange={setLocalGrams}
+            onSlidingComplete={(value) => onGramsChange(String(Math.round(value)))}
+            minimumTrackTintColor={colors.accent}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.accent}
+          />
+        </View>
+      ) : null}
+
       {meal.tags && meal.tags.length > 0 ? (
         <View style={styles.tagPills}>
           {meal.tags.map((tag, idx) => (
             <View key={`tag-${idx}`} style={styles.macroPill}>
               <Text style={styles.macroPillLabel}>{tag.label}</Text>
-              <Text style={styles.macroPillValue}>{tag.value}</Text>
+              <Text style={styles.macroPillValue}>
+                {hasGrams ? scaledTagValue(tag.value, factor) : tag.value}
+              </Text>
             </View>
           ))}
         </View>
@@ -63,7 +100,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   mealTopRow: {
     flexDirection: "row",
@@ -87,22 +124,25 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 1,
   },
-  gramsInput: {
-    width: 60,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    padding: spacing.xs,
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    textAlign: "center",
-    backgroundColor: colors.bg,
+  gramsValue: {
+    fontSize: fontSizes.md,
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    minWidth: 48,
+    textAlign: "right",
   },
   deleteText: {
-    fontSize: fontSizes.lg,
-    color: colors.danger,
-    fontWeight: "600",
+    fontSize: fontSizes.md,
+    color: colors.muted,
     paddingHorizontal: spacing.xs,
+  },
+  sliderRow: {
+    paddingLeft: 32,
+  },
+  slider: {
+    width: "100%",
+    height: 32,
   },
   tagPills: {
     flexDirection: "row",

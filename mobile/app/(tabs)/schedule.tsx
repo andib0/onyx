@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useSchedule } from "../../contexts/ScheduleContext";
@@ -9,15 +9,15 @@ import LoadingScreen from "../../components/shared/LoadingScreen";
 import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import ProgressBar from "../../components/ui/ProgressBar";
-import Pill from "../../components/ui/Pill";
+import FAB from "../../components/ui/FAB";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import BlockItem from "../../components/schedule/BlockItem";
 import BlockForm from "../../components/schedule/BlockForm";
 import type { ScheduleBlock } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { colors, spacing, fontSizes, fonts } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
-export default function TodayScreen() {
+export default function ScheduleScreen() {
   const { stateLoading } = useData();
   const { showToast } = useToastContext();
   const {
@@ -82,30 +82,34 @@ export default function TodayScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Header title="Today" subtitle="Your timeline for today" />
-
-      <View style={styles.statsRow}>
-        <Pill
-          label="Done"
-          value={`${timelineDoneCount}/${timelineTotalBlocks}`}
-          color={colors.good}
-        />
-        <Pill label="Left" value={String(timelineRemainingCount)} />
-        {nextStartBlock ? (
-          <Pill
-            label="Next"
-            value={`${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`}
-          />
-        ) : null}
-      </View>
-
-      <ProgressBar
-        progress={timelineProgressPercent}
-        color={colors.good}
-        height={6}
-        showPercent
+    <ScreenContainer
+      floatingAction={
+        !showAddForm && !editingBlock ? (
+          <FAB icon="add" label="Add task" onPress={() => setShowAddForm(true)} />
+        ) : null
+      }
+    >
+      <Header
+        title="Schedule"
+        subtitle={
+          nextStartBlock
+            ? `Next at ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
+            : undefined
+        }
       />
+
+      <Card>
+        <View style={styles.progressRow}>
+          <Text style={styles.progressText}>
+            <Text style={styles.progressStrong}>
+              {timelineDoneCount}/{timelineTotalBlocks}
+            </Text>{" "}
+            done · {timelineRemainingCount} left
+          </Text>
+          <Text style={styles.progressPercent}>{timelineProgressPercent}%</Text>
+        </View>
+        <ProgressBar progress={timelineProgressPercent} color={colors.good} height={6} />
+      </Card>
 
       {editingBlock && !editingBlock.readonly ? (
         <BlockForm
@@ -132,7 +136,9 @@ export default function TodayScreen() {
 
       {timelineBlocks.length === 0 ? (
         <Card>
-          <Text style={sharedStyles.emptyText}>No blocks scheduled for today.</Text>
+          <Text style={sharedStyles.emptyText}>
+            Nothing planned yet. Tap + to add your first task.
+          </Text>
         </Card>
       ) : null}
 
@@ -142,19 +148,12 @@ export default function TodayScreen() {
           onSubmit={handleAddBlock}
           onCancel={() => setShowAddForm(false)}
         />
-      ) : (
-        <Pressable
-          style={({ pressed }) => [styles.fab, pressed && sharedStyles.pressed]}
-          onPress={() => setShowAddForm(true)}
-        >
-          <Text style={styles.fabText}>+ Add Block</Text>
-        </Pressable>
-      )}
+      ) : null}
 
       <ConfirmModal
         visible={deleteTarget !== null}
-        title="Delete Block"
-        message="Are you sure you want to delete this block?"
+        title="Delete task"
+        message="Remove this task from your schedule?"
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
@@ -165,22 +164,25 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  statsRow: {
+  progressRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  fab: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
+    justifyContent: "space-between",
     alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
+    marginBottom: spacing.sm,
   },
-  fabText: {
-    color: "#fff",
-    fontSize: fontSizes.md,
-    fontWeight: "600",
+  progressText: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+  },
+  progressStrong: {
+    color: colors.text,
+    fontWeight: "700",
+    fontFamily: fonts.mono,
+  },
+  progressPercent: {
+    fontSize: fontSizes.sm,
+    color: colors.good,
+    fontWeight: "700",
+    fontFamily: fonts.mono,
   },
 });

@@ -174,6 +174,27 @@ export function computeConsumedMacros(
   return totals;
 }
 
+export type MacroTargets = {
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+};
+
+// Parse numeric macro targets from the target list; calories derived from macros
+// (the calorie target string is relative, e.g. "+200-300 kcal/day").
+export function computeMacroTargets(
+  targets: Array<{ k: string; v: string }>
+): MacroTargets {
+  const find = (key: string) =>
+    parseTargetNumber(targets.find((t) => t.k.toLowerCase().includes(key))?.v || "");
+  const protein = find("protein");
+  const carbs = find("carb");
+  const fat = find("fat");
+  const calories = protein && carbs && fat ? protein * 4 + carbs * 4 + fat * 9 : 0;
+  return { protein, carbs, fat, calories };
+}
+
 // "126-154 g/day" -> 140 (midpoint); "150 g" -> 150; no number -> 0
 export function parseTargetNumber(value: string): number {
   const matches = String(value || "").match(/\d+(\.\d+)?/g);

@@ -20,7 +20,9 @@ interface ProgramContextType {
   setSelectedProgramDayId: (id: string) => void;
   setProgramSetupDismissed: (dismissed: boolean) => void;
   resetProgram: () => void;
+  refreshPrograms: () => Promise<void>;
   workout: WorkoutState;
+  workoutCompletedToday: boolean;
   startWorkout: () => void;
   togglePauseWorkout: () => void;
   stopWorkout: () => void;
@@ -44,6 +46,7 @@ export function ProgramProvider({
   const program = useProgramHook(isAuthenticated, authLoading, user);
   const {
     workout,
+    workoutCompletedToday,
     startWorkout,
     togglePauseWorkout,
     stopWorkout,
@@ -68,7 +71,9 @@ export function ProgramProvider({
         setSelectedProgramDayId: program.setSelectedProgramDayId,
         setProgramSetupDismissed: program.setProgramSetupDismissed,
         resetProgram: program.resetProgram,
+        refreshPrograms: program.refreshPrograms,
         workout,
+        workoutCompletedToday,
         startWorkout,
         togglePauseWorkout,
         stopWorkout,

@@ -1,53 +1,56 @@
 import { View, Text, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import type { YesterdayRecap } from "../../utils/trends";
-import { colors, spacing, fontSizes } from "../../theme";
+import { colors, spacing, fontSizes, fonts } from "../../theme";
 
 interface RecapCardProps {
   recap: YesterdayRecap | null;
   streak: number;
 }
 
+function Stat({
+  value,
+  label,
+  color,
+}: {
+  value: string;
+  label: string;
+  color?: string;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function RecapCard({ recap, streak }: RecapCardProps) {
   if (!recap && streak === 0) return null;
 
+  const suppsOk = recap ? recap.missedSupplements.length === 0 : false;
+
   return (
-    <Card title="Yesterday">
-      <View style={styles.container}>
+    <Card>
+      <Text style={styles.title}>Yesterday</Text>
+      <View style={styles.statsRow}>
         {recap ? (
           <>
-            <View style={styles.row}>
-              <Text style={styles.label}>Blocks</Text>
-              <Text style={styles.value}>
-                {recap.blocksDone}/{recap.blocksTotal}
-              </Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Meals eaten</Text>
-              <Text style={styles.value}>{recap.mealsEaten}</Text>
-            </View>
-            {recap.missedSupplements.length > 0 ? (
-              <View style={styles.row}>
-                <Text style={styles.label}>Missed supplements</Text>
-                <Text style={[styles.value, { color: colors.warning }]} numberOfLines={2}>
-                  {recap.missedSupplements.join(", ")}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.row}>
-                <Text style={styles.label}>Supplements</Text>
-                <Text style={[styles.value, { color: colors.good }]}>All taken</Text>
-              </View>
-            )}
+            <Stat
+              value={`${recap.blocksDone}/${recap.blocksTotal}`}
+              label="tasks"
+              color={recap.blocksDone === recap.blocksTotal ? colors.good : undefined}
+            />
+            <Stat value={String(recap.mealsEaten)} label="meals" />
+            <Stat
+              value={suppsOk ? "✓" : String(recap.missedSupplements.length)}
+              label={suppsOk ? "supps" : "missed"}
+              color={suppsOk ? colors.good : colors.warning}
+            />
           </>
         ) : null}
         {streak > 0 ? (
-          <View style={styles.row}>
-            <Text style={styles.label}>Supplement streak</Text>
-            <Text style={[styles.value, { color: colors.good }]}>
-              {streak} day{streak === 1 ? "" : "s"}
-            </Text>
-          </View>
+          <Stat value={`${streak}d`} label="streak" color={colors.good} />
         ) : null}
       </View>
     </Card>
@@ -55,24 +58,34 @@ export default function RecapCard({ recap, streak }: RecapCardProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.xs,
+  title: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
   },
-  row: {
+  statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  stat: {
+    flex: 1,
     alignItems: "center",
-    gap: spacing.md,
+    gap: 1,
   },
-  label: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  value: {
-    fontSize: fontSizes.sm,
+  statValue: {
+    fontSize: fontSizes.xl,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
     color: colors.text,
-    fontWeight: "600",
-    flexShrink: 1,
-    textAlign: "right",
+  },
+  statLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });

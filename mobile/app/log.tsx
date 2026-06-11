@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useAppState } from "../contexts/AppStateContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Header from "../components/layout/Header";
@@ -77,7 +76,6 @@ function LogEntryCard({ entry, onDelete }: { entry: LogEntry; onDelete: () => vo
 }
 
 export default function LogScreen() {
-  const router = useRouter();
   const {
     stateLoading,
     logEntries,
@@ -139,15 +137,7 @@ export default function LogScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Header
-        title="Log"
-        right={
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>{"\u2190"} Back</Text>
-          </Pressable>
-        }
-      />
+    <ScreenContainer hasNativeHeader>
 
       {/* Bodyweight trend */}
       <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
