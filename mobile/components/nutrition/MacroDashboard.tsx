@@ -95,10 +95,10 @@ export default function MacroDashboard({
     <Card>
       <Glow
         color={colors.good}
-        size={compact ? 200 : 240}
-        x={compact ? 50 : 64}
-        y={compact ? 50 : 60}
-        opacity={0.1}
+        size={compact ? 130 : 160}
+        x={compact ? 52 : 66}
+        y={compact ? 52 : 62}
+        opacity={0.08}
       />
       <View style={styles.row}>
         <Ring

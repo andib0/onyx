@@ -442,7 +442,7 @@ export default function FocusScreen() {
       {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
       <Pressable onPress={() => router.push("/(tabs)/schedule")}>
         <Card>
-          <Glow color={colors.good} size={220} x={56} y={50} />
+          <Glow color={colors.good} size={150} x={52} y={52} opacity={0.1} />
           <View style={styles.dayRow}>
             <Ring
               size={72}

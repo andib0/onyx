@@ -31,7 +31,8 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: spacing.lg,
-    bottom: spacing.xl,
+    // Clears the floating 84px tab bar
+    bottom: 100,
     width: 56,
     height: 56,
     borderRadius: 28,

@@ -255,7 +255,7 @@ export default function WorkoutSection({
       {workout.mode === "rest" ? (
         <View style={styles.restBox}>
           <View style={styles.restRingWrap}>
-            <Glow color={colors.good} size={300} x={105} y={105} opacity={0.16} />
+            <Glow color={colors.good} size={230} x={105} y={113} opacity={0.12} />
             <Ring
               size={210}
               strokeWidth={9}

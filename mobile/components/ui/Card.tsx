@@ -25,6 +25,8 @@ const styles = StyleSheet.create({
     // Lit-from-above edge: signature dark-UI depth cue
     borderTopColor: colors.edgeHighlight,
     padding: spacing.lg,
+    // Clips internal glows to the card bounds
+    overflow: "hidden",
   },
   title: {
     fontSize: fontSizes.lg,
