@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState as RNAppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import type { ProgramRow } from "../types/appTypes";
 import { todayKey } from "../utils/storage";
 import {
@@ -12,6 +13,7 @@ import {
 import {
   startWorkoutSession,
   logWorkoutSet,
+  deleteWorkoutSet,
   finishWorkoutSession,
   getExerciseHistory,
   type ExerciseHistory,
@@ -40,6 +42,7 @@ export type WorkoutState = {
   setsThisSession: Record<string, LoggedSetValues[]>;
   prCount: number;
   lastPrExercise: string | null;
+  canUndo: boolean;
 };
 
 const DEFAULT_REST_SECONDS = 90;
@@ -134,6 +137,17 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const sessionIdRef = useRef<string | null>(null);
   const restNotificationRef = useRef<string | null>(null);
   const restNotifyEnabledRef = useRef(false);
+  // One-level undo snapshot of the last completed set
+  const lastSetRef = useRef<{
+    exerciseIndex: number;
+    setNumber: number;
+    exerciseName: string;
+    serverId: string | null;
+    wasPr: boolean;
+    completedExercise: boolean;
+    finishedWorkout: boolean;
+  } | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
 
   // Load rest-notification preference once
   useEffect(() => {
@@ -145,6 +159,15 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const rowCount = programRows.length;
   const currentRow = programRows[exerciseIndex];
   const totalSets = parseSetsCount(currentRow ? currentRow.sets : "");
+
+  // Keep the screen on during an active workout
+  useEffect(() => {
+    if (!isActive || isFinished) return undefined;
+    activateKeepAwakeAsync("workout").catch(() => {});
+    return () => {
+      deactivateKeepAwake("workout").catch(() => {});
+    };
+  }, [isActive, isFinished]);
 
   // Tick while active; recompute clock immediately when app returns to foreground.
   useEffect(() => {
@@ -205,6 +228,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const resetAll = useCallback(() => {
     cancelNotification(restNotificationRef.current);
     restNotificationRef.current = null;
+    lastSetRef.current = null;
+    setCanUndo(false);
     setIsActive(false);
     setIsPaused(false);
     setIsFinished(false);
@@ -273,7 +298,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         return next;
       });
 
-      if (isPersonalRecord(historyByExercise[row.ex], setValues)) {
+      const wasPr = isPersonalRecord(historyByExercise[row.ex], setValues);
+      if (wasPr) {
         setPrCount((prev) => prev + 1);
         setLastPrExercise(row.ex);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
@@ -281,20 +307,46 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         );
       }
 
-      const sessionId = sessionIdRef.current;
-      if (sessionId) {
-        logWorkoutSet(sessionId, {
-          exerciseName: row.ex,
-          setNumber: currentSet,
-          weightKg: setValues.weightKg,
-          reps: setValues.reps,
-          rir: row.rir || null,
-        }).catch(() => {});
-      }
-
       const sets = parseSetsCount(row.sets);
       const isLastSetOfExercise = currentSet >= sets;
       const isLastExercise = exerciseIndex >= rowCount - 1;
+
+      // Snapshot for one-level undo
+      lastSetRef.current = {
+        exerciseIndex,
+        setNumber: currentSet,
+        exerciseName: row.ex,
+        serverId: null,
+        wasPr,
+        completedExercise: isLastSetOfExercise,
+        finishedWorkout: isLastSetOfExercise && isLastExercise,
+      };
+      setCanUndo(true);
+
+      const sessionId = sessionIdRef.current;
+      if (sessionId) {
+        const setNumber = currentSet;
+        logWorkoutSet(sessionId, {
+          exerciseName: row.ex,
+          setNumber,
+          weightKg: setValues.weightKg,
+          reps: setValues.reps,
+          rir: row.rir || null,
+        })
+          .then((result) => {
+            const snap = lastSetRef.current;
+            if (
+              result.success &&
+              result.data &&
+              snap &&
+              snap.exerciseName === row.ex &&
+              snap.setNumber === setNumber
+            ) {
+              snap.serverId = result.data.id;
+            }
+          })
+          .catch(() => {});
+      }
 
       if (isLastSetOfExercise) {
         setCompletedExercises((prev) => {
@@ -349,6 +401,96 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       finishSession,
       historyByExercise,
     ]
+  );
+
+  // Undo the last completed set: restore position, remove local + server log, revert PR
+  const undoLastSet = useCallback(() => {
+    const snap = lastSetRef.current;
+    if (!snap) return;
+    lastSetRef.current = null;
+    setCanUndo(false);
+    cancelNotification(restNotificationRef.current);
+    restNotificationRef.current = null;
+    pendingNextRef.current = null;
+    restEndsAtRef.current = null;
+    pausedRestRemainingMsRef.current = null;
+    setIsPaused(false);
+    setIsFinished(false);
+    if (snap.finishedWorkout) {
+      setCompletedToday(false);
+      AsyncStorage.removeItem(WORKOUT_DONE_KEY).catch(() => {});
+    }
+    if (snap.completedExercise) {
+      setCompletedExercises((prev) => {
+        const next = new Set(prev);
+        next.delete(snap.exerciseIndex);
+        return next;
+      });
+    }
+    setSetsThisSession((prev) => {
+      const next = Object.assign({}, prev);
+      next[snap.exerciseName] = (next[snap.exerciseName] || []).slice(0, -1);
+      return next;
+    });
+    if (snap.wasPr) {
+      setPrCount((prev) => Math.max(prev - 1, 0));
+      setLastPrExercise(null);
+    }
+    setMode("lifting");
+    setExerciseIndex(snap.exerciseIndex);
+    setCurrentSet(snap.setNumber);
+    if (snap.serverId) deleteWorkoutSet(snap.serverId).catch(() => {});
+    setNow(Date.now());
+  }, []);
+
+  // Jump to any exercise mid-workout (machine taken, supersets, etc.)
+  const jumpToExercise = useCallback(
+    (index: number) => {
+      if (!isActive || isFinished) return;
+      const row = programRows[index];
+      if (!row) return;
+      cancelNotification(restNotificationRef.current);
+      restNotificationRef.current = null;
+      pendingNextRef.current = null;
+      restEndsAtRef.current = null;
+      pausedRestRemainingMsRef.current = null;
+      setIsPaused(false);
+      setMode("lifting");
+      setExerciseIndex(index);
+      const doneSets = (setsThisSession[row.ex] || []).length;
+      setCurrentSet(Math.min(doneSets + 1, parseSetsCount(row.sets)));
+      setCompletedExercises((prev) => {
+        if (!prev.has(index)) return prev;
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+      setNow(Date.now());
+    },
+    [isActive, isFinished, programRows, setsThisSession]
+  );
+
+  const extendRest = useCallback(
+    (seconds = 30) => {
+      if (mode !== "rest") return;
+      if (isPaused && pausedRestRemainingMsRef.current !== null) {
+        pausedRestRemainingMsRef.current += seconds * 1000;
+      } else if (restEndsAtRef.current !== null) {
+        restEndsAtRef.current += seconds * 1000;
+        if (restNotifyEnabledRef.current) {
+          cancelNotification(restNotificationRef.current);
+          const remaining = (restEndsAtRef.current - Date.now()) / 1000;
+          scheduleRestEndNotification("Next set", currentSet, remaining).then(
+            (identifier) => {
+              restNotificationRef.current = identifier;
+            }
+          );
+        }
+      }
+      setRestTotalSeconds((prev) => prev + seconds);
+      setNow(Date.now());
+    },
+    [mode, isPaused, currentSet]
   );
 
   const skipRest = useCallback(() => {
@@ -419,6 +561,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     setsThisSession,
     prCount,
     lastPrExercise,
+    canUndo,
   };
 
   return {
@@ -427,6 +570,9 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     startWorkout: start,
     completeWorkoutSet: completeSet,
     skipWorkoutRest: skipRest,
+    undoLastWorkoutSet: undoLastSet,
+    jumpToWorkoutExercise: jumpToExercise,
+    extendWorkoutRest: extendRest,
     togglePauseWorkout: togglePause,
     stopWorkout: stop,
   };

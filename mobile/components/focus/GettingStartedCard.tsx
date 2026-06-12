@@ -6,18 +6,21 @@ import IconButton from "../ui/IconButton";
 import ProgressBar from "../ui/ProgressBar";
 import { colors, spacing, fontSizes } from "../../theme";
 
-const DISMISS_KEY = "onyx_getting_started_dismissed";
+export const GETTING_STARTED_DISMISS_KEY = "onyx_getting_started_dismissed";
+const DISMISS_KEY = GETTING_STARTED_DISMISS_KEY;
 
 interface GettingStartedCardProps {
   programSelected: boolean;
   anythingChecked: boolean;
   dayLogged: boolean;
+  onDismiss?: () => void;
 }
 
 export default function GettingStartedCard({
   programSelected,
   anythingChecked,
   dayLogged,
+  onDismiss,
 }: GettingStartedCardProps) {
   const [dismissed, setDismissed] = useState(true);
 
@@ -50,6 +53,7 @@ export default function GettingStartedCard({
   const handleDismiss = () => {
     setDismissed(true);
     AsyncStorage.setItem(DISMISS_KEY, "1").catch(() => {});
+    if (onDismiss) onDismiss();
   };
 
   return (

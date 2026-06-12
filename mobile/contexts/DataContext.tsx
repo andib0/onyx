@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -35,6 +36,8 @@ interface DataContextType {
   cancelImport: () => void;
   confirmImport: () => Promise<void>;
   resetProgram: () => void;
+  loadError: boolean;
+  reloadState: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -53,6 +56,7 @@ export function DataProvider({
 
   const [appState, setAppState] = useState<AppState>(() => normalizeState({}));
   const [stateLoading, setStateLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const todayKeyValue = todayKey();
 
   // Load app state from backend
@@ -62,6 +66,7 @@ export function DataProvider({
       setAppState(normalizeState({}));
       resetProgram();
       setStateLoading(false);
+      setLoadError(false);
       return undefined;
     }
     let cancelled = false;
@@ -71,9 +76,14 @@ export function DataProvider({
         if (cancelled) return;
         if (result.success && result.data) {
           setAppState(normalizeState(result.data));
+          setLoadError(false);
         } else {
           setAppState(normalizeState({}));
+          setLoadError(true);
         }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setStateLoading(false);
@@ -82,6 +92,17 @@ export function DataProvider({
       cancelled = true;
     };
   }, [authLoading, isAuthenticated, resetProgram]);
+
+  // Manual refresh (pull-to-refresh, error retry)
+  const reloadState = useCallback(async () => {
+    const result = await exportUserData();
+    if (result.success && result.data) {
+      setAppState(normalizeState(result.data));
+      setLoadError(false);
+    } else {
+      setLoadError(true);
+    }
+  }, []);
 
   // Log
   const { logEntries, addLogEntry, clearLogEntries, deleteLogEntry } = useLog(
@@ -124,6 +145,8 @@ export function DataProvider({
         cancelImport: importExport.cancelImport,
         confirmImport: importExport.confirmImport,
         resetProgram,
+        loadError,
+        reloadState,
       }}
     >
       {children}

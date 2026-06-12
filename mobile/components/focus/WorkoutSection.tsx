@@ -62,6 +62,9 @@ interface WorkoutSectionProps {
   onStop: () => void;
   onCompleteSet: (values?: LoggedSetValues) => void;
   onSkipRest: () => void;
+  onUndoSet?: () => void;
+  onJumpExercise?: (index: number) => void;
+  onExtendRest?: () => void;
 }
 
 export default function WorkoutSection({
@@ -75,6 +78,9 @@ export default function WorkoutSection({
   onStop,
   onCompleteSet,
   onSkipRest,
+  onUndoSet,
+  onJumpExercise,
+  onExtendRest,
 }: WorkoutSectionProps) {
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
@@ -241,7 +247,33 @@ export default function WorkoutSection({
             Up next: <Text style={styles.upNextName}>{exerciseName}</Text> — set{" "}
             {workout.currentSet}/{workout.totalSets}
           </Text>
-          <Button label="Skip rest" variant="secondary" onPress={onSkipRest} />
+          <View style={styles.restActions}>
+            {workout.canUndo && onUndoSet ? (
+              <Button
+                label="Undo set"
+                variant="ghost"
+                size="sm"
+                onPress={onUndoSet}
+                style={styles.restActionBtn}
+              />
+            ) : null}
+            {onExtendRest ? (
+              <Button
+                label="+30s"
+                variant="secondary"
+                size="sm"
+                onPress={onExtendRest}
+                style={styles.restActionBtn}
+              />
+            ) : null}
+            <Button
+              label="Skip rest"
+              variant="secondary"
+              size="sm"
+              onPress={onSkipRest}
+              style={styles.restActionBtn}
+            />
+          </View>
         </View>
       ) : (
         <View style={styles.liftBox}>
@@ -325,14 +357,19 @@ export default function WorkoutSection({
           const current = idx === workout.exerciseIndex;
           const nearCurrent = Math.abs(idx - workout.exerciseIndex) <= 1;
           if (!showFullList && !nearCurrent) return null;
+          const canJump = Boolean(onJumpExercise) && !current;
           return (
-            <View
+            <Pressable
               key={`ex-${idx}`}
-              style={[
+              onPress={canJump ? () => onJumpExercise!(idx) : undefined}
+              disabled={!canJump}
+              style={({ pressed }) => [
                 styles.exerciseListItem,
                 current && styles.exerciseListItemCurrent,
                 done && styles.exerciseListItemDone,
+                pressed && canJump && styles.exerciseListItemPressed,
               ]}
+              accessibilityLabel={canJump ? `Jump to ${row.ex}` : row.ex}
             >
               <Text
                 style={[styles.exerciseListName, done && styles.exerciseListNameDone]}
@@ -343,7 +380,7 @@ export default function WorkoutSection({
               <Text style={styles.exerciseListStatus}>
                 {done ? "✓" : `${row.sets}×${row.reps}`}
               </Text>
-            </View>
+            </Pressable>
           );
         })}
         {programRows.length > 3 ? (
@@ -625,6 +662,17 @@ const styles = StyleSheet.create({
   },
   exerciseListItemDone: {
     opacity: 0.45,
+  },
+  exerciseListItemPressed: {
+    opacity: 0.7,
+  },
+  restActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center",
+  },
+  restActionBtn: {
+    flex: 1,
   },
   exerciseListName: {
     flex: 1,

@@ -95,6 +95,7 @@ export function buildYesterdayRecap(
 }
 
 // Consecutive days (ending yesterday) where every supplement was taken.
+// One grace miss per rolling 7 days keeps a single slip from nuking motivation.
 export function supplementStreak(
   appState: AppState,
   supplementsList: SupplementItem[],
@@ -102,11 +103,25 @@ export function supplementStreak(
 ): number {
   if (supplementsList.length === 0) return 0;
   let streak = 0;
+  let graceLeft = 1;
+  let daysSinceGraceRefill = 0;
   for (let daysAgo = 1; daysAgo <= maxDays; daysAgo++) {
     const checks = appState.suppLog[dateKeyDaysAgo(daysAgo)] || {};
     const allTaken = supplementsList.every((s) => checks[s.id || ""]);
-    if (!allTaken) break;
-    streak++;
+    if (allTaken) {
+      streak++;
+    } else if (graceLeft > 0 && streak > 0) {
+      graceLeft--;
+    } else if (graceLeft > 0 && Object.keys(checks).length > 0) {
+      graceLeft--;
+    } else {
+      break;
+    }
+    daysSinceGraceRefill++;
+    if (daysSinceGraceRefill >= 7) {
+      graceLeft = 1;
+      daysSinceGraceRefill = 0;
+    }
   }
   // Today counts too once everything is checked.
   const todayChecks = appState.suppLog[dateKeyDaysAgo(0)] || {};

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
@@ -29,11 +30,19 @@ import SectionTitle from "../../components/ui/SectionTitle";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
-import DayCheckInCard from "../../components/focus/DayCheckInCard";
-import GettingStartedCard from "../../components/focus/GettingStartedCard";
-import WeeklyRecapCard from "../../components/focus/WeeklyRecapCard";
+import DayCheckInCard, {
+  CHECK_IN_HOUR,
+  CHECKIN_DISMISS_KEY,
+} from "../../components/focus/DayCheckInCard";
+import GettingStartedCard, {
+  GETTING_STARTED_DISMISS_KEY,
+} from "../../components/focus/GettingStartedCard";
+import WeeklyRecapCard, {
+  WEEKLY_DISMISS_KEY,
+  weekKey,
+} from "../../components/focus/WeeklyRecapCard";
 import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
-import { colors, fontSizes, spacing } from "../../theme";
+import { colors, fontSizes, spacing, tints } from "../../theme";
 
 const getGreeting = (minutes: number): string => {
   const hour = Math.floor(minutes / 60);
@@ -86,7 +95,15 @@ export default function FocusScreen() {
     todayKeyValue,
     logEntries,
     addLogEntry,
+    loadError,
+    reloadState,
   } = useData();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await reloadState();
+    setRefreshing(false);
+  };
   const { showToast } = useToastContext();
   const { scheduleBlocks } = useSchedule();
   const { supplementsList, supplementChecksForToday, setSupplementChecked } =
@@ -104,6 +121,9 @@ export default function FocusScreen() {
     stopWorkout,
     completeWorkoutSet,
     skipWorkoutRest,
+    undoLastWorkoutSet,
+    jumpToWorkoutExercise,
+    extendWorkoutRest,
   } = useProgram();
   const {
     timelineBlocks,
@@ -202,8 +222,6 @@ export default function FocusScreen() {
     });
   };
 
-  if (stateLoading) return <LoadingScreen />;
-
   const mealDoneCount = mealTemplatesForToday.filter(
     (m) => mealCheckMap[m.id || ""]
   ).length;
@@ -220,8 +238,70 @@ export default function FocusScreen() {
     Object.keys(appState.suppLog).length > 0 ||
     Object.keys(appState.mealLog).length > 0;
 
+  // One contextual card at a time (Miller): priority queue
+  type ContextualSlot = "gettingStarted" | "checkIn" | "weekly" | "recap" | null;
+  const [slot, setSlot] = useState<ContextualSlot>(null);
+  const [slotTick, setSlotTick] = useState(0);
+  const bumpSlot = () => setSlotTick((prev) => prev + 1);
+  const gettingStartedDone =
+    Boolean(selectedProgramId) && anythingChecked && logEntries.length > 0;
+  const loggedToday = logEntries.some((entry) => entry.date === todayKeyValue);
+  const isEvening = nowMinutes >= CHECK_IN_HOUR * 60;
+  const isMorning = nowMinutes < 12 * 60;
+  const isMonday = new Date().getDay() === 1;
+  const gymActive = blocksToShow.some(
+    (fb) => !fb.isUpcoming && fb.context === "gym"
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [gsDismissed, checkinDismissed, weeklyDismissed] = await Promise.all([
+        AsyncStorage.getItem(GETTING_STARTED_DISMISS_KEY).catch(() => null),
+        AsyncStorage.getItem(CHECKIN_DISMISS_KEY).catch(() => null),
+        AsyncStorage.getItem(WEEKLY_DISMISS_KEY).catch(() => null),
+      ]);
+      if (cancelled) return;
+      if (gsDismissed !== "1" && !gettingStartedDone) {
+        setSlot("gettingStarted");
+      } else if (isEvening && !loggedToday && checkinDismissed !== todayKeyValue) {
+        setSlot("checkIn");
+      } else if (isMonday && weeklyDismissed !== weekKey()) {
+        setSlot("weekly");
+      } else if (isMorning && recap) {
+        setSlot("recap");
+      } else {
+        setSlot(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recap object identity churns
+  }, [
+    gettingStartedDone,
+    isEvening,
+    isMorning,
+    isMonday,
+    loggedToday,
+    todayKeyValue,
+    slotTick,
+  ]);
+
+  if (stateLoading) return <LoadingScreen />;
+
   return (
-    <ScreenContainer>
+    <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      {/* Sync failure banner */}
+      {loadError ? (
+        <Pressable onPress={handleRefresh}>
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>
+              Couldn't sync with server — tap to retry
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
       {/* Header: greeting + date, no clock (status bar has one) */}
       <View style={styles.headerRow}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.headerText}>
@@ -240,16 +320,60 @@ export default function FocusScreen() {
         </Animated.View>
       </View>
 
-      {/* New-account checklist (auto-hides when complete) */}
-      <GettingStartedCard
-        programSelected={Boolean(selectedProgramId)}
-        anythingChecked={anythingChecked}
-        dayLogged={logEntries.length > 0}
-      />
+      {/* Single contextual slot — highest-priority card only */}
+      {slot === "gettingStarted" ? (
+        <GettingStartedCard
+          programSelected={Boolean(selectedProgramId)}
+          anythingChecked={anythingChecked}
+          dayLogged={logEntries.length > 0}
+          onDismiss={bumpSlot}
+        />
+      ) : null}
+      {slot === "checkIn" ? (
+        <DayCheckInCard
+          nowMinutes={nowMinutes}
+          todayKeyValue={todayKeyValue}
+          dayLabel={trainingDayActive ? programLabel : "Rest"}
+          logEntries={logEntries}
+          onSave={addLogEntry}
+          showToast={showToast}
+          onDismiss={bumpSlot}
+        />
+      ) : null}
+      {slot === "weekly" ? (
+        <WeeklyRecapCard
+          appState={appState}
+          supplementsList={supplementsList}
+          logEntries={logEntries}
+          onDismiss={bumpSlot}
+        />
+      ) : null}
+      {slot === "recap" ? <RecapCard recap={recap} streak={streak} /> : null}
 
-      {/* Hero: what matters right now, with the matching one-tap action */}
+      {/* Hero: what matters right now, with the matching one-tap action.
+          Active gym block renders the workout card itself — no duplicate. */}
+      {gymActive ? (
+        <WorkoutSection
+          workout={workout}
+          workoutCompletedToday={workoutCompletedToday}
+          programRows={programRows}
+          programLabel={programLabel}
+          trainingDayActive={trainingDayActive}
+          onStart={startWorkout}
+          onTogglePause={togglePauseWorkout}
+          onStop={stopWorkout}
+          onCompleteSet={completeWorkoutSet}
+          onSkipRest={skipWorkoutRest}
+          onUndoSet={undoLastWorkoutSet}
+          onJumpExercise={jumpToWorkoutExercise}
+          onExtendRest={extendWorkoutRest}
+        />
+      ) : null}
       {blocksToShow.length > 0 ? (
         blocksToShow.map((focusBlock) => {
+          if (gymActive && !focusBlock.isUpcoming && focusBlock.context === "gym") {
+            return null;
+          }
           const blockId = focusBlock.block.id || "";
           let action = null;
           if (!focusBlock.isUpcoming && focusBlock.context === "meal") {
@@ -309,7 +433,18 @@ export default function FocusScreen() {
               value={`${timelineProgressPercent}%`}
             />
             <View style={styles.dayRowInfo}>
-              <Text style={styles.dayRowTitle}>Day score</Text>
+              <Text
+                style={[
+                  styles.dayRowTitle,
+                  timelineProgressPercent >= 100 &&
+                    timelineBlocks.length > 0 &&
+                    styles.dayRowPerfect,
+                ]}
+              >
+                {timelineProgressPercent >= 100 && timelineBlocks.length > 0
+                  ? "Perfect day ✨"
+                  : "Day score"}
+              </Text>
               <Text style={styles.dayRowText}>
                 <Text style={styles.dayRowStrong}>
                   {timelineBlocks.length - timelineRemainingCount}/
@@ -328,20 +463,27 @@ export default function FocusScreen() {
         </Card>
       </Pressable>
 
-      {/* Training */}
-      <SectionTitle label="Training" meta={programLabel} />
-      <WorkoutSection
-        workout={workout}
-        workoutCompletedToday={workoutCompletedToday}
-        programRows={programRows}
-        programLabel={programLabel}
-        trainingDayActive={trainingDayActive}
-        onStart={startWorkout}
-        onTogglePause={togglePauseWorkout}
-        onStop={stopWorkout}
-        onCompleteSet={completeWorkoutSet}
-        onSkipRest={skipWorkoutRest}
-      />
+      {/* Training (hidden when already rendered as the hero) */}
+      {!gymActive ? (
+        <>
+          <SectionTitle label="Training" meta={programLabel} />
+          <WorkoutSection
+            workout={workout}
+            workoutCompletedToday={workoutCompletedToday}
+            programRows={programRows}
+            programLabel={programLabel}
+            trainingDayActive={trainingDayActive}
+            onStart={startWorkout}
+            onTogglePause={togglePauseWorkout}
+            onStop={stopWorkout}
+            onCompleteSet={completeWorkoutSet}
+            onSkipRest={skipWorkoutRest}
+            onUndoSet={undoLastWorkoutSet}
+            onJumpExercise={jumpToWorkoutExercise}
+            onExtendRest={extendWorkoutRest}
+          />
+        </>
+      ) : null}
 
       {/* Nutrition */}
       {mealTemplatesForToday.length > 0 ? (
@@ -383,23 +525,6 @@ export default function FocusScreen() {
         </>
       ) : null}
 
-      {/* Contextual: check-in evenings (component gates itself), recap mornings only */}
-      <DayCheckInCard
-        nowMinutes={nowMinutes}
-        todayKeyValue={todayKeyValue}
-        dayLabel={trainingDayActive ? programLabel : "Rest"}
-        logEntries={logEntries}
-        onSave={addLogEntry}
-        showToast={showToast}
-      />
-      {nowMinutes < 12 * 60 ? <RecapCard recap={recap} streak={streak} /> : null}
-
-      {/* Monday weekly recap */}
-      <WeeklyRecapCard
-        appState={appState}
-        supplementsList={supplementsList}
-        logEntries={logEntries}
-      />
     </ScreenContainer>
   );
 }
@@ -448,6 +573,23 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.md,
     fontWeight: "600",
     color: colors.text,
+  },
+  dayRowPerfect: {
+    color: colors.good,
+  },
+  errorBanner: {
+    backgroundColor: tints.danger,
+    borderWidth: 1,
+    borderColor: colors.danger + "55",
+    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  errorBannerText: {
+    fontSize: fontSizes.sm,
+    color: colors.danger,
+    textAlign: "center",
+    fontWeight: "600",
   },
   dayRowText: {
     fontSize: fontSizes.sm,

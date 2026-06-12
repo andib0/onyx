@@ -49,6 +49,13 @@ export class WorkoutsService {
     });
   }
 
+  async deleteSet(userId: string, setId: string) {
+    const result = await prisma.workoutSetLog.deleteMany({
+      where: { id: setId, userId },
+    });
+    return result.count > 0;
+  }
+
   async getSessions(userId: string, limit = 30, offset = 0) {
     return prisma.workoutSession.findMany({
       where: { userId },

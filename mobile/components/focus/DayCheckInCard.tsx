@@ -7,8 +7,9 @@ import IconButton from "../ui/IconButton";
 import type { LogEntry } from "../../types/appTypes";
 import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
 
-const CHECK_IN_HOUR = 19;
-const DISMISS_KEY = "onyx_checkin_dismissed";
+export const CHECK_IN_HOUR = 19;
+export const CHECKIN_DISMISS_KEY = "onyx_checkin_dismissed";
+const DISMISS_KEY = CHECKIN_DISMISS_KEY;
 
 interface DayCheckInCardProps {
   nowMinutes: number;
@@ -17,6 +18,7 @@ interface DayCheckInCardProps {
   logEntries: LogEntry[];
   onSave: (entry: LogEntry) => Promise<void>;
   showToast: (message: string) => void;
+  onDismiss?: () => void;
 }
 
 function Field({
@@ -60,6 +62,7 @@ export default function DayCheckInCard({
   logEntries,
   onSave,
   showToast,
+  onDismiss,
 }: DayCheckInCardProps) {
   const [dismissed, setDismissed] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,6 +88,7 @@ export default function DayCheckInCard({
   const handleDismiss = () => {
     setDismissed(true);
     AsyncStorage.setItem(DISMISS_KEY, todayKeyValue).catch(() => {});
+    if (onDismiss) onDismiss();
   };
 
   const isEvening = nowMinutes >= CHECK_IN_HOUR * 60;

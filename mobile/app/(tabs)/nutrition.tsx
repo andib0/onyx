@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -20,6 +20,7 @@ import MealCard from "../../components/nutrition/MealCard";
 import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
 import MyFoodsSection from "../../components/nutrition/MyFoodsSection";
 import useDebouncedValue from "../../hooks/useDebouncedValue";
+import useWater from "../../hooks/useWater";
 import { searchFoods, type Food } from "../../api/foods";
 import {
   getUserFoods,
@@ -38,7 +39,8 @@ import { sharedStyles } from "../../theme/sharedStyles";
 
 export default function NutritionScreen() {
   const router = useRouter();
-  const { stateLoading, nutritionTargets } = useData();
+  const { stateLoading, nutritionTargets, appState, todayKeyValue } = useData();
+  const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
   const { programGoal } = useProgram();
   const { supplementsList, supplementChecksForToday, setSupplementChecked } =
@@ -57,6 +59,9 @@ export default function NutritionScreen() {
 
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [showFoodSearch, setShowFoodSearch] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickProtein, setQuickProtein] = useState("");
+  const [quickKcal, setQuickKcal] = useState("");
 
   // Food search state
   const [foodQuery, setFoodQuery] = useState("");
@@ -137,6 +142,10 @@ export default function NutritionScreen() {
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
+  const hydrationValue =
+    nutritionTargets.find((t) => t.k.toLowerCase().includes("hydration"))?.v || "";
+  const hydrationMatch = hydrationValue.match(/\d+(\.\d+)?/);
+  const waterTargetMl = hydrationMatch ? parseFloat(hydrationMatch[0]) * 1000 : 2500;
 
   const supplementItems = useMemo(
     () =>
@@ -155,6 +164,57 @@ export default function NutritionScreen() {
     setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
       showToast(err instanceof Error ? err.message : "Failed to update supplement");
     });
+  };
+
+  // Fill empty weekdays with the current day's meals (non-destructive)
+  const handleCopyToEmptyDays = async () => {
+    if (!mealTemplatesForDay.length) return;
+    let copied = 0;
+    for (const day of mealDayOptions) {
+      if (day === selectedMealDay) continue;
+      const existing = appState.mealTemplatesByDay[day] || [];
+      if (existing.length) continue;
+      for (const meal of mealTemplatesForDay) {
+        await addMealTemplateForDay(
+          day,
+          Object.assign({}, meal, {
+            id: `copy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          })
+        );
+      }
+      copied++;
+    }
+    showToast(
+      copied ? `Copied to ${copied} day${copied === 1 ? "" : "s"}` : "Other days already have meals"
+    );
+  };
+
+  const handleQuickAdd = async () => {
+    const name = quickName.trim();
+    if (!name) {
+      showToast("Meal needs a name");
+      return;
+    }
+    const tags = [];
+    const protein = parseFloat(quickProtein.replace(",", "."));
+    const kcal = parseFloat(quickKcal.replace(",", "."));
+    if (!isNaN(protein)) tags.push({ label: "Protein", value: `${protein}g` });
+    if (!isNaN(kcal)) tags.push({ label: "Cal", value: `${kcal}` });
+    try {
+      await addMealTemplateForDay(selectedMealDay, {
+        id: `custom_${Date.now()}`,
+        name,
+        examples: "",
+        grams: null,
+        tags,
+      });
+      setQuickName("");
+      setQuickProtein("");
+      setQuickKcal("");
+      showToast(`Added ${name}`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to add meal");
+    }
   };
 
   const handleGramsChange = (mealId: string, text: string) => {
@@ -194,7 +254,13 @@ export default function NutritionScreen() {
         />
       </ScrollView>
 
-      <MacroDashboard consumed={macroTotals} targets={macroTargets} />
+      <MacroDashboard
+        consumed={macroTotals}
+        targets={macroTargets}
+        waterMl={waterMl}
+        waterTargetMl={waterTargetMl}
+        onAddWater={addWater}
+      />
 
       {/* Meals */}
       <SectionTitle label={`Meals · ${selectedMealDay}`} />
@@ -224,9 +290,51 @@ export default function NutritionScreen() {
         )}
       </Card>
 
+      {/* Copy current day's meals to empty days */}
+      {mealTemplatesForDay.length > 0 ? (
+        <Button
+          label="Copy this day to empty days"
+          variant="ghost"
+          size="sm"
+          onPress={handleCopyToEmptyDays}
+        />
+      ) : null}
+
       {/* Food search behind progressive disclosure */}
       {showFoodSearch ? (
         <>
+          {/* Quick add custom meal */}
+          <Card title="Quick add">
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickName]}
+                placeholder="Meal name"
+                placeholderTextColor={colors.muted}
+                value={quickName}
+                onChangeText={setQuickName}
+                maxLength={60}
+              />
+            </View>
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="Protein g"
+                placeholderTextColor={colors.muted}
+                value={quickProtein}
+                onChangeText={setQuickProtein}
+                keyboardType="decimal-pad"
+              />
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="kcal"
+                placeholderTextColor={colors.muted}
+                value={quickKcal}
+                onChangeText={setQuickKcal}
+                keyboardType="number-pad"
+              />
+              <Button label="Add" size="sm" onPress={handleQuickAdd} />
+            </View>
+          </Card>
           <FoodSearchSection
             query={foodQuery}
             onQueryChange={setFoodQuery}
@@ -313,6 +421,18 @@ export default function NutritionScreen() {
 const styles = StyleSheet.create({
   macroGrid: {
     gap: spacing.md,
+  },
+  quickRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  quickName: {
+    flex: 1,
+  },
+  quickField: {
+    flex: 1,
   },
   targetRow: {
     paddingVertical: spacing.sm,

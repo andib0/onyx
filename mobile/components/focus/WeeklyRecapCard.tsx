@@ -8,9 +8,10 @@ import { buildWeightTrend, dateKeyDaysAgo } from "../../utils/trends";
 import type { AppState, LogEntry, SupplementItem } from "../../types/appTypes";
 import { colors, spacing, fontSizes, fonts } from "../../theme";
 
-const DISMISS_KEY = "onyx_weekly_recap_dismissed";
+export const WEEKLY_DISMISS_KEY = "onyx_weekly_recap_dismissed";
+const DISMISS_KEY = WEEKLY_DISMISS_KEY;
 
-function weekKey(): string {
+export function weekKey(): string {
   const now = new Date();
   const jan1 = new Date(now.getFullYear(), 0, 1);
   const week = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + 1) / 7);
@@ -43,12 +44,14 @@ interface WeeklyRecapCardProps {
   appState: AppState;
   supplementsList: SupplementItem[];
   logEntries: LogEntry[];
+  onDismiss?: () => void;
 }
 
 export default function WeeklyRecapCard({
   appState,
   supplementsList,
   logEntries,
+  onDismiss,
 }: WeeklyRecapCardProps) {
   const [dismissed, setDismissed] = useState(true);
   const [weekSets, setWeekSets] = useState<number | null>(null);
@@ -93,6 +96,7 @@ export default function WeeklyRecapCard({
   const handleDismiss = () => {
     setDismissed(true);
     AsyncStorage.setItem(DISMISS_KEY, weekKey()).catch(() => {});
+    if (onDismiss) onDismiss();
   };
 
   return (

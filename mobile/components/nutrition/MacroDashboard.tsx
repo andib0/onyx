@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Card from "../ui/Card";
 import Ring from "../ui/Ring";
 import type { ConsumedMacros } from "../../utils/nutrition";
@@ -15,6 +16,9 @@ interface MacroDashboardProps {
   consumed: ConsumedMacros;
   targets: MacroTargets;
   compact?: boolean;
+  waterMl?: number;
+  waterTargetMl?: number;
+  onAddWater?: (amountMl: number) => void;
 }
 
 function MacroBar({
@@ -49,6 +53,9 @@ export default function MacroDashboard({
   consumed,
   targets,
   compact = false,
+  waterMl,
+  waterTargetMl,
+  onAddWater,
 }: MacroDashboardProps) {
   const calPercent =
     targets.calories > 0 ? (consumed.calories / targets.calories) * 100 : 0;
@@ -88,6 +95,32 @@ export default function MacroDashboard({
       </View>
       {targets.calories > 0 ? (
         <Text style={styles.footer}>{kcalLeft} kcal left</Text>
+      ) : null}
+
+      {/* Water tracking */}
+      {onAddWater && waterMl !== undefined ? (
+        <View style={styles.waterRow}>
+          <Ionicons name="water" size={18} color={colors.accent} />
+          <Text style={styles.waterText}>
+            <Text style={styles.waterValue}>{(waterMl / 1000).toFixed(2)}</Text>
+            {waterTargetMl ? ` / ${(waterTargetMl / 1000).toFixed(1)} L` : " L"}
+          </Text>
+          <View style={styles.waterChips}>
+            {[250, 500].map((amount) => (
+              <Pressable
+                key={`water-${amount}`}
+                onPress={() => onAddWater(amount)}
+                style={({ pressed }) => [
+                  styles.waterChip,
+                  pressed && styles.waterChipPressed,
+                ]}
+                accessibilityLabel={`Add ${amount} milliliters of water`}
+              >
+                <Text style={styles.waterChipText}>+{amount}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       ) : null}
     </Card>
   );
@@ -142,5 +175,48 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: "center",
     marginTop: spacing.sm,
+  },
+  waterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  waterText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+  },
+  waterValue: {
+    color: colors.text,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    fontSize: fontSizes.md,
+  },
+  waterChips: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  waterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.full,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 32,
+    justifyContent: "center",
+  },
+  waterChipPressed: {
+    opacity: 0.7,
+  },
+  waterChipText: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
   },
 });

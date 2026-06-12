@@ -40,6 +40,19 @@ export async function finishSession(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function deleteSet(req: AuthenticatedRequest, res: Response) {
+  try {
+    const deleted = await workoutsService.deleteSet(req.userId!, req.params.id);
+    if (!deleted) {
+      return sendNotFound(res, 'Set not found');
+    }
+    return sendSuccess(res, null, 'Set deleted');
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
 export async function getSessions(req: AuthenticatedRequest, res: Response) {
   try {
     const { limit, offset } = req.query;

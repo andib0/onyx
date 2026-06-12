@@ -49,6 +49,10 @@ export async function logWorkoutSet(
   return api.post<LoggedSet>(`/workouts/sessions/${sessionId}/sets`, set);
 }
 
+export async function deleteWorkoutSet(setId: string) {
+  return api.delete<null>(`/workouts/sets/${setId}`);
+}
+
 export async function finishWorkoutSession(sessionId: string, durationSeconds: number) {
   return api.patch<WorkoutSession>(`/workouts/sessions/${sessionId}/finish`, {
     durationSeconds,

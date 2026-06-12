@@ -1,4 +1,7 @@
-import { View, Text, Switch, StyleSheet } from "react-native";
+import { View, Text, TextInput, Switch, StyleSheet } from "react-native";
+import Constants from "expo-constants";
+import { updateProfile } from "../../api/auth";
+import { updatePreferences } from "../../api/preferences";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useSupplements } from "../../contexts/SupplementsContext";
@@ -25,7 +28,7 @@ import { colors, spacing, fontSizes } from "../../theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { logout, user } = useAuth();
+  const { logout, user, refreshUser } = useAuth();
   const {
     handleImportClick,
     exportJson,
@@ -36,7 +39,43 @@ export default function SettingsScreen() {
   } = useData();
 
   const [showLogout, setShowLogout] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editWeight, setEditWeight] = useState("");
+  const [editCutoff, setEditCutoff] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
   const weightTrend = buildWeightTrend(logEntries);
+
+  const startEditProfile = () => {
+    setEditUsername(user?.username || "");
+    setEditWeight(user?.weight ? String(user.weight) : "");
+    setEditCutoff(user?.preferences?.caffeineCutoff || "");
+    setEditingProfile(true);
+  };
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const weight = parseFloat(editWeight.replace(",", "."));
+      const profilePatch: { username?: string; weight?: number } = {};
+      if (editUsername.trim()) profilePatch.username = editUsername.trim();
+      if (!isNaN(weight)) profilePatch.weight = weight;
+      if (Object.keys(profilePatch).length) {
+        await updateProfile(profilePatch);
+      }
+      const cutoff = editCutoff.trim();
+      if (cutoff && /^\d{1,2}:\d{2}$/.test(cutoff)) {
+        await updatePreferences({ caffeineCutoff: cutoff });
+      }
+      await refreshUser();
+      setEditingProfile(false);
+      showToast("Profile updated");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
   const { showToast } = useToastContext();
   const { supplementsList } = useSupplements();
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
@@ -100,6 +139,61 @@ export default function SettingsScreen() {
             <Text style={styles.metaValue}>{user.preferences.caffeineCutoff}</Text>
           </View>
         ) : null}
+        {editingProfile ? (
+          <View style={styles.editBox}>
+            <Text style={styles.editLabel}>Username</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editUsername}
+              onChangeText={setEditUsername}
+              placeholder="Username"
+              placeholderTextColor={colors.muted}
+              maxLength={50}
+            />
+            <Text style={styles.editLabel}>Weight (kg)</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editWeight}
+              onChangeText={setEditWeight}
+              placeholder="75"
+              placeholderTextColor={colors.muted}
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.editLabel}>Caffeine cutoff (HH:MM)</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editCutoff}
+              onChangeText={setEditCutoff}
+              placeholder="15:40"
+              placeholderTextColor={colors.muted}
+              maxLength={5}
+            />
+            <View style={styles.editActions}>
+              <Button
+                label={savingProfile ? "Saving..." : "Save"}
+                size="sm"
+                onPress={saveProfile}
+                disabled={savingProfile}
+                style={styles.editBtn}
+              />
+              <Button
+                label="Cancel"
+                variant="ghost"
+                size="sm"
+                onPress={() => setEditingProfile(false)}
+                style={styles.editBtn}
+              />
+            </View>
+          </View>
+        ) : (
+          <Button
+            label="Edit profile"
+            variant="secondary"
+            size="sm"
+            onPress={startEditProfile}
+            style={styles.editProfileBtn}
+          />
+        )}
       </Card>
 
       {/* Progress */}
@@ -171,6 +265,11 @@ export default function SettingsScreen() {
           />
         </View>
       </Card>
+
+      {/* About */}
+      <Text style={styles.aboutText}>
+        Onyx · v{Constants.expoConfig?.version || "1.0.0"}
+      </Text>
 
       {/* Sign out */}
       <Button label="Sign Out" variant="danger" onPress={() => setShowLogout(true)} />
@@ -244,6 +343,47 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.text,
     fontWeight: "600",
+  },
+  editProfileBtn: {
+    marginTop: spacing.md,
+  },
+  editBox: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.xs,
+  },
+  editLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: spacing.xs,
+  },
+  editInput: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    fontSize: fontSizes.md,
+    minHeight: 44,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  editBtn: {
+    flex: 1,
+  },
+  aboutText: {
+    fontSize: fontSizes.xs,
+    color: colors.faint,
+    textAlign: "center",
   },
   notifRow: {
     flexDirection: "row",

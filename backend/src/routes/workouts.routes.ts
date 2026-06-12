@@ -5,6 +5,7 @@ import {
   finishSession,
   getSessions,
   getExerciseHistory,
+  deleteSet,
 } from '../controllers/workouts.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -23,5 +24,6 @@ router.get('/exercise-history', getExerciseHistory);
 router.post('/sessions', validate(startSessionSchema), startSession);
 router.post('/sessions/:id/sets', validate(logSetSchema), logSet);
 router.patch('/sessions/:id/finish', validate(finishSessionSchema), finishSession);
+router.delete('/sets/:id', deleteSet);
 
 export default router;

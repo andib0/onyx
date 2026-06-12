@@ -28,6 +28,9 @@ interface ProgramContextType {
   stopWorkout: () => void;
   completeWorkoutSet: (values?: LoggedSetValues) => void;
   skipWorkoutRest: () => void;
+  undoLastWorkoutSet: () => void;
+  jumpToWorkoutExercise: (index: number) => void;
+  extendWorkoutRest: (seconds?: number) => void;
 }
 
 const ProgramContext = createContext<ProgramContextType | null>(null);
@@ -52,6 +55,9 @@ export function ProgramProvider({
     stopWorkout,
     completeWorkoutSet,
     skipWorkoutRest,
+    undoLastWorkoutSet,
+    jumpToWorkoutExercise,
+    extendWorkoutRest,
   } = useWorkout(program.programRows, program.programLabel);
 
   return (
@@ -79,6 +85,9 @@ export function ProgramProvider({
         stopWorkout,
         completeWorkoutSet,
         skipWorkoutRest,
+        undoLastWorkoutSet,
+        jumpToWorkoutExercise,
+        extendWorkoutRest,
       }}
     >
       {children}
