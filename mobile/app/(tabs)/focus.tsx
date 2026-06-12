@@ -440,6 +440,7 @@ export default function FocusScreen() {
       ) : null}
 
       {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
+      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
       <Pressable onPress={() => router.push("/(tabs)/schedule")}>
         <Card>
           <Glow color={colors.good} size={150} x={52} y={52} opacity={0.1} />
@@ -481,6 +482,7 @@ export default function FocusScreen() {
           </View>
         </Card>
       </Pressable>
+      </Animated.View>
 
       {/* Training (hidden when already rendered as the hero) */}
       {!gymActive ? (

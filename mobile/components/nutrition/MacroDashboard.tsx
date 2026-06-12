@@ -11,6 +11,7 @@ import Animated, {
 import Card from "../ui/Card";
 import Ring from "../ui/Ring";
 import Glow from "../ui/Glow";
+import AnimatedNumber from "../ui/AnimatedNumber";
 import type { ConsumedMacros } from "../../utils/nutrition";
 import { colors, spacing, fontSizes, fonts, radii } from "../../theme";
 
@@ -131,7 +132,10 @@ export default function MacroDashboard({
         </View>
       </View>
       {targets.calories > 0 ? (
-        <Text style={styles.footer}>{kcalLeft} kcal left</Text>
+        <View style={styles.footerRow}>
+          <AnimatedNumber value={kcalLeft} style={styles.footerNumber} />
+          <Text style={styles.footer}> kcal left</Text>
+        </View>
       ) : null}
 
       {/* Water tracking */}
@@ -211,11 +215,23 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: radii.full,
   },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "baseline",
+    marginTop: spacing.sm,
+  },
+  footerNumber: {
+    fontSize: fontSizes.sm,
+    color: colors.text,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
   footer: {
     fontSize: fontSizes.xs,
     color: colors.muted,
     textAlign: "center",
-    marginTop: spacing.sm,
   },
   waterRow: {
     flexDirection: "row",
