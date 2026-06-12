@@ -33,6 +33,7 @@ function RootStack() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="supplements" options={{ title: "Supplements" }} />
       <Stack.Screen name="log" options={{ title: "History & Trends" }} />
       <Stack.Screen name="program-editor" options={{ title: "Program editor" }} />

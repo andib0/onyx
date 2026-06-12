@@ -29,6 +29,7 @@ interface AuthContextType {
   ) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -151,6 +152,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const me = await authApi.getMe();
+    if (me.success && me.data) {
+      setUser(me.data.user);
+    }
+  }, []);
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -160,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     clearError,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

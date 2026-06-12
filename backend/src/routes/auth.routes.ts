@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, me } from '../controllers/auth.controller.js';
+import {
+  register,
+  login,
+  refresh,
+  logout,
+  me,
+  updateProfile,
+} from '../controllers/auth.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/rateLimit.js';
 
@@ -13,5 +20,6 @@ router.post('/refresh', refresh);
 // Protected routes
 router.post('/logout', authMiddleware, logout);
 router.get('/me', authMiddleware, me);
+router.put('/profile', authMiddleware, updateProfile);
 
 export default router;

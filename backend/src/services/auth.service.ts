@@ -165,6 +165,25 @@ export class AuthService {
     }
   }
 
+  async updateProfile(
+    userId: string,
+    data: { username?: string; age?: number; weight?: number }
+  ) {
+    return prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        age: true,
+        weight: true,
+        createdAt: true,
+        preferences: true,
+      },
+    });
+  }
+
   async getUser(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },

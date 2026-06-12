@@ -148,7 +148,9 @@ export default function WorkoutSection({
     return (
       <Card>
         <View style={styles.idleHeader}>
-          <Text style={styles.idleTitle}>{programLabel}</Text>
+          <Text style={styles.idleTitle} numberOfLines={2}>
+            {programLabel}
+          </Text>
           <Text style={styles.idleMeta}>{programRows.length} exercises</Text>
         </View>
         <View style={styles.previewList}>
@@ -183,7 +185,14 @@ export default function WorkoutSection({
     return (
       <Card>
         <View style={styles.finishedBox}>
-          <Text style={styles.finishedTitle}>Workout complete</Text>
+          <Text style={styles.finishedTitle}>
+            {workout.prCount > 0 ? "Workout complete 🔥" : "Workout complete"}
+          </Text>
+          {workout.prCount > 0 ? (
+            <Text style={styles.prLine}>
+              {workout.prCount} personal record{workout.prCount === 1 ? "" : "s"} today
+            </Text>
+          ) : null}
           <View style={styles.finishedStats}>
             <View style={styles.finishedStat}>
               <Text style={styles.finishedStatValue}>
@@ -246,6 +255,11 @@ export default function WorkoutSection({
             Target {currentRow?.reps} reps · RIR {currentRow?.rir || "-"} · rest{" "}
             {currentRow?.rest || "-"}
           </Text>
+          {workout.lastPrExercise === exerciseName ? (
+            <View style={styles.prBadge}>
+              <Text style={styles.prBadgeText}>🔥 New PR</Text>
+            </View>
+          ) : null}
           {history ? (
             <View style={styles.lastBadge}>
               <Text style={styles.lastBadgeText} numberOfLines={1}>
@@ -390,14 +404,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
+    gap: spacing.md,
     marginBottom: spacing.md,
   },
   idleTitle: {
+    flex: 1,
     fontSize: fontSizes.xl,
     fontWeight: "700",
     color: colors.text,
   },
   idleMeta: {
+    flexShrink: 0,
     fontSize: fontSizes.sm,
     color: colors.muted,
   },
@@ -530,6 +547,25 @@ const styles = StyleSheet.create({
   liftTarget: {
     fontSize: fontSizes.sm,
     color: colors.muted,
+  },
+  prLine: {
+    fontSize: fontSizes.md,
+    color: colors.warning,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: -spacing.sm,
+  },
+  prBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: tints.warning,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  prBadgeText: {
+    fontSize: fontSizes.sm,
+    color: colors.warning,
+    fontWeight: "700",
   },
   lastBadge: {
     alignSelf: "flex-start",

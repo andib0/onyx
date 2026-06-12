@@ -42,7 +42,7 @@ export default function RegisterScreen() {
 
     const success = await register(email.trim(), password, profile);
     if (success) {
-      router.replace("/(tabs)/focus");
+      router.replace("/onboarding");
     }
   };
 

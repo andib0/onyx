@@ -30,6 +30,7 @@ import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
 import DayCheckInCard from "../../components/focus/DayCheckInCard";
+import GettingStartedCard from "../../components/focus/GettingStartedCard";
 import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
 import { colors, fontSizes, spacing } from "../../theme";
 
@@ -94,6 +95,7 @@ export default function FocusScreen() {
     programRows,
     programLabel,
     trainingDayActive,
+    selectedProgramId,
     workout,
     workoutCompletedToday,
     startWorkout,
@@ -211,6 +213,12 @@ export default function FocusScreen() {
   const recap = buildYesterdayRecap(appState, supplementsList);
   const streak = supplementStreak(appState, supplementsList);
 
+  const anythingChecked =
+    Object.values(mealCheckMap).some(Boolean) ||
+    Object.values(supplementChecksForToday).some(Boolean) ||
+    Object.keys(appState.suppLog).length > 0 ||
+    Object.keys(appState.mealLog).length > 0;
+
   return (
     <ScreenContainer>
       {/* Header: greeting + date, no clock (status bar has one) */}
@@ -230,6 +238,13 @@ export default function FocusScreen() {
           />
         </Animated.View>
       </View>
+
+      {/* New-account checklist (auto-hides when complete) */}
+      <GettingStartedCard
+        programSelected={Boolean(selectedProgramId)}
+        anythingChecked={anythingChecked}
+        dayLogged={logEntries.length > 0}
+      />
 
       {/* Hero: what matters right now, with the matching one-tap action */}
       {blocksToShow.length > 0 ? (
@@ -280,6 +295,37 @@ export default function FocusScreen() {
           checkColor={colors.supplement}
         />
       ) : null}
+
+      {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
+      <Pressable onPress={() => router.push("/(tabs)/schedule")}>
+        <Card>
+          <View style={styles.dayRow}>
+            <Ring
+              size={64}
+              strokeWidth={6}
+              progress={timelineProgressPercent}
+              color={colors.good}
+              value={`${timelineProgressPercent}%`}
+            />
+            <View style={styles.dayRowInfo}>
+              <Text style={styles.dayRowTitle}>Day score</Text>
+              <Text style={styles.dayRowText}>
+                <Text style={styles.dayRowStrong}>
+                  {timelineBlocks.length - timelineRemainingCount}/
+                  {timelineBlocks.length}
+                </Text>{" "}
+                done
+                {nextStartBlock
+                  ? ` · next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
+                  : ""}
+              </Text>
+              {streak > 0 ? (
+                <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
+              ) : null}
+            </View>
+          </View>
+        </Card>
+      </Pressable>
 
       {/* Training */}
       <SectionTitle label="Training" meta={programLabel} />
@@ -335,37 +381,6 @@ export default function FocusScreen() {
           />
         </>
       ) : null}
-
-      {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
-      <Pressable onPress={() => router.push("/(tabs)/schedule")}>
-        <Card>
-          <View style={styles.dayRow}>
-            <Ring
-              size={64}
-              strokeWidth={6}
-              progress={timelineProgressPercent}
-              color={colors.good}
-              value={`${timelineProgressPercent}%`}
-            />
-            <View style={styles.dayRowInfo}>
-              <Text style={styles.dayRowTitle}>Day score</Text>
-              <Text style={styles.dayRowText}>
-                <Text style={styles.dayRowStrong}>
-                  {timelineBlocks.length - timelineRemainingCount}/
-                  {timelineBlocks.length}
-                </Text>{" "}
-                done
-                {nextStartBlock
-                  ? ` · next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
-                  : ""}
-              </Text>
-              {streak > 0 ? (
-                <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
-              ) : null}
-            </View>
-          </View>
-        </Card>
-      </Pressable>
 
       {/* Contextual: check-in evenings (component gates itself), recap mornings only */}
       <DayCheckInCard

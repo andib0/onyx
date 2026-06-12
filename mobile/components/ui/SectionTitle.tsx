@@ -10,7 +10,11 @@ export default function SectionTitle({ label, meta }: SectionTitleProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+      {meta ? (
+        <Text style={styles.meta} numberOfLines={1}>
+          {meta}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -24,6 +28,7 @@ const styles = StyleSheet.create({
     marginBottom: -spacing.sm,
   },
   label: {
+    flexShrink: 0,
     fontSize: fontSizes.sm,
     color: colors.muted,
     textTransform: "uppercase",
@@ -31,6 +36,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   meta: {
+    flex: 1,
+    textAlign: "right",
+    marginLeft: spacing.md,
     fontSize: fontSizes.sm,
     color: colors.muted,
   },

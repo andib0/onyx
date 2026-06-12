@@ -101,6 +101,30 @@ export async function logout(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function updateProfile(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.userId) {
+      return sendUnauthorized(res);
+    }
+
+    const { username, age, weight } = req.body as {
+      username?: string;
+      age?: number;
+      weight?: number;
+    };
+    const data: { username?: string; age?: number; weight?: number } = {};
+    if (typeof username === 'string' && username.trim()) data.username = username.trim().slice(0, 50);
+    if (typeof age === 'number' && age > 0 && age < 120) data.age = Math.round(age);
+    if (typeof weight === 'number' && weight > 20 && weight < 400) data.weight = weight;
+
+    const user = await authService.updateProfile(req.userId, data);
+    return sendSuccess(res, { user });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update profile';
+    return sendError(res, message);
+  }
+}
+
 export async function me(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.userId) {

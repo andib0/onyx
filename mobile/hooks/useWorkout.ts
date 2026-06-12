@@ -38,6 +38,8 @@ export type WorkoutState = {
   completedExercises: Set<number>;
   historyByExercise: ExerciseHistory;
   setsThisSession: Record<string, LoggedSetValues[]>;
+  prCount: number;
+  lastPrExercise: string | null;
 };
 
 const DEFAULT_REST_SECONDS = 90;
@@ -67,6 +69,28 @@ type PendingNext = {
   currentSet: number;
 };
 
+// PR when weight beats the best previous weight, or matches it with more reps
+function isPersonalRecord(
+  history: ExerciseHistory[string] | undefined,
+  values: LoggedSetValues
+): boolean {
+  if (!history || values.weightKg === null) return false;
+  const prevSets = history.sets.filter((s) => s.weightKg !== null);
+  if (!prevSets.length) return false;
+  const bestWeight = prevSets.reduce(
+    (max, s) => Math.max(max, s.weightKg as number),
+    0
+  );
+  if (values.weightKg > bestWeight) return true;
+  if (values.weightKg === bestWeight && values.reps !== null) {
+    const bestRepsAtWeight = prevSets
+      .filter((s) => s.weightKg === bestWeight)
+      .reduce((max, s) => Math.max(max, s.reps ?? 0), 0);
+    return values.reps > bestRepsAtWeight;
+  }
+  return false;
+}
+
 export default function useWorkout(programRows: ProgramRow[], programLabel?: string) {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -82,6 +106,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const [setsThisSession, setSetsThisSession] = useState<
     Record<string, LoggedSetValues[]>
   >({});
+  const [prCount, setPrCount] = useState(0);
+  const [lastPrExercise, setLastPrExercise] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [completedToday, setCompletedToday] = useState(false);
 
@@ -188,6 +214,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     setRestTotalSeconds(DEFAULT_REST_SECONDS);
     setCompletedExercises(new Set());
     setSetsThisSession({});
+    setPrCount(0);
+    setLastPrExercise(null);
     restEndsAtRef.current = null;
     pausedRestRemainingMsRef.current = null;
     pendingNextRef.current = null;
@@ -244,6 +272,14 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         next[row.ex] = list;
         return next;
       });
+
+      if (isPersonalRecord(historyByExercise[row.ex], setValues)) {
+        setPrCount((prev) => prev + 1);
+        setLastPrExercise(row.ex);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+          () => {}
+        );
+      }
 
       const sessionId = sessionIdRef.current;
       if (sessionId) {
@@ -311,6 +347,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       rowCount,
       sessionSeconds,
       finishSession,
+      historyByExercise,
     ]
   );
 
@@ -380,6 +417,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     completedExercises,
     historyByExercise,
     setsThisSession,
+    prCount,
+    lastPrExercise,
   };
 
   return {

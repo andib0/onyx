@@ -89,3 +89,7 @@ export async function refreshToken() {
 export async function getMe() {
   return api.get<MeResponse>("/auth/me");
 }
+
+export async function updateProfile(profile: RegisterProfile) {
+  return api.put<MeResponse>("/auth/profile", profile);
+}
