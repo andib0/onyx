@@ -83,7 +83,8 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    // Clears the floating blur tab bar
+    paddingBottom: 120,
     gap: spacing.lg,
   },
 });

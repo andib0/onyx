@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useToastContext } from "../contexts/ToastContext";
@@ -171,7 +171,7 @@ export default function ProgramEditorScreen() {
         showToast(editingId ? "Program updated" : "Program created");
         router.back();
       } else {
-        showToast(result.error || "Failed to save program");
+        showToast(result.error || "Couldn't save program — try again");
       }
     } finally {
       setSaving(false);

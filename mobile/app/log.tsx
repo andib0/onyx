@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -123,7 +123,7 @@ export default function LogScreen() {
       });
       setForm(Object.assign({}, DEFAULT_FORM, { date: todayKeyValue }));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add entry");
+      showToast(err instanceof Error ? err.message : "Couldn't add entry — try again");
     }
   };
 
@@ -132,7 +132,7 @@ export default function LogScreen() {
       await clearLogEntries();
       setShowClearConfirm(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to clear log");
+      showToast(err instanceof Error ? err.message : "Couldn't clear log — try again");
     }
   };
 

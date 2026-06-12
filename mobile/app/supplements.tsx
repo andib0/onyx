@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -230,7 +230,7 @@ export default function SupplementsScreen() {
       });
       showToast(`Added ${dbItem.name}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add supplement");
+      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
     }
   };
 
@@ -256,7 +256,7 @@ export default function SupplementsScreen() {
       await addSupplementItem(Object.assign({}, item, { id: `supp_${Date.now()}` }));
       setShowAddForm(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add supplement");
+      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
     }
   };
 
@@ -266,7 +266,7 @@ export default function SupplementsScreen() {
       await updateSupplementItem(editingId, item);
       setEditingId(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to update supplement");
+      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
     }
   };
 
@@ -276,7 +276,7 @@ export default function SupplementsScreen() {
         await removeSupplementItem(deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to delete supplement");
+        showToast(err instanceof Error ? err.message : "Couldn't delete supplement — try again");
       }
     }
   };
@@ -286,7 +286,7 @@ export default function SupplementsScreen() {
       await clearSupplementChecks();
       setShowClearConfirm(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to clear checks");
+      showToast(err instanceof Error ? err.message : "Couldn't clear checks — try again");
     }
   };
 

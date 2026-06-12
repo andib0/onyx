@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
 import type { AppState, SupplementItem } from "../types/appTypes";
@@ -24,7 +24,7 @@ function useSupplements(
       isChecked
     );
     if (!result.success) {
-      showToast(result.error || "Failed to update supplement log.");
+      showToast(result.error || "Couldn't update supplement log — try again");
       return;
     }
     setAppState((prev) => {
@@ -45,7 +45,7 @@ function useSupplements(
       payload as Omit<SupplementItem, "id">
     );
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to add supplement.");
+      showToast(result.error || "Couldn't add supplement — try again");
       return;
     }
     const data = result.data;
@@ -74,7 +74,7 @@ function useSupplements(
   ) => {
     const result = await supplementsApi.updateSupplement(supplementId, patch);
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to update supplement.");
+      showToast(result.error || "Couldn't update supplement — try again");
       return;
     }
     const data = result.data;
@@ -99,7 +99,7 @@ function useSupplements(
   const removeSupplementItem = async (supplementId: string) => {
     const result = await supplementsApi.deleteSupplement(supplementId);
     if (!result.success) {
-      showToast(result.error || "Failed to remove supplement.");
+      showToast(result.error || "Couldn't remove supplement — try again");
       return;
     }
     setAppState((prev) => {

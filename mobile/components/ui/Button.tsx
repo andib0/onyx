@@ -1,6 +1,13 @@
 import { Pressable, Text, StyleSheet, type ViewStyle } from "react-native";
-import * as Haptics from "expo-haptics";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+import { confirm } from "../../utils/haptics";
 import { colors, spacing, radii, fontSizes, tints } from "../../theme";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 type Size = "sm" | "md" | "lg";
@@ -24,31 +31,43 @@ export default function Button({
   haptic = true,
   style,
 }: ButtonProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const handlePress = () => {
     if (disabled) return;
-    if (haptic) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    }
+    if (haptic) confirm();
     onPress();
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={handlePress}
+      onPressIn={() => {
+        scale.value = withSpring(0.96, { damping: 20, stiffness: 400 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 14, stiffness: 300 });
+      }}
       disabled={disabled}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         sizeStyles[size],
         variantStyles[variant],
-        pressed && styles.pressed,
         disabled && styles.disabled,
+        animatedStyle,
         style,
       ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={[styles.label, labelSizes[size], labelVariants[variant]]}>
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -57,10 +76,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-  },
-  pressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.985 }],
   },
   disabled: {
     opacity: 0.4,
@@ -85,7 +100,7 @@ const labelSizes = StyleSheet.create({
 const variantStyles = StyleSheet.create({
   primary: { backgroundColor: colors.accent },
   secondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },

@@ -22,6 +22,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
+    // Lit-from-above edge: signature dark-UI depth cue
+    borderTopColor: colors.edgeHighlight,
     padding: spacing.lg,
   },
   title: {

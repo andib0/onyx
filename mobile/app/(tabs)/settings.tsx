@@ -71,7 +71,7 @@ export default function SettingsScreen() {
       setEditingProfile(false);
       showToast("Profile updated");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to save");
+      showToast(err instanceof Error ? err.message : "Couldn't save — try again");
     } finally {
       setSavingProfile(false);
     }

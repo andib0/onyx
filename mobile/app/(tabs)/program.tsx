@@ -99,7 +99,7 @@ export default function ProgramScreen() {
       await refreshPrograms();
       showToast("Program deleted");
     } else {
-      showToast(result.error || "Failed to delete program");
+      showToast(result.error || "Couldn't delete program — try again");
     }
   };
 

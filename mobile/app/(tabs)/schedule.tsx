@@ -56,7 +56,7 @@ export default function ScheduleScreen() {
       );
       setShowAddForm(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add block");
+      showToast(err instanceof Error ? err.message : "Couldn't add block — try again");
     }
   };
 
@@ -66,7 +66,7 @@ export default function ScheduleScreen() {
       await updateScheduleBlock(editingBlockId, patch);
       setEditingBlockId(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to update block");
+      showToast(err instanceof Error ? err.message : "Couldn't update block — try again");
     }
   };
 
@@ -76,7 +76,7 @@ export default function ScheduleScreen() {
         await removeScheduleBlock(deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to delete block");
+        showToast(err instanceof Error ? err.message : "Couldn't delete block — try again");
       }
     }
   };

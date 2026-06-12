@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
 import type { AppState, LogEntry } from "../types/appTypes";
@@ -16,7 +16,7 @@ function useLog(
     delete (payload as Partial<LogEntry>).id;
     const result = await logsApi.createOrUpdateLog(payload as Omit<LogEntry, "id">);
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to save entry.");
+      showToast(result.error || "Couldn't save entry — try again");
       return;
     }
     const data = result.data;
@@ -65,7 +65,7 @@ function useLog(
     }
     const result = await logsApi.deleteLog(entry.id);
     if (!result.success) {
-      showToast(result.error || "Failed to delete entry.");
+      showToast(result.error || "Couldn't delete entry — try again");
       return;
     }
     setAppState((prev) => {

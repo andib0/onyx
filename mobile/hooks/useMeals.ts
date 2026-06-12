@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+﻿import { useState, type Dispatch, type SetStateAction } from "react";
 import {
   createMealTemplate,
   deleteMealTemplate,
@@ -21,7 +21,7 @@ export default function useMeals(
   const setMealChecked = async (mealId: string, isChecked: boolean) => {
     const result = await toggleMealLog(mealId, todayKeyValue, isChecked);
     if (!result.success) {
-      showToast(result.error || "Failed to update meal log.");
+      showToast(result.error || "Couldn't update meal log — try again");
       return;
     }
     setAppState((prev) => {
@@ -45,7 +45,7 @@ export default function useMeals(
       Object.assign({}, patch, { dayOfWeek: dayName })
     );
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to update meal template.");
+      showToast(result.error || "Couldn't update meal template — try again");
       return;
     }
     const data = result.data;
@@ -79,7 +79,7 @@ export default function useMeals(
       tags: template.tags,
     });
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to add meal template.");
+      showToast(result.error || "Couldn't add meal template — try again");
       return;
     }
     const addData = result.data;
@@ -106,7 +106,7 @@ export default function useMeals(
   const removeMealTemplateForDay = async (dayName: string, mealId: string) => {
     const result = await deleteMealTemplate(mealId);
     if (!result.success) {
-      showToast(result.error || "Failed to remove meal template.");
+      showToast(result.error || "Couldn't remove meal template — try again");
       return;
     }
     setAppState((prev) => {

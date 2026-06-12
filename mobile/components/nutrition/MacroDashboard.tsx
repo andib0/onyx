@@ -1,7 +1,16 @@
+import { useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  useReducedMotion,
+} from "react-native-reanimated";
 import Card from "../ui/Card";
 import Ring from "../ui/Ring";
+import Glow from "../ui/Glow";
 import type { ConsumedMacros } from "../../utils/nutrition";
 import { colors, spacing, fontSizes, fonts, radii } from "../../theme";
 
@@ -32,18 +41,39 @@ function MacroBar({
   target: number;
   color: string;
 }) {
+  const over = target > 0 && current > target;
   const percent = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const reduceMotion = useReducedMotion();
+  const width = useSharedValue(reduceMotion ? percent : 0);
+
+  useEffect(() => {
+    width.value = reduceMotion
+      ? percent
+      : withTiming(percent, { duration: 500, easing: Easing.out(Easing.cubic) });
+  }, [percent, reduceMotion, width]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${width.value}%`,
+  }));
+
   return (
     <View style={styles.barBlock}>
       <View style={styles.barHeader}>
         <Text style={styles.barLabel}>{label}</Text>
-        <Text style={styles.barValue}>
+        <Text style={[styles.barValue, over && styles.barValueOver]}>
+          {over ? "▲ " : ""}
           {Math.round(current)}
           <Text style={styles.barTarget}>/{target}g</Text>
         </Text>
       </View>
       <View style={styles.barTrack}>
-        <View style={[styles.barFill, { width: `${percent}%`, backgroundColor: color }]} />
+        <Animated.View
+          style={[
+            styles.barFill,
+            { backgroundColor: over ? colors.warning : color },
+            fillStyle,
+          ]}
+        />
       </View>
     </View>
   );
@@ -63,6 +93,13 @@ export default function MacroDashboard({
 
   return (
     <Card>
+      <Glow
+        color={colors.good}
+        size={compact ? 200 : 240}
+        x={compact ? 50 : 64}
+        y={compact ? 50 : 60}
+        opacity={0.1}
+      />
       <View style={styles.row}>
         <Ring
           size={compact ? 84 : 104}
@@ -155,6 +192,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.mono,
     fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
+  barValueOver: {
+    color: colors.warning,
   },
   barTarget: {
     color: colors.muted,

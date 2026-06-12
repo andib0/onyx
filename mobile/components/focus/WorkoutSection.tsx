@@ -3,7 +3,9 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import Stepper from "../ui/Stepper";
-import ProgressBar from "../ui/ProgressBar";
+import Ring from "../ui/Ring";
+import Glow from "../ui/Glow";
+import Burst from "../ui/Burst";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
 import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
@@ -30,21 +32,45 @@ const formatLastSession = (
     .join(", ");
 };
 
-function SetDots({ total, current }: { total: number; current: number }) {
+// Set pills: logged weight×reps at a glance (Hevy-style table, compressed)
+function SetPills({
+  total,
+  current,
+  logged,
+}: {
+  total: number;
+  current: number;
+  logged: Array<{ weightKg: number | null; reps: number | null }>;
+}) {
   return (
-    <View style={styles.dotsRow}>
+    <View style={styles.pillsRow}>
       {Array.from({ length: total }).map((_, idx) => {
-        const done = idx < current - 1;
+        const set = logged[idx];
         const active = idx === current - 1;
+        const done = Boolean(set);
         return (
           <View
-            key={`dot-${idx}`}
+            key={`pill-${idx}`}
             style={[
-              styles.dot,
-              done && styles.dotDone,
-              active && styles.dotActive,
+              styles.setPill,
+              done && styles.setPillDone,
+              active && styles.setPillActive,
             ]}
-          />
+          >
+            <Text
+              style={[
+                styles.setPillText,
+                done && styles.setPillTextDone,
+                active && styles.setPillTextActive,
+              ]}
+            >
+              {set
+                ? `${set.weightKg !== null ? set.weightKg : "-"}×${set.reps !== null ? set.reps : "-"}`
+                : active
+                  ? `set ${idx + 1}`
+                  : "·"}
+            </Text>
+          </View>
         );
       })}
     </View>
@@ -228,25 +254,33 @@ export default function WorkoutSection({
     <Card>
       {workout.mode === "rest" ? (
         <View style={styles.restBox}>
-          <Text style={styles.restLabel}>REST</Text>
-          <Text style={styles.restTimer}>
-            {formatSeconds(workout.restSecondsRemaining)}
-          </Text>
-          <ProgressBar
-            progress={
-              workout.restTotalSeconds > 0
-                ? ((workout.restTotalSeconds - workout.restSecondsRemaining) /
-                    workout.restTotalSeconds) *
-                  100
-                : 0
-            }
-            color={colors.good}
-            height={6}
-          />
-          <Text style={styles.upNextText} numberOfLines={2}>
-            Up next: <Text style={styles.upNextName}>{exerciseName}</Text> — set{" "}
-            {workout.currentSet}/{workout.totalSets}
-          </Text>
+          <View style={styles.restRingWrap}>
+            <Glow color={colors.good} size={300} x={105} y={105} opacity={0.16} />
+            <Ring
+              size={210}
+              strokeWidth={9}
+              progress={
+                workout.restTotalSeconds > 0
+                  ? ((workout.restTotalSeconds - workout.restSecondsRemaining) /
+                      workout.restTotalSeconds) *
+                    100
+                  : 0
+              }
+              color={colors.good}
+              value={formatSeconds(workout.restSecondsRemaining)}
+              label="rest"
+            />
+          </View>
+          <View style={styles.upNextCard}>
+            <Text style={styles.upNextLabel}>UP NEXT</Text>
+            <Text style={styles.upNextName} numberOfLines={1}>
+              {exerciseName}
+            </Text>
+            <Text style={styles.upNextMeta}>
+              Set {workout.currentSet} of {workout.totalSets}
+              {currentRow?.reps ? ` · target ${currentRow.reps} reps` : ""}
+            </Text>
+          </View>
           <View style={styles.restActions}>
             {workout.canUndo && onUndoSet ? (
               <Button
@@ -277,12 +311,17 @@ export default function WorkoutSection({
         </View>
       ) : (
         <View style={styles.liftBox}>
-          <View style={styles.liftHeader}>
-            <Text style={styles.liftExercise} numberOfLines={2}>
-              {exerciseName}
-            </Text>
-            <SetDots total={workout.totalSets} current={workout.currentSet} />
-          </View>
+          {workout.lastPrExercise === exerciseName ? (
+            <Burst key={`burst-${workout.prCount}`} />
+          ) : null}
+          <Text style={styles.liftExercise} numberOfLines={2}>
+            {exerciseName}
+          </Text>
+          <SetPills
+            total={workout.totalSets}
+            current={workout.currentSet}
+            logged={sessionSets}
+          />
           <Text style={styles.liftTarget}>
             Target {currentRow?.reps} reps · RIR {currentRow?.rir || "-"} · rest{" "}
             {currentRow?.rest || "-"}
@@ -524,62 +563,80 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
   },
-  restLabel: {
-    fontSize: fontSizes.sm,
-    color: colors.good,
-    letterSpacing: 3,
-    fontWeight: "700",
-    textAlign: "center",
+  restRingWrap: {
+    alignItems: "center",
+    paddingVertical: spacing.sm,
   },
-  restTimer: {
-    fontSize: 72,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.good,
-    textAlign: "center",
-    lineHeight: 78,
+  upNextCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderTopColor: colors.edgeHighlight,
+    padding: spacing.md,
+    alignItems: "center",
+    gap: 2,
   },
-  upNextText: {
-    fontSize: fontSizes.md,
+  upNextLabel: {
+    fontSize: fontSizes.xs,
     color: colors.muted,
-    textAlign: "center",
+    letterSpacing: 1.5,
+    fontWeight: "600",
   },
   upNextName: {
+    fontSize: fontSizes.lg,
     color: colors.text,
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+  upNextMeta: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
   },
   /* lifting */
   liftBox: {
     gap: spacing.sm,
   },
-  liftHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.md,
-  },
   liftExercise: {
-    flex: 1,
     fontSize: fontSizes.xl,
     fontWeight: "700",
     color: colors.text,
   },
-  dotsRow: {
+  pillsRow: {
     flexDirection: "row",
-    gap: 6,
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.border,
+  setPill: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 44,
+    alignItems: "center",
   },
-  dotDone: {
-    backgroundColor: colors.good,
+  setPillDone: {
+    backgroundColor: tints.good,
+    borderColor: colors.good + "44",
   },
-  dotActive: {
-    backgroundColor: colors.accent,
-    transform: [{ scale: 1.25 }],
+  setPillActive: {
+    backgroundColor: tints.accent,
+    borderColor: colors.accent,
+  },
+  setPillText: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+    fontVariant: ["tabular-nums"],
+  },
+  setPillTextDone: {
+    color: colors.good,
+    fontWeight: "700",
+  },
+  setPillTextActive: {
+    color: colors.text,
+    fontWeight: "700",
   },
   liftTarget: {
     fontSize: fontSizes.sm,

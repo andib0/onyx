@@ -109,7 +109,7 @@ export default function NutritionScreen() {
       await addMealTemplateForDay(selectedMealDay, foodToMealTemplate(food));
       showToast(`Added ${food.name}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add food");
+      showToast(err instanceof Error ? err.message : "Couldn't add food — try again");
     }
   };
 
@@ -120,10 +120,10 @@ export default function NutritionScreen() {
         setMyFoods((prev) => prev.concat(result.data as UserFood));
         showToast("Saved to My Foods");
       } else {
-        showToast(result.error || "Failed to save food");
+        showToast(result.error || "Couldn't save food — try again");
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to save food");
+      showToast(err instanceof Error ? err.message : "Couldn't save food — try again");
     }
   };
 
@@ -135,7 +135,7 @@ export default function NutritionScreen() {
         showToast("Removed from My Foods");
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to remove food");
+      showToast(err instanceof Error ? err.message : "Couldn't remove food — try again");
     }
   };
 
@@ -162,7 +162,7 @@ export default function NutritionScreen() {
 
   const handleSuppToggle = (id: string) => {
     setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Failed to update supplement");
+      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
     });
   };
 
@@ -213,14 +213,14 @@ export default function NutritionScreen() {
       setQuickKcal("");
       showToast(`Added ${name}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add meal");
+      showToast(err instanceof Error ? err.message : "Couldn't add meal — try again");
     }
   };
 
   const handleGramsChange = (mealId: string, text: string) => {
     const grams = text === "" ? null : Number(text);
     updateMealTemplateForDay(selectedMealDay, mealId, { grams }).catch((err) => {
-      showToast(err instanceof Error ? err.message : "Failed to update grams");
+      showToast(err instanceof Error ? err.message : "Couldn't update grams — try again");
     });
   };
 
@@ -230,7 +230,7 @@ export default function NutritionScreen() {
         await removeMealTemplateForDay(selectedMealDay, deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Failed to delete meal");
+        showToast(err instanceof Error ? err.message : "Couldn't delete meal — try again");
       }
     }
   };

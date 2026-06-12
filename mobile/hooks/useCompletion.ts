@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
@@ -19,7 +19,7 @@ function useCompletion(
   const setBlockCompletion = async (blockId: string, isComplete: boolean) => {
     const result = await scheduleApi.toggleCompletion(blockId, todayKeyValue, isComplete);
     if (!result.success) {
-      showToast(result.error || "Failed to update completion.");
+      showToast(result.error || "Couldn't save — check your connection");
       return;
     }
     setAppState((prev) => {
@@ -36,7 +36,7 @@ function useCompletion(
   const updateScheduleBlock = async (blockId: string, patch: Partial<ScheduleBlock>) => {
     const result = await scheduleApi.updateScheduleBlock(blockId, patch);
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to update schedule block.");
+      showToast(result.error || "Couldn't update schedule block — try again");
       return;
     }
     const data = result.data;
@@ -63,7 +63,7 @@ function useCompletion(
   const removeScheduleBlock = async (blockId: string) => {
     const result = await scheduleApi.deleteScheduleBlock(blockId);
     if (!result.success) {
-      showToast(result.error || "Failed to remove schedule block.");
+      showToast(result.error || "Couldn't remove schedule block — try again");
       return;
     }
     setAppState((prev) => {
@@ -87,7 +87,7 @@ function useCompletion(
       payload as Omit<ScheduleBlock, "id">
     );
     if (!result.success || !result.data) {
-      showToast(result.error || "Failed to add schedule block.");
+      showToast(result.error || "Couldn't add schedule block — try again");
       return;
     }
     const data = result.data;

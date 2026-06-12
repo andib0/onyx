@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
@@ -113,7 +113,7 @@ export default function DayCheckInCard({
       });
       showToast("Day logged");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to save");
+      showToast(err instanceof Error ? err.message : "Couldn't save — try again");
     } finally {
       setSaving(false);
     }

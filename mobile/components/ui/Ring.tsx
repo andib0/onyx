@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -59,6 +59,15 @@ export default function Ring({
       accessibilityLabel={`${value}${label ? ` ${label}` : ""}, ${Math.round(progress)} percent`}
     >
       <Svg width={size} height={size}>
+        <Defs>
+          <LinearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={over ? colors.warning : color} />
+            <Stop
+              offset="100%"
+              stopColor={over ? colors.warning : colors.accent2}
+            />
+          </LinearGradient>
+        </Defs>
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -71,7 +80,7 @@ export default function Ring({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={over ? colors.warning : color}
+          stroke="url(#ringGradient)"
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={circumference}

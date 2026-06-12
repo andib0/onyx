@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToastContext } from "../../contexts/ToastContext";
@@ -22,6 +23,7 @@ import { toMinutes } from "../../utils/time";
 import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutrition";
 import Card from "../../components/ui/Card";
 import Ring from "../../components/ui/Ring";
+import Glow from "../../components/ui/Glow";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
@@ -61,6 +63,15 @@ const getGreetingIcon = (
   if (hour >= 8 && hour < 17) return { name: "sunny", color: "#fbbf24" };
   if (hour >= 17 && hour < 21) return { name: "cloudy-night", color: "#a78bfa" };
   return { name: "moon", color: "#a78bfa" };
+};
+
+// Time-of-day wash behind the header (Gentler Streak-style atmosphere)
+const getHeaderTint = (minutes: number): string => {
+  const hour = Math.floor(minutes / 60);
+  if (hour >= 5 && hour < 8) return "rgba(251, 146, 60, 0.10)"; // dawn peach
+  if (hour >= 8 && hour < 17) return "rgba(122, 162, 255, 0.08)"; // day blue
+  if (hour >= 17 && hour < 21) return "rgba(167, 139, 250, 0.10)"; // dusk violet
+  return "rgba(99, 102, 241, 0.08)"; // night indigo
 };
 
 const formatToday = (): string => {
@@ -212,13 +223,13 @@ export default function FocusScreen() {
 
   const handleMealToggle = (id: string) => {
     setMealChecked(id, !mealCheckMap[id]).catch((err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Failed to update meal");
+      showToast(err instanceof Error ? err.message : "Couldn't update meal — try again");
     });
   };
 
   const handleSuppToggle = (id: string) => {
     setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Failed to update supplement");
+      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
     });
   };
 
@@ -292,6 +303,13 @@ export default function FocusScreen() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      {/* Atmosphere: time-of-day wash behind the header */}
+      <LinearGradient
+        colors={[getHeaderTint(nowMinutes), "transparent"]}
+        style={styles.headerWash}
+        pointerEvents="none"
+      />
+
       {/* Sync failure banner */}
       {loadError ? (
         <Pressable onPress={handleRefresh}>
@@ -424,10 +442,11 @@ export default function FocusScreen() {
       {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
       <Pressable onPress={() => router.push("/(tabs)/schedule")}>
         <Card>
+          <Glow color={colors.good} size={220} x={56} y={50} />
           <View style={styles.dayRow}>
             <Ring
-              size={64}
-              strokeWidth={6}
+              size={72}
+              strokeWidth={7}
               progress={timelineProgressPercent}
               color={colors.good}
               value={`${timelineProgressPercent}%`}
@@ -530,6 +549,13 @@ export default function FocusScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerWash: {
+    position: "absolute",
+    top: -spacing.xl,
+    left: -spacing.lg,
+    right: -spacing.lg,
+    height: 240,
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
