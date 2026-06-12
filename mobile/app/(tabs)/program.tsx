@@ -13,6 +13,7 @@ import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import SectionTitle from "../../components/ui/SectionTitle";
+import EmptyState from "../../components/ui/EmptyState";
 import type { ProgramSummary } from "../../api/programs";
 import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
@@ -137,7 +138,13 @@ export default function ProgramScreen() {
             ))
           ) : (
             <Card>
-              <Text style={sharedStyles.emptyText}>No programs available.</Text>
+              <EmptyState
+                icon="barbell-outline"
+                title="No programs yet"
+                subtitle="Build your own training split."
+                actionLabel="Create program"
+                onAction={() => router.push("/program-editor")}
+              />
             </Card>
           )}
         </>

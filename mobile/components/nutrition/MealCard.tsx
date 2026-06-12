@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
 import Checkbox from "../shared/Checkbox";
 import IconButton from "../ui/IconButton";
 import type { MealTemplate } from "../../types/appTypes";
 import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+
+const GRAM_PRESETS = [100, 150, 200];
 
 interface MealCardProps {
   meal: MealTemplate;
@@ -61,7 +63,7 @@ export default function MealCard({
         <IconButton icon="trash-outline" onPress={onDelete} label="Delete meal" />
       </View>
 
-      {/* Grams slider for food-based meals */}
+      {/* Grams slider + quick presets for food-based meals */}
       {hasGrams ? (
         <View style={styles.sliderRow}>
           <Slider
@@ -76,6 +78,31 @@ export default function MealCard({
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.accent}
           />
+          <View style={styles.presetRow}>
+            {GRAM_PRESETS.map((preset) => (
+              <Pressable
+                key={`preset-${preset}`}
+                onPress={() => {
+                  setLocalGrams(preset);
+                  onGramsChange(String(preset));
+                }}
+                style={({ pressed }) => [
+                  styles.presetChip,
+                  Math.round(localGrams) === preset && styles.presetChipActive,
+                  pressed && styles.presetPressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.presetText,
+                    Math.round(localGrams) === preset && styles.presetTextActive,
+                  ]}
+                >
+                  {preset}g
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       ) : null}
 
@@ -143,6 +170,37 @@ const styles = StyleSheet.create({
   slider: {
     width: "100%",
     height: 32,
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: 2,
+  },
+  presetChip: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.full,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 28,
+    justifyContent: "center",
+  },
+  presetChipActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + "22",
+  },
+  presetPressed: {
+    opacity: 0.7,
+  },
+  presetText: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+  },
+  presetTextActive: {
+    color: colors.accent,
+    fontWeight: "700",
   },
   tagPills: {
     flexDirection: "row",

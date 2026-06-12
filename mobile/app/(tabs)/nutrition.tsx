@@ -12,6 +12,7 @@ import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import ChipSelector from "../../components/shared/ChipSelector";
 import SectionTitle from "../../components/ui/SectionTitle";
+import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
 import ChecklistSection from "../../components/shared/ChecklistSection";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -213,9 +214,13 @@ export default function NutritionScreen() {
             );
           })
         ) : (
-          <Text style={sharedStyles.emptyText}>
-            No meals configured for {selectedMealDay}.
-          </Text>
+          <EmptyState
+            icon="restaurant-outline"
+            title={`No meals for ${selectedMealDay}`}
+            subtitle="Add foods below — macros track automatically."
+            actionLabel="+ Add food"
+            onAction={() => setShowFoodSearch(true)}
+          />
         )}
       </Card>
 

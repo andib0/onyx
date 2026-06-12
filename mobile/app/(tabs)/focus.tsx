@@ -31,6 +31,7 @@ import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
 import DayCheckInCard from "../../components/focus/DayCheckInCard";
 import GettingStartedCard from "../../components/focus/GettingStartedCard";
+import WeeklyRecapCard from "../../components/focus/WeeklyRecapCard";
 import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
 import { colors, fontSizes, spacing } from "../../theme";
 
@@ -392,6 +393,13 @@ export default function FocusScreen() {
         showToast={showToast}
       />
       {nowMinutes < 12 * 60 ? <RecapCard recap={recap} streak={streak} /> : null}
+
+      {/* Monday weekly recap */}
+      <WeeklyRecapCard
+        appState={appState}
+        supplementsList={supplementsList}
+        logEntries={logEntries}
+      />
     </ScreenContainer>
   );
 }

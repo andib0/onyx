@@ -94,6 +94,12 @@ export default function SettingsScreen() {
             <Text style={styles.metaValue}>{user.weight} kg</Text>
           </View>
         ) : null}
+        {user?.preferences?.caffeineCutoff ? (
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Caffeine cutoff</Text>
+            <Text style={styles.metaValue}>{user.preferences.caffeineCutoff}</Text>
+          </View>
+        ) : null}
       </Card>
 
       {/* Progress */}

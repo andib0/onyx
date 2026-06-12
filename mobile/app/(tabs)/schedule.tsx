@@ -10,12 +10,12 @@ import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import ProgressBar from "../../components/ui/ProgressBar";
 import FAB from "../../components/ui/FAB";
+import EmptyState from "../../components/ui/EmptyState";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import BlockItem from "../../components/schedule/BlockItem";
 import BlockForm from "../../components/schedule/BlockForm";
 import type { ScheduleBlock } from "../../types/appTypes";
 import { colors, spacing, fontSizes, fonts } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
 
 export default function ScheduleScreen() {
   const { stateLoading } = useData();
@@ -136,9 +136,13 @@ export default function ScheduleScreen() {
 
       {timelineBlocks.length === 0 ? (
         <Card>
-          <Text style={sharedStyles.emptyText}>
-            Nothing planned yet. Tap + to add your first task.
-          </Text>
+          <EmptyState
+            icon="calendar-outline"
+            title="Nothing planned yet"
+            subtitle="Structure your day with time-boxed tasks."
+            actionLabel="Add first task"
+            onAction={() => setShowAddForm(true)}
+          />
         </Card>
       ) : null}
 
