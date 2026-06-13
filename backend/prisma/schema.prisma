@@ -270,6 +270,8 @@ model DailyScore {
   mealsDone   Int      @default(0)
   mealsTotal  Int      @default(0)
   workoutDone Boolean  @default(false)
+  protein     Int      @default(0)
+  calories    Int      @default(0)
   updatedAt   DateTime @updatedAt
 
   @@unique([userId, date])

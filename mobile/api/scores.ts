@@ -10,6 +10,8 @@ export interface DailyScore {
   mealsDone: number;
   mealsTotal: number;
   workoutDone: boolean;
+  protein: number;
+  calories: number;
 }
 
 export interface ScoreSnapshot {
@@ -22,6 +24,8 @@ export interface ScoreSnapshot {
   mealsDone?: number;
   mealsTotal?: number;
   workoutDone?: boolean;
+  protein?: number;
+  calories?: number;
 }
 
 export async function getScores(days = 30) {

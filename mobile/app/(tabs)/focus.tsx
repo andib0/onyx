@@ -318,6 +318,7 @@ export default function FocusScreen() {
   // Today's row stays current; it freezes naturally once the day rolls over.
   useEffect(() => {
     if (stateLoading) return undefined;
+    const consumed = computeConsumedMacros(mealTemplatesForToday, mealCheckMap);
     const handle = setTimeout(() => {
       postScore({
         date: todayKeyValue,
@@ -329,6 +330,8 @@ export default function FocusScreen() {
         mealsDone: mealDoneCount,
         mealsTotal: mealTemplatesForToday.length,
         workoutDone: workoutCompletedToday,
+        protein: Math.round(consumed.protein),
+        calories: Math.round(consumed.calories),
       }).catch(() => {});
     }, 1500);
     return () => clearTimeout(handle);
@@ -341,7 +344,8 @@ export default function FocusScreen() {
     suppDoneCount,
     supplementsList.length,
     mealDoneCount,
-    mealTemplatesForToday.length,
+    mealTemplatesForToday,
+    mealCheckMap,
     workoutCompletedToday,
   ]);
 

@@ -10,6 +10,8 @@ export interface ScoreInput {
   mealsDone?: number;
   mealsTotal?: number;
   workoutDone?: boolean;
+  protein?: number;
+  calories?: number;
 }
 
 export class ScoresService {
@@ -25,6 +27,8 @@ export class ScoresService {
       mealsDone: data.mealsDone ?? 0,
       mealsTotal: data.mealsTotal ?? 0,
       workoutDone: data.workoutDone ?? false,
+      protein: Math.max(0, Math.round(data.protein ?? 0)),
+      calories: Math.max(0, Math.round(data.calories ?? 0)),
     };
     return prisma.dailyScore.upsert({
       where: { userId_date: { userId, date: data.date } },

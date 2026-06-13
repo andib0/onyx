@@ -48,8 +48,16 @@ export type DayBar = { label: string; value: number };
 export function scoreBarsFromHistory(
   history: Array<{ date: string; score: number }>
 ): DayBar[] {
+  return last7Bars(history, (r) => r.score);
+}
+
+// Generic last-7-days bars from any dated history field
+export function last7Bars<T extends { date: string }>(
+  history: T[],
+  pick: (row: T) => number
+): DayBar[] {
   const map: Record<string, number> = {};
-  for (const row of history) map[row.date] = row.score;
+  for (const row of history) map[row.date] = pick(row);
   const bars: DayBar[] = [];
   for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
     const date = dateKeyDaysAgo(daysAgo);

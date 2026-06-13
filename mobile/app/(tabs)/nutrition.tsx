@@ -35,12 +35,15 @@ import {
   computeMacroTargets,
 } from "../../utils/nutrition";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
-import { colors, spacing } from "../../theme";
+import BarChart from "../../components/ui/BarChart";
+import { last7Bars } from "../../utils/trends";
+import { colors, spacing, fontSizes } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 export default function NutritionScreen() {
   const router = useRouter();
-  const { stateLoading, nutritionTargets, appState, todayKeyValue } = useData();
+  const { stateLoading, nutritionTargets, appState, todayKeyValue, scoreHistory } =
+    useData();
   const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
   const { programGoal } = useProgram();
@@ -178,6 +181,8 @@ export default function NutritionScreen() {
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
+  const proteinBars = last7Bars(scoreHistory, (r) => r.protein);
+  const proteinMax = proteinBars.reduce((m, b) => Math.max(m, b.value), 0) || 1;
   const hydrationValue =
     nutritionTargets.find((t) => t.k.toLowerCase().includes("hydration"))?.v || "";
   const hydrationMatch = hydrationValue.match(/\d+(\.\d+)?/);
@@ -283,6 +288,23 @@ export default function NutritionScreen() {
         waterTargetMl={waterTargetMl}
         onAddWater={addWater}
       />
+
+      {/* Protein trend (7 days) from score snapshots */}
+      {proteinBars.some((b) => b.value > 0) ? (
+        <Card>
+          <View style={styles.trendHeader}>
+            <Text style={styles.trendTitle}>PROTEIN · 7 DAYS</Text>
+            {macroTargets.protein ? (
+              <Text style={styles.trendTarget}>target {macroTargets.protein}g</Text>
+            ) : null}
+          </View>
+          <BarChart
+            bars={proteinBars}
+            maxValue={Math.max(macroTargets.protein || 0, proteinMax)}
+            color={colors.accent}
+          />
+        </Card>
+      ) : null}
 
       {/* Meals */}
       <SectionTitle label={`Meals · ${selectedMealDay}`} />
@@ -477,5 +499,21 @@ const styles = StyleSheet.create({
   },
   quickField: {
     flex: 1,
+  },
+  trendHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
+  },
+  trendTitle: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: "600",
+  },
+  trendTarget: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
   },
 });
