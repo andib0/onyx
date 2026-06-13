@@ -11,11 +11,14 @@ export const sharedStyles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: spacing.xl,
   },
+  // Matches the canonical Input primitive so every bespoke form field is consistent
   formInput: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.sm,
-    padding: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
     fontSize: fontSizes.md,
     color: colors.text,
     backgroundColor: colors.bg,
@@ -23,7 +26,9 @@ export const sharedStyles = StyleSheet.create({
   formLabel: {
     fontSize: fontSizes.xs,
     color: colors.muted,
-    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: "600",
   },
   formField: {
     flex: 1,

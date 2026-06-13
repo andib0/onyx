@@ -6,6 +6,7 @@ import Stepper from "../ui/Stepper";
 import Ring from "../ui/Ring";
 import Glow from "../ui/Glow";
 import Burst from "../ui/Burst";
+import StatBlock from "../ui/StatBlock";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
 import { suggestProgression } from "../../utils/progression";
@@ -258,22 +259,12 @@ export default function WorkoutSection({
             </Text>
           ) : null}
           <View style={styles.finishedStats}>
-            <View style={styles.finishedStat}>
-              <Text style={styles.finishedStatValue}>
-                {formatSeconds(workout.sessionSeconds)}
-              </Text>
-              <Text style={styles.finishedStatLabel}>duration</Text>
-            </View>
-            <View style={styles.finishedStat}>
-              <Text style={styles.finishedStatValue}>{totalSetsLogged}</Text>
-              <Text style={styles.finishedStatLabel}>sets logged</Text>
-            </View>
-            <View style={styles.finishedStat}>
-              <Text style={styles.finishedStatValue}>
-                {workout.completedExercises.size}
-              </Text>
-              <Text style={styles.finishedStatLabel}>exercises</Text>
-            </View>
+            <StatBlock
+              value={formatSeconds(workout.sessionSeconds)}
+              label="duration"
+            />
+            <StatBlock value={totalSetsLogged} label="sets" />
+            <StatBlock value={workout.completedExercises.size} label="exercises" />
           </View>
           <Button label="Done" variant="secondary" onPress={onStop} />
         </View>
@@ -606,22 +597,6 @@ const styles = StyleSheet.create({
   finishedStats: {
     flexDirection: "row",
     justifyContent: "space-around",
-  },
-  finishedStat: {
-    alignItems: "center",
-    gap: 2,
-  },
-  finishedStatValue: {
-    fontSize: fontSizes.xxl,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  finishedStatLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
   },
   /* rest */
   restBox: {
