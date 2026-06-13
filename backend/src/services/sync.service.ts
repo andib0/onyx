@@ -1,7 +1,96 @@
 import { prisma } from '../config/database.js';
 import type { AppState, ScheduleBlock, SupplementItem, MealTemplate, LogEntry } from '../types/index.js';
 
+const STARTER_SCHEDULE = [
+  { start: "07:00", end: "07:15", title: "Wake + water", purpose: "500 ml on rising", tag: "Recovery" },
+  { start: "08:00", end: "08:30", title: "Breakfast", purpose: "Protein-forward start", tag: "Nutrition" },
+  { start: "09:00", end: "12:00", title: "Deep work", purpose: "Hardest task first", tag: "Work" },
+  { start: "12:30", end: "13:00", title: "Lunch", purpose: "", tag: "Nutrition" },
+  { start: "17:30", end: "18:30", title: "Train", purpose: "Follow today's program", tag: "Training" },
+  { start: "19:00", end: "19:30", title: "Dinner", purpose: "", tag: "Nutrition" },
+  { start: "22:30", end: "23:00", title: "Wind down", purpose: "Screens off, stretch", tag: "Sleep" },
+];
+
+const STARTER_SUPPLEMENTS = [
+  { item: "Creatine", dose: "5 g", goal: "Strength & recovery", timeAt: "08:00", tier: "Core" },
+  { item: "Vitamin D3", dose: "2000 IU", goal: "Immunity & hormones", timeAt: "08:00", tier: "Core" },
+  { item: "Omega-3", dose: "2 g", goal: "Recovery & joints", timeAt: "08:00", tier: "Core" },
+  { item: "Magnesium", dose: "300 mg", goal: "Sleep quality", timeAt: "22:00", tier: "Core" },
+];
+
+const STARTER_MEALS = [
+  { name: "Breakfast", examples: "Eggs, oats, fruit" },
+  { name: "Lunch", examples: "Chicken, rice, veg" },
+  { name: "Dinner", examples: "Salmon, potatoes, salad" },
+  { name: "Snack", examples: "Greek yogurt, nuts" },
+];
+
+const WEEKDAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
 export class SyncService {
+  // Populate a believable starter day for a brand-new account so the first
+  // session shows a living dashboard. No-op if the user already has data.
+  async seedStarterData(userId: string) {
+    const [blocks, supps, meals] = await Promise.all([
+      prisma.scheduleBlock.count({ where: { userId } }),
+      prisma.supplement.count({ where: { userId } }),
+      prisma.mealTemplate.count({ where: { userId } }),
+    ]);
+    if (blocks > 0 || supps > 0 || meals > 0) {
+      return { seeded: false };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.scheduleBlock.createMany({
+        data: STARTER_SCHEDULE.map((b, i) => ({
+          userId,
+          start: b.start,
+          end: b.end,
+          title: b.title,
+          purpose: b.purpose,
+          good: "",
+          tag: b.tag,
+          source: "schedule",
+          sortOrder: i,
+        })),
+      });
+      await tx.supplement.createMany({
+        data: STARTER_SUPPLEMENTS.map((s, i) => ({
+          userId,
+          item: s.item,
+          dose: s.dose,
+          goal: s.goal,
+          timeAt: s.timeAt,
+          tier: s.tier,
+          sortOrder: i,
+        })),
+      });
+      for (const day of WEEKDAYS) {
+        for (let i = 0; i < STARTER_MEALS.length; i++) {
+          await tx.mealTemplate.create({
+            data: {
+              userId,
+              dayOfWeek: day,
+              name: STARTER_MEALS[i].name,
+              examples: STARTER_MEALS[i].examples,
+              sortOrder: i,
+            },
+          });
+        }
+      }
+    });
+
+    return { seeded: true };
+  }
+
   async importState(userId: string, state: AppState) {
     const idMappings: Record<string, string> = {};
     return prisma.$transaction(async (tx) => {

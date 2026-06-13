@@ -22,3 +22,7 @@ export async function exportUserData() {
 export async function getFullState() {
   return api.get<unknown>("/sync/state");
 }
+
+export async function seedStarterData() {
+  return api.post<{ seeded: boolean }>("/sync/seed-starter");
+}

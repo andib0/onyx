@@ -3,6 +3,8 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
 import { useProgram } from "../contexts/ProgramContext";
+import { useData } from "../contexts/DataContext";
+import { seedStarterData } from "../api/sync";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -29,10 +31,20 @@ export default function OnboardingScreen() {
     setProgramSetupDismissed,
   } = useProgram();
 
+  const { reloadState } = useData();
   const [step, setStep] = useState(0);
   const [weight, setWeight] = useState("");
+  const [finishing, setFinishing] = useState(false);
 
-  const finish = () => {
+  // Seed a starter day so Focus is alive on first open, then reload + go
+  const finish = async () => {
+    setFinishing(true);
+    try {
+      await seedStarterData();
+      await reloadState();
+    } catch {
+      // Non-fatal — proceed to the app regardless
+    }
     setProgramSetupDismissed(true);
     router.replace("/(tabs)/focus");
   };
@@ -54,7 +66,7 @@ export default function OnboardingScreen() {
       await saveNotificationPrefs(next);
       await syncCheckInReminder(true);
     }
-    finish();
+    await finish();
   };
 
   return (
@@ -139,8 +151,19 @@ export default function OnboardingScreen() {
             Evening check-in nudge and rest-timer alerts. You stay in control —
             every category can be toggled in Settings.
           </Text>
-          <Button label="Enable reminders" size="lg" onPress={enableReminders} />
-          <Button label="Not now" variant="ghost" size="sm" onPress={finish} />
+          <Button
+            label={finishing ? "Setting up…" : "Enable reminders"}
+            size="lg"
+            onPress={enableReminders}
+            disabled={finishing}
+          />
+          <Button
+            label="Not now"
+            variant="ghost"
+            size="sm"
+            onPress={finish}
+            disabled={finishing}
+          />
         </>
       ) : null}
     </ScreenContainer>

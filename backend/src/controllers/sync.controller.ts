@@ -24,6 +24,16 @@ export async function exportState(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function seedStarter(req: AuthenticatedRequest, res: Response) {
+  try {
+    const result = await syncService.seedStarterData(req.userId!);
+    return sendSuccess(res, result);
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
 export async function getFullState(req: AuthenticatedRequest, res: Response) {
   try {
     const state = await syncService.getFullState(req.userId!);
