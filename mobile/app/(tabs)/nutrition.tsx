@@ -15,6 +15,7 @@ import SectionTitle from "../../components/ui/SectionTitle";
 import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
 import { SettingsGroup, Row } from "../../components/ui/SettingsGroup";
+import Segmented from "../../components/ui/Segmented";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import MealCard from "../../components/nutrition/MealCard";
 import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
@@ -43,7 +44,8 @@ export default function NutritionScreen() {
   const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
   const { programGoal } = useProgram();
-  const { supplementsList, supplementChecksForToday } = useSupplements();
+  const { supplementsList, supplementChecksForToday, addSupplementItem } =
+    useSupplements();
   const {
     selectedMealDay,
     setSelectedMealDay,
@@ -57,10 +59,45 @@ export default function NutritionScreen() {
   } = useMeals();
 
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [showFoodSearch, setShowFoodSearch] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addMode, setAddMode] = useState<"food" | "supplement">("food");
   const [quickName, setQuickName] = useState("");
   const [quickProtein, setQuickProtein] = useState("");
   const [quickKcal, setQuickKcal] = useState("");
+  // Supplement quick-add fields
+  const [suppName, setSuppName] = useState("");
+  const [suppDose, setSuppDose] = useState("");
+  const [suppTime, setSuppTime] = useState("");
+
+  const openAdd = (mode: "food" | "supplement") => {
+    setAddMode(mode);
+    setShowAdd(true);
+  };
+
+  const handleAddSupplement = async () => {
+    const name = suppName.trim();
+    if (!name) {
+      showToast("Supplement needs a name");
+      return;
+    }
+    try {
+      await addSupplementItem({
+        id: `supp_${Date.now()}`,
+        item: name,
+        dose: suppDose.trim(),
+        timeAt: suppTime.trim(),
+        goal: "",
+        tier: "Core",
+      });
+      setSuppName("");
+      setSuppDose("");
+      setSuppTime("");
+      setShowAdd(false);
+      showToast(`Added ${name}`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
+    }
+  };
 
   // Food search state
   const [foodQuery, setFoodQuery] = useState("");
@@ -195,6 +232,7 @@ export default function NutritionScreen() {
       setQuickName("");
       setQuickProtein("");
       setQuickKcal("");
+      setShowAdd(false);
       showToast(`Added ${name}`);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't add meal — try again");
@@ -267,75 +305,124 @@ export default function NutritionScreen() {
           <EmptyState
             icon="restaurant-outline"
             title={`No meals for ${selectedMealDay}`}
-            subtitle="Add foods below — macros track automatically."
-            actionLabel="+ Add food"
-            onAction={() => setShowFoodSearch(true)}
+            subtitle="Use Add below — macros track automatically."
           />
         )}
       </Card>
 
-      {/* Single add entry: search + quick-add together, progressive disclosure */}
-      {showFoodSearch ? (
-        <>
-          <Card title="Quick add a meal">
-            <View style={styles.quickRow}>
-              <TextInput
-                style={[sharedStyles.formInput, styles.quickName]}
-                placeholder="Meal name"
-                placeholderTextColor={colors.muted}
-                value={quickName}
-                onChangeText={setQuickName}
-                maxLength={60}
+      {/* Single add card with Food | Supplement switch */}
+      {showAdd ? (
+        <Card>
+          <View style={styles.addHeader}>
+            <Segmented
+              options={["food", "supplement"]}
+              selected={addMode}
+              onSelect={(m) => setAddMode(m as "food" | "supplement")}
+              getLabel={(m) => (m === "food" ? "Food" : "Supplement")}
+            />
+          </View>
+
+          {addMode === "food" ? (
+            <>
+              <View style={styles.quickRow}>
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickName]}
+                  placeholder="Meal name"
+                  placeholderTextColor={colors.muted}
+                  value={quickName}
+                  onChangeText={setQuickName}
+                  maxLength={60}
+                />
+              </View>
+              <View style={styles.quickRow}>
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickField]}
+                  placeholder="Protein g"
+                  placeholderTextColor={colors.muted}
+                  value={quickProtein}
+                  onChangeText={setQuickProtein}
+                  keyboardType="decimal-pad"
+                />
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickField]}
+                  placeholder="kcal"
+                  placeholderTextColor={colors.muted}
+                  value={quickKcal}
+                  onChangeText={setQuickKcal}
+                  keyboardType="number-pad"
+                />
+                <Button label="Add" size="sm" onPress={handleQuickAdd} />
+              </View>
+              <View style={styles.addDivider} />
+              <FoodSearchSection
+                query={foodQuery}
+                onQueryChange={setFoodQuery}
+                results={foodResults}
+                searching={foodSearching}
+                debouncedQuery={debouncedFoodQuery}
+                onAddFood={handleAddFoodToDay}
+                onSaveFood={handleSaveFood}
               />
-            </View>
-            <View style={styles.quickRow}>
-              <TextInput
-                style={[sharedStyles.formInput, styles.quickField]}
-                placeholder="Protein g"
-                placeholderTextColor={colors.muted}
-                value={quickProtein}
-                onChangeText={setQuickProtein}
-                keyboardType="decimal-pad"
+              <MyFoodsSection
+                myFoods={myFoods}
+                onAddFood={handleAddFoodToDay}
+                onRemoveFood={handleRemoveUserFood}
               />
-              <TextInput
-                style={[sharedStyles.formInput, styles.quickField]}
-                placeholder="kcal"
-                placeholderTextColor={colors.muted}
-                value={quickKcal}
-                onChangeText={setQuickKcal}
-                keyboardType="number-pad"
+            </>
+          ) : (
+            <>
+              <View style={styles.quickRow}>
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickName]}
+                  placeholder="Supplement name"
+                  placeholderTextColor={colors.muted}
+                  value={suppName}
+                  onChangeText={setSuppName}
+                  maxLength={60}
+                />
+              </View>
+              <View style={styles.quickRow}>
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickField]}
+                  placeholder="Dose (5 g)"
+                  placeholderTextColor={colors.muted}
+                  value={suppDose}
+                  onChangeText={setSuppDose}
+                  maxLength={20}
+                />
+                <TextInput
+                  style={[sharedStyles.formInput, styles.quickField]}
+                  placeholder="Time 08:00"
+                  placeholderTextColor={colors.muted}
+                  value={suppTime}
+                  onChangeText={setSuppTime}
+                  maxLength={5}
+                />
+                <Button label="Add" size="sm" onPress={handleAddSupplement} />
+              </View>
+              <Button
+                label="Open full supplement manager"
+                variant="ghost"
+                size="sm"
+                onPress={() => router.push("/supplements")}
               />
-              <Button label="Add" size="sm" onPress={handleQuickAdd} />
-            </View>
-          </Card>
-          <FoodSearchSection
-            query={foodQuery}
-            onQueryChange={setFoodQuery}
-            results={foodResults}
-            searching={foodSearching}
-            debouncedQuery={debouncedFoodQuery}
-            onAddFood={handleAddFoodToDay}
-            onSaveFood={handleSaveFood}
-          />
-          <MyFoodsSection
-            myFoods={myFoods}
-            onAddFood={handleAddFoodToDay}
-            onRemoveFood={handleRemoveUserFood}
-          />
+            </>
+          )}
+
           <Button
             label="Done"
             variant="ghost"
             size="sm"
-            onPress={() => setShowFoodSearch(false)}
+            onPress={() => setShowAdd(false)}
           />
-        </>
+        </Card>
       ) : (
         <SettingsGroup>
           <Row
             first
             icon="add-circle-outline"
-            label="Add food or meal"
-            onPress={() => setShowFoodSearch(true)}
+            label="Add food or supplement"
+            onPress={() => openAdd("food")}
           />
           {mealTemplatesForDay.length > 0 ? (
             <Row
@@ -371,6 +458,14 @@ export default function NutritionScreen() {
 }
 
 const styles = StyleSheet.create({
+  addHeader: {
+    marginBottom: spacing.md,
+  },
+  addDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
   quickRow: {
     flexDirection: "row",
     gap: spacing.sm,
