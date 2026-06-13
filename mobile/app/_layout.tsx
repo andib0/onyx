@@ -38,6 +38,7 @@ function RootStack() {
       <Stack.Screen name="log" options={{ title: "History & Trends" }} />
       <Stack.Screen name="program-editor" options={{ title: "Program editor" }} />
       <Stack.Screen name="exercise/[name]" options={{ title: "Exercise" }} />
+      <Stack.Screen name="achievements" options={{ title: "Achievements" }} />
       <Stack.Screen name="+not-found" options={{ title: "Not found" }} />
     </Stack>
   );

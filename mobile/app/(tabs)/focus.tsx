@@ -43,6 +43,12 @@ import WeeklyRecapCard, {
 } from "../../components/focus/WeeklyRecapCard";
 import { buildYesterdayRecap, scoreStreak } from "../../utils/trends";
 import { postScore } from "../../api/scores";
+import {
+  buildAchievementCtx,
+  evaluateAchievements,
+  detectNewUnlocks,
+} from "../../utils/achievements";
+import { success } from "../../utils/haptics";
 import { colors, fontSizes, fonts, spacing, radii, tints } from "../../theme";
 
 const getGreeting = (minutes: number): string => {
@@ -286,6 +292,27 @@ export default function FocusScreen() {
   const gymActive = blocksToShow.some(
     (fb) => !fb.isUpcoming && fb.context === "gym"
   );
+
+  // Celebrate newly-unlocked achievements (after score history is known)
+  useEffect(() => {
+    if (stateLoading || scoreHistory.length === 0) return;
+    const todayScore =
+      scoreHistory.find((s) => s.date === todayKeyValue)?.score ?? 0;
+    const streakNow = scoreStreak(scoreHistory, todayKeyValue, todayScore);
+    const ctx = buildAchievementCtx(scoreHistory, logEntries, streakNow);
+    const unlockedIds = evaluateAchievements(ctx)
+      .filter((a) => a.unlocked)
+      .map((a) => a.id);
+    detectNewUnlocks(unlockedIds).then((fresh) => {
+      if (fresh.length) {
+        success();
+        showToast(
+          fresh.length === 1 ? "Achievement unlocked!" : `${fresh.length} achievements unlocked!`
+        );
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run on score history changes
+  }, [scoreHistory, stateLoading]);
 
   // Day-close spine: debounce-snapshot today's score whenever it changes.
   // Today's row stays current; it freezes naturally once the day rolls over.

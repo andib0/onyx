@@ -224,7 +224,13 @@ export default function SettingsScreen() {
         <BarChart bars={adherence} maxValue={100} color={colors.good} />
       </Card>
       <SettingsGroup>
-        <Row first label="Full history & trends" onPress={() => router.push("/log")} />
+        <Row
+          first
+          icon="trophy-outline"
+          label="Achievements"
+          onPress={() => router.push("/achievements")}
+        />
+        <Row icon="time-outline" label="Full history & trends" onPress={() => router.push("/log")} />
       </SettingsGroup>
 
       {/* NOTIFICATIONS */}
