@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { foods } from './foods.js';
 import { supplements } from './supplements.js';
 import { programs } from './programs.js';
+import { exercises } from './exercises.js';
 
 const prisma = new PrismaClient();
 
@@ -69,6 +70,16 @@ async function main() {
     console.log(`Created ${programs.length} gym programs`);
   } else {
     console.log(`Programs already seeded (${existingPrograms} existing)`);
+  }
+
+  // Seed exercise library
+  console.log('Seeding exercise library...');
+  const existingExercises = await prisma.exerciseLibrary.count();
+  if (existingExercises === 0) {
+    await prisma.exerciseLibrary.createMany({ data: exercises });
+    console.log(`Created ${exercises.length} exercises`);
+  } else {
+    console.log(`Exercises already seeded (${existingExercises} existing)`);
   }
 
   console.log('Seeding complete!');

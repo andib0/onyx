@@ -18,6 +18,8 @@ import {
   type ProgramDayInput,
   type ProgramExerciseInput,
 } from "../api/programs";
+import { searchExercises, type ExerciseLibraryItem } from "../api/exercises";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { colors, spacing, radii, fontSizes } from "../theme";
 import { sharedStyles } from "../theme/sharedStyles";
 
@@ -49,6 +51,27 @@ export default function ProgramEditorScreen() {
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("general");
   const [days, setDays] = useState<ProgramDayInput[]>([emptyDay(0)]);
+
+  // Exercise-name autocomplete from the library
+  const [activeEx, setActiveEx] = useState<string | null>(null);
+  const [exQuery, setExQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<ExerciseLibraryItem[]>([]);
+  const debouncedExQuery = useDebouncedValue(exQuery, 250);
+
+  useEffect(() => {
+    if (!activeEx || debouncedExQuery.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    searchExercises(debouncedExQuery).then((result) => {
+      if (cancelled) return;
+      setSuggestions(result.success && result.data ? result.data : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedExQuery, activeEx]);
 
   // Prefill when editing or duplicating an existing program
   useEffect(() => {
@@ -233,9 +256,15 @@ export default function ProgramEditorScreen() {
                     placeholder="Exercise name"
                     placeholderTextColor={colors.muted}
                     value={exercise.exerciseName}
-                    onChangeText={(text) =>
-                      updateExercise(dayIndex, exIndex, { exerciseName: text })
-                    }
+                    onChangeText={(text) => {
+                      updateExercise(dayIndex, exIndex, { exerciseName: text });
+                      setActiveEx(`${dayIndex}-${exIndex}`);
+                      setExQuery(text);
+                    }}
+                    onFocus={() => {
+                      setActiveEx(`${dayIndex}-${exIndex}`);
+                      setExQuery(exercise.exerciseName);
+                    }}
                     maxLength={80}
                   />
                   <IconButton
@@ -244,6 +273,29 @@ export default function ProgramEditorScreen() {
                     label="Remove exercise"
                   />
                 </View>
+                {activeEx === `${dayIndex}-${exIndex}` && suggestions.length > 0 ? (
+                  <View style={styles.suggestList}>
+                    {suggestions.slice(0, 6).map((s) => (
+                      <Pressable
+                        key={s.id}
+                        style={({ pressed }) => [
+                          styles.suggestItem,
+                          pressed && styles.suggestPressed,
+                        ]}
+                        onPress={() => {
+                          updateExercise(dayIndex, exIndex, { exerciseName: s.name });
+                          setActiveEx(null);
+                          setSuggestions([]);
+                        }}
+                      >
+                        <Text style={styles.suggestName}>{s.name}</Text>
+                        {s.primaryMuscle ? (
+                          <Text style={styles.suggestMuscle}>{s.primaryMuscle}</Text>
+                        ) : null}
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
                 <View style={styles.exerciseFields}>
                   <View style={styles.smallField}>
                     <Text style={styles.smallLabel}>Sets</Text>
@@ -353,6 +405,34 @@ const styles = StyleSheet.create({
   },
   exerciseNameInput: {
     flex: 1,
+  },
+  suggestList: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  suggestItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  suggestPressed: {
+    backgroundColor: colors.surfaceHover,
+  },
+  suggestName: {
+    fontSize: fontSizes.md,
+    color: colors.text,
+  },
+  suggestMuscle: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
   },
   exerciseFields: {
     flexDirection: "row",

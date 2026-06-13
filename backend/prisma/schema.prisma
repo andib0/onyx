@@ -315,6 +315,20 @@ model WorkoutSetLog {
 }
 
 // ============================================
+// EXERCISE LIBRARY (Reference Data)
+// ============================================
+
+model ExerciseLibrary {
+  id            String  @id @default(uuid())
+  name          String  @unique
+  primaryMuscle String?
+  equipment     String?
+  isSystem      Boolean @default(true)
+
+  @@index([name])
+}
+
+// ============================================
 // GYM PROGRAMS
 // ============================================
 

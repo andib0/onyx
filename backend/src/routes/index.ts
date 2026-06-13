@@ -12,6 +12,7 @@ import preferencesRoutes from './preferences.routes.js';
 import userFoodsRoutes from './userFoods.routes.js';
 import workoutsRoutes from './workouts.routes.js';
 import scoresRoutes from './scores.routes.js';
+import exercisesRoutes from './exercises.routes.js';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/preferences', preferencesRoutes);
 router.use('/user-foods', userFoodsRoutes);
 router.use('/workouts', workoutsRoutes);
 router.use('/scores', scoresRoutes);
+router.use('/exercises', exercisesRoutes);
 
 // Health check
 router.get('/health', (_, res) => {
