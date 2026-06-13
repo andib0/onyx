@@ -65,6 +65,23 @@ export async function getWorkoutSessions(limit = 30) {
   return api.get<WorkoutSessionWithSets[]>(`/workouts/sessions?limit=${limit}`);
 }
 
+export interface ExerciseSession {
+  sessionId: string;
+  date: string;
+  sets: Array<{
+    setNumber: number;
+    weightKg: number | null;
+    reps: number | null;
+    rir: string | null;
+  }>;
+}
+
+export async function getExerciseSessions(name: string, limit = 30) {
+  return api.get<ExerciseSession[]>(
+    `/workouts/exercise-sessions?name=${encodeURIComponent(name)}&limit=${limit}`
+  );
+}
+
 export async function getExerciseHistory(
   exerciseNames: string[],
   excludeSessionId?: string

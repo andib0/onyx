@@ -240,7 +240,19 @@ export default function ProgramScreen() {
             </View>
             <View style={styles.exerciseList}>
               {programRows.map((row, idx) => (
-                <View key={`row-${idx}`} style={styles.exerciseRow}>
+                <Pressable
+                  key={`row-${idx}`}
+                  style={({ pressed }) => [
+                    styles.exerciseRow,
+                    pressed && sharedStyles.pressed,
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/exercise/[name]",
+                      params: { name: row.ex },
+                    })
+                  }
+                >
                   <View style={styles.exerciseTop}>
                     <Text style={styles.exIndex}>{idx + 1}</Text>
                     <View style={styles.exMain}>
@@ -257,8 +269,9 @@ export default function ProgramScreen() {
                       ) : null}
                       {row.prog ? <Text style={styles.exProg}>{row.prog}</Text> : null}
                     </View>
+                    <Text style={styles.exChevron}>›</Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
           </Card>
@@ -438,6 +451,11 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.muted,
     fontFamily: fonts.mono,
+  },
+  exChevron: {
+    fontSize: fontSizes.xl,
+    color: colors.faint,
+    alignSelf: "center",
   },
   exNotes: {
     fontSize: fontSizes.sm,

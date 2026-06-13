@@ -69,6 +69,50 @@ export class WorkoutsService {
   }
 
   /**
+   * All logged sessions for one exercise (newest first), grouped by session,
+   * for the exercise detail screen's history list and charts.
+   */
+  async getExerciseSessions(userId: string, exerciseName: string, limit = 30) {
+    const logs = await prisma.workoutSetLog.findMany({
+      where: { userId, exerciseName },
+      orderBy: { createdAt: 'asc' },
+      include: { session: { select: { id: true, date: true } } },
+    });
+
+    const bySession = new Map<
+      string,
+      {
+        sessionId: string;
+        date: string;
+        sets: Array<{ setNumber: number; weightKg: number | null; reps: number | null; rir: string | null }>;
+      }
+    >();
+
+    for (const log of logs) {
+      let entry = bySession.get(log.session.id);
+      if (!entry) {
+        entry = { sessionId: log.session.id, date: log.session.date, sets: [] };
+        bySession.set(log.session.id, entry);
+      }
+      entry.sets.push({
+        setNumber: log.setNumber,
+        weightKg: log.weightKg ? Number(log.weightKg) : null,
+        reps: log.reps,
+        rir: log.rir,
+      });
+    }
+
+    return Array.from(bySession.values())
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .slice(0, limit)
+      .map((entry) => ({
+        sessionId: entry.sessionId,
+        date: entry.date,
+        sets: entry.sets.sort((a, b) => a.setNumber - b.setNumber),
+      }));
+  }
+
+  /**
    * For each exercise name, return the sets from the most recent *finished*
    * session (excluding the given session id, so an in-progress workout never
    * compares against itself).

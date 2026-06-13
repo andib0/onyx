@@ -66,6 +66,19 @@ export async function getSessions(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function getExerciseSessions(req: AuthenticatedRequest, res: Response) {
+  try {
+    const name = ((req.query.name as string) || "").trim();
+    if (!name) return sendSuccess(res, []);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 30, 1), 100);
+    const sessions = await workoutsService.getExerciseSessions(req.userId!, name, limit);
+    return sendSuccess(res, sessions);
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
 export async function getExerciseHistory(req: AuthenticatedRequest, res: Response) {
   try {
     const namesParam = (req.query.names as string) || '';
