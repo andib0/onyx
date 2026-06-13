@@ -2,10 +2,13 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
+import NotificationResponder from "../../components/NotificationResponder";
 import { colors, fontSizes } from "../../theme";
 
 export default function TabLayout() {
   return (
+    <>
+    <NotificationResponder />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -85,6 +88,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }
 

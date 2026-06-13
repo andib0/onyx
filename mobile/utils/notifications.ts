@@ -40,11 +40,32 @@ export async function saveNotificationPrefs(prefs: NotificationPrefs): Promise<v
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
 }
 
+// Action buttons attached to notifications (lock-screen quick actions)
+export const ACTION_MARK_TAKEN = "mark_taken";
+export const ACTION_LOG_NOW = "log_now";
+
+export async function registerNotificationCategories(): Promise<void> {
+  try {
+    await Notifications.setNotificationCategoryAsync("supplement", [
+      { identifier: ACTION_MARK_TAKEN, buttonTitle: "Mark taken" },
+    ]);
+    await Notifications.setNotificationCategoryAsync("checkin", [
+      { identifier: ACTION_LOG_NOW, buttonTitle: "Log now" },
+    ]);
+  } catch {
+    // categories unsupported on this platform — notifications still fire
+  }
+}
+
 export async function ensurePermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
+  if (current.granted) {
+    await registerNotificationCategories();
+    return true;
+  }
   if (!current.canAskAgain) return false;
   const requested = await Notifications.requestPermissionsAsync();
+  if (requested.granted) await registerNotificationCategories();
   return requested.granted;
 }
 
@@ -80,7 +101,8 @@ export async function syncSupplementReminders(
       content: {
         title: supplement.item,
         body: `${supplement.dose}${supplement.goal ? ` · ${supplement.goal}` : ""}`,
-        data: { type: "supplement" },
+        data: { type: "supplement", supplementId: supplement.id },
+        categoryIdentifier: "supplement",
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -99,6 +121,7 @@ export async function syncCheckInReminder(enabled: boolean): Promise<void> {
       title: "Evening check-in",
       body: "Log weight, sleep and steps — 30 seconds.",
       data: { type: "checkin" },
+      categoryIdentifier: "checkin",
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
