@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, fontSizes } from "../../theme";
+import { colors, spacing, fontSizes, fonts } from "../../theme";
 
 interface HeaderProps {
   title: string;
@@ -34,8 +34,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSizes.xxl,
-    fontWeight: "700",
+    fontFamily: fonts.display,
     color: colors.text,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: fontSizes.sm,

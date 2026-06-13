@@ -1,23 +1,26 @@
 import { Platform } from "react-native";
 
 export const colors = {
-  bg: "#0b0f14",
-  // Layered solid surfaces (alpha-white grays out on dark; solids keep chroma)
-  surface: "#11161d",
-  surface2: "#171d26",
-  surfaceHover: "#1a212b",
-  edgeHighlight: "rgba(255, 255, 255, 0.07)",
-  text: "rgba(255, 255, 255, 0.92)",
-  muted: "rgba(255, 255, 255, 0.75)",
-  faint: "rgba(255, 255, 255, 0.5)",
-  border: "rgba(255, 255, 255, 0.1)",
-  borderLight: "rgba(255, 255, 255, 0.18)",
-  shadow: "rgba(0, 0, 0, 0.35)",
-  accent: "#7aa2ff",
-  accent2: "#9bf0ff",
-  good: "#36d399",
-  warning: "#fbbf24",
-  danger: "#ef4444",
+  // Near-black with a cool undertone; tonal surface steps (not alpha films)
+  bg: "#0a0d11",
+  surface: "#12161c",
+  surface2: "#1a1f27",
+  surfaceHover: "#232a34",
+  edgeHighlight: "rgba(255, 255, 255, 0.08)",
+  text: "rgba(255, 255, 255, 0.94)",
+  muted: "rgba(255, 255, 255, 0.60)",
+  faint: "rgba(255, 255, 255, 0.40)",
+  border: "rgba(255, 255, 255, 0.08)",
+  borderLight: "rgba(255, 255, 255, 0.16)",
+  shadow: "rgba(0, 0, 0, 0.45)",
+  // Single jewel accent — deeper, more saturated than the old #7aa2ff
+  accent: "#4d7cff",
+  accentDim: "rgba(77, 124, 255, 0.4)",
+  accent2: "#7fb0ff",
+  // Semantics held slightly muted so the accent always wins attention
+  good: "#34c98a",
+  warning: "#e8a838",
+  danger: "#e2554b",
   supplement: "#2dd4bf",
 };
 
@@ -32,16 +35,23 @@ export const spacing = {
 };
 
 export const radii = {
-  sm: 8,
-  md: 12,
-  lg: 22,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 24,
   full: 999,
 };
 
+// Loaded in the root layout via expo-font. Falls back to platform fonts until ready.
 export const fonts = {
-  brand: Platform.OS === "ios" ? "Palatino" : "serif",
-  mono: Platform.OS === "ios" ? "Menlo" : "monospace",
+  // Expanded grotesk display face for titles + hero numbers
+  display: "Archivo_700Bold",
+  displayBlack: "Archivo_800ExtraBold",
+  // Refined monospace for all numerals
+  mono: "JetBrainsMono_500Medium",
+  monoBold: "JetBrainsMono_700Bold",
   sans: Platform.OS === "ios" ? "System" : "Roboto",
+  brand: "Archivo_800ExtraBold",
 };
 
 export const fontSizes = {
@@ -57,10 +67,10 @@ export const fontSizes = {
 
 // Soft tints for colored chips/fills on dark bg
 export const tints = {
-  accent: "rgba(122, 162, 255, 0.14)",
-  good: "rgba(54, 211, 153, 0.14)",
-  warning: "rgba(251, 191, 36, 0.14)",
-  danger: "rgba(239, 68, 68, 0.12)",
+  accent: "rgba(77, 124, 255, 0.16)",
+  good: "rgba(52, 201, 138, 0.14)",
+  warning: "rgba(232, 168, 56, 0.14)",
+  danger: "rgba(226, 85, 75, 0.12)",
 };
 
 // Type ramp presets — use instead of hand-rolled size/weight combos
@@ -87,12 +97,12 @@ export const typeRamp = {
   },
   screenTitle: {
     fontSize: 30,
-    fontWeight: "700" as const,
+    fontFamily: fonts.display,
     letterSpacing: -0.5,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "600" as const,
+    fontFamily: fonts.display,
   },
   body: {
     fontSize: 14,

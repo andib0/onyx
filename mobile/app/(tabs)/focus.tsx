@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: fontSizes.title,
-    fontWeight: "700",
+    fontFamily: fonts.display,
     color: colors.text,
     letterSpacing: -0.5,
   },
