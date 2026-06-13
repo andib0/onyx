@@ -226,6 +226,11 @@ export default function SettingsScreen() {
       <SettingsGroup>
         <Row
           first
+          icon="bulb-outline"
+          label="Insights"
+          onPress={() => router.push("/insights")}
+        />
+        <Row
           icon="trophy-outline"
           label="Achievements"
           onPress={() => router.push("/achievements")}
