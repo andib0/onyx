@@ -91,6 +91,8 @@ interface WorkoutSectionProps {
   onUndoSet?: () => void;
   onJumpExercise?: (index: number) => void;
   onExtendRest?: () => void;
+  // Idle state hides the full exercise preview (used on Focus)
+  compact?: boolean;
 }
 
 export default function WorkoutSection({
@@ -107,6 +109,7 @@ export default function WorkoutSection({
   onUndoSet,
   onJumpExercise,
   onExtendRest,
+  compact = false,
 }: WorkoutSectionProps) {
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
@@ -177,6 +180,22 @@ export default function WorkoutSection({
 
   /* ── Idle ── */
   if (!workout.isActive) {
+    // Compact (Focus): no full preview — just the headline + start
+    if (compact) {
+      return (
+        <Card>
+          <View style={styles.compactIdle}>
+            <View style={styles.compactInfo}>
+              <Text style={styles.compactTitle} numberOfLines={1}>
+                {programLabel}
+              </Text>
+              <Text style={styles.idleMeta}>{programRows.length} exercises</Text>
+            </View>
+            <Button label="Start" onPress={onStart} />
+          </View>
+        </Card>
+      );
+    }
     return (
       <Card>
         <View style={styles.idleHeader}>
@@ -474,6 +493,21 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     color: colors.muted,
     marginTop: 1,
+  },
+  /* compact idle (Focus) */
+  compactIdle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  compactInfo: {
+    flex: 1,
+  },
+  compactTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: "700",
+    color: colors.text,
   },
   /* idle */
   idleHeader: {

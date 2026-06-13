@@ -24,11 +24,9 @@ import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutritio
 import Card from "../../components/ui/Card";
 import Ring from "../../components/ui/Ring";
 import Glow from "../../components/ui/Glow";
-import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import ChecklistSection from "../../components/shared/ChecklistSection";
-import SectionTitle from "../../components/ui/SectionTitle";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
@@ -44,7 +42,7 @@ import WeeklyRecapCard, {
   weekKey,
 } from "../../components/focus/WeeklyRecapCard";
 import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
-import { colors, fontSizes, spacing, tints } from "../../theme";
+import { colors, fontSizes, fonts, spacing, radii, tints } from "../../theme";
 
 const getGreeting = (minutes: number): string => {
   const hour = Math.floor(minutes / 60);
@@ -82,19 +80,43 @@ const formatToday = (): string => {
   });
 };
 
-function MacroSummaryCard({
+// Slim protein-only glance for Focus; full macros live on the Nutrition tab
+function ProteinCard({
   mealTemplates,
   mealCheckMap,
   nutritionTargets,
+  mealsLabel,
+  onPress,
 }: {
   mealTemplates: MealTemplate[];
   mealCheckMap: Record<string, boolean>;
   nutritionTargets: NutritionTarget[];
+  mealsLabel: string;
+  onPress: () => void;
 }) {
   const consumed = computeConsumedMacros(mealTemplates, mealCheckMap);
   const targets = computeMacroTargets(nutritionTargets);
   if (!targets.protein) return null;
-  return <MacroDashboard consumed={consumed} targets={targets} compact />;
+  const pct = Math.min((consumed.protein / targets.protein) * 100, 100);
+  return (
+    <Pressable onPress={onPress}>
+      <Card>
+        <View style={styles.proteinHeader}>
+          <Text style={styles.proteinLabel}>PROTEIN</Text>
+          <Text style={styles.proteinMeta}>{mealsLabel}</Text>
+        </View>
+        <View style={styles.proteinValueRow}>
+          <Text style={styles.proteinValue}>
+            {Math.round(consumed.protein)}
+            <Text style={styles.proteinTarget}> / {targets.protein} g</Text>
+          </Text>
+        </View>
+        <View style={styles.proteinTrack}>
+          <View style={[styles.proteinFill, { width: `${pct}%` }]} />
+        </View>
+      </Card>
+    </Pressable>
+  );
 }
 
 export default function FocusScreen() {
@@ -136,13 +158,8 @@ export default function FocusScreen() {
     jumpToWorkoutExercise,
     extendWorkoutRest,
   } = useProgram();
-  const {
-    timelineBlocks,
-    timelineProgressPercent,
-    timelineRemainingCount,
-    nextStartBlock,
-    nextStartInMinutes,
-  } = useTimeline();
+  const { timelineBlocks, timelineProgressPercent, timelineRemainingCount } =
+    useTimeline();
   const { user } = useAuth();
 
   const { nowMinutes, focusBlocks, nextBlock, minutesUntilNext, supplementWindow } =
@@ -368,6 +385,48 @@ export default function FocusScreen() {
       ) : null}
       {slot === "recap" ? <RecapCard recap={recap} streak={streak} /> : null}
 
+      {/* Day Score — the anchor, links to Schedule */}
+      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+        <Pressable onPress={() => router.push("/(tabs)/schedule")}>
+          <Card>
+            <Glow color={colors.good} size={150} x={52} y={52} opacity={0.1} />
+            <View style={styles.dayRow}>
+              <Ring
+                size={72}
+                strokeWidth={7}
+                progress={timelineProgressPercent}
+                color={colors.good}
+                value={`${timelineProgressPercent}%`}
+              />
+              <View style={styles.dayRowInfo}>
+                <Text
+                  style={[
+                    styles.dayRowTitle,
+                    timelineProgressPercent >= 100 &&
+                      timelineBlocks.length > 0 &&
+                      styles.dayRowPerfect,
+                  ]}
+                >
+                  {timelineProgressPercent >= 100 && timelineBlocks.length > 0
+                    ? "Perfect day ✨"
+                    : "Day score"}
+                </Text>
+                <Text style={styles.dayRowText}>
+                  <Text style={styles.dayRowStrong}>
+                    {timelineBlocks.length - timelineRemainingCount}/
+                    {timelineBlocks.length}
+                  </Text>{" "}
+                  done
+                </Text>
+                {streak > 0 ? (
+                  <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
+                ) : null}
+              </View>
+            </View>
+          </Card>
+        </Pressable>
+      </Animated.View>
+
       {/* Hero: what matters right now, with the matching one-tap action.
           Active gym block renders the workout card itself — no duplicate. */}
       {gymActive ? (
@@ -387,48 +446,43 @@ export default function FocusScreen() {
           onExtendRest={extendWorkoutRest}
         />
       ) : null}
-      {blocksToShow.length > 0 ? (
-        blocksToShow.map((focusBlock) => {
-          if (gymActive && !focusBlock.isUpcoming && focusBlock.context === "gym") {
-            return null;
-          }
-          const blockId = focusBlock.block.id || "";
-          let action = null;
-          if (!focusBlock.isUpcoming && focusBlock.context === "meal") {
-            const meal =
-              mealTemplatesForToday.find(
-                (m) => m.name === focusBlock.block.title && !mealCheckMap[m.id || ""]
-              ) || null;
-            if (meal) {
-              action = {
-                label: "Mark eaten",
-                onPress: () => handleMealToggle(meal.id || ""),
-              };
+      {blocksToShow.length > 0
+        ? blocksToShow.map((focusBlock) => {
+            if (gymActive && !focusBlock.isUpcoming && focusBlock.context === "gym") {
+              return null;
             }
-          } else if (
-            focusBlock.context === "gym" &&
-            !workout.isActive &&
-            !workoutCompletedToday &&
-            programRows.length > 0
-          ) {
-            action = { label: "Start workout", onPress: startWorkout };
-          }
-          return (
-            <FocusBlockPanel
-              key={`focus-${blockId}`}
-              focusBlock={focusBlock}
-              action={action}
-            />
-          );
-        })
-      ) : (
-        <Card>
-          <Text style={styles.allClearTitle}>All clear</Text>
-          <Text style={styles.allClearText}>Nothing scheduled right now.</Text>
-        </Card>
-      )}
+            const blockId = focusBlock.block.id || "";
+            let action = null;
+            if (!focusBlock.isUpcoming && focusBlock.context === "meal") {
+              const meal =
+                mealTemplatesForToday.find(
+                  (m) => m.name === focusBlock.block.title && !mealCheckMap[m.id || ""]
+                ) || null;
+              if (meal) {
+                action = {
+                  label: "Mark eaten",
+                  onPress: () => handleMealToggle(meal.id || ""),
+                };
+              }
+            } else if (
+              focusBlock.context === "gym" &&
+              !workout.isActive &&
+              !workoutCompletedToday &&
+              programRows.length > 0
+            ) {
+              action = { label: "Start workout", onPress: startWorkout };
+            }
+            return (
+              <FocusBlockPanel
+                key={`focus-${blockId}`}
+                focusBlock={focusBlock}
+                action={action}
+              />
+            );
+          })
+        : null}
 
-      {/* Supplements due now */}
+      {/* Supplements due now (time-sensitive) */}
       {supplementWindow && supplementWindow.pending.length > 0 ? (
         <ChecklistSection
           title={`Take now (${supplementWindow.pending.length}/${supplementWindow.totalInWindow})`}
@@ -439,113 +493,61 @@ export default function FocusScreen() {
         />
       ) : null}
 
-      {/* Day Score: tasks + meals + supplements + workout, links to Schedule */}
-      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-      <Pressable onPress={() => router.push("/(tabs)/schedule")}>
-        <Card>
-          <Glow color={colors.good} size={150} x={52} y={52} opacity={0.1} />
-          <View style={styles.dayRow}>
-            <Ring
-              size={72}
-              strokeWidth={7}
-              progress={timelineProgressPercent}
-              color={colors.good}
-              value={`${timelineProgressPercent}%`}
-            />
-            <View style={styles.dayRowInfo}>
-              <Text
-                style={[
-                  styles.dayRowTitle,
-                  timelineProgressPercent >= 100 &&
-                    timelineBlocks.length > 0 &&
-                    styles.dayRowPerfect,
-                ]}
-              >
-                {timelineProgressPercent >= 100 && timelineBlocks.length > 0
-                  ? "Perfect day ✨"
-                  : "Day score"}
-              </Text>
-              <Text style={styles.dayRowText}>
-                <Text style={styles.dayRowStrong}>
-                  {timelineBlocks.length - timelineRemainingCount}/
-                  {timelineBlocks.length}
-                </Text>{" "}
-                done
-                {nextStartBlock
-                  ? ` · next ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
-                  : ""}
-              </Text>
-              {streak > 0 ? (
-                <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
-              ) : null}
-            </View>
-          </View>
-        </Card>
-      </Pressable>
-      </Animated.View>
-
-      {/* Training (hidden when already rendered as the hero) */}
+      {/* Training (compact — full plan on Program tab / in active workout) */}
       {!gymActive ? (
-        <>
-          <SectionTitle label="Training" meta={programLabel} />
-          <WorkoutSection
-            workout={workout}
-            workoutCompletedToday={workoutCompletedToday}
-            programRows={programRows}
-            programLabel={programLabel}
-            trainingDayActive={trainingDayActive}
-            onStart={startWorkout}
-            onTogglePause={togglePauseWorkout}
-            onStop={stopWorkout}
-            onCompleteSet={completeWorkoutSet}
-            onSkipRest={skipWorkoutRest}
-            onUndoSet={undoLastWorkoutSet}
-            onJumpExercise={jumpToWorkoutExercise}
-            onExtendRest={extendWorkoutRest}
-          />
-        </>
+        <WorkoutSection
+          workout={workout}
+          workoutCompletedToday={workoutCompletedToday}
+          programRows={programRows}
+          programLabel={programLabel}
+          trainingDayActive={trainingDayActive}
+          onStart={startWorkout}
+          onTogglePause={togglePauseWorkout}
+          onStop={stopWorkout}
+          onCompleteSet={completeWorkoutSet}
+          onSkipRest={skipWorkoutRest}
+          onUndoSet={undoLastWorkoutSet}
+          onJumpExercise={jumpToWorkoutExercise}
+          onExtendRest={extendWorkoutRest}
+          compact
+        />
       ) : null}
 
-      {/* Nutrition */}
+      {/* Nutrition — slim protein glance + next meals to eat */}
       {mealTemplatesForToday.length > 0 ? (
         <>
-          <SectionTitle
-            label="Nutrition"
-            meta={`${mealDoneCount}/${mealTemplatesForToday.length} meals`}
-          />
-          <MacroSummaryCard
+          <ProteinCard
             mealTemplates={mealTemplatesForToday}
             mealCheckMap={mealCheckMap}
             nutritionTargets={nutritionTargets}
+            mealsLabel={`${mealDoneCount}/${mealTemplatesForToday.length} meals`}
+            onPress={() => router.push("/(tabs)/nutrition")}
           />
           {mealItems.length > 0 ? (
             <ChecklistSection
-              title="Still to eat"
+              title="Meals to eat"
               items={mealItems}
               checkMap={mealCheckMap}
               onToggle={handleMealToggle}
+              maxVisible={3}
+              onShowMore={() => router.push("/(tabs)/nutrition")}
             />
           ) : null}
         </>
       ) : null}
 
-      {/* Supplements: unchecked only */}
+      {/* Supplements still to take (capped) */}
       {supplementItems.length > 0 ? (
-        <>
-          <SectionTitle
-            label="Supplements"
-            meta={`${suppDoneCount}/${supplementsList.length} taken`}
-          />
-          <ChecklistSection
-            title="Still to take"
-            items={supplementItems}
-            checkMap={supplementChecksForToday}
-            onToggle={handleSuppToggle}
-            checkColor={colors.supplement}
-          />
-        </>
+        <ChecklistSection
+          title={`Supplements · ${suppDoneCount}/${supplementsList.length} taken`}
+          items={supplementItems}
+          checkMap={supplementChecksForToday}
+          onToggle={handleSuppToggle}
+          checkColor={colors.supplement}
+          maxVisible={3}
+          onShowMore={() => router.push("/(tabs)/nutrition")}
+        />
       ) : null}
-
     </ScreenContainer>
   );
 }
@@ -575,16 +577,6 @@ const styles = StyleSheet.create({
   },
   dateLine: {
     fontSize: fontSizes.md,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  allClearTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.good,
-  },
-  allClearText: {
-    fontSize: fontSizes.sm,
     color: colors.muted,
     marginTop: 2,
   },
@@ -631,5 +623,47 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.good,
     fontWeight: "600",
+  },
+  proteinHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+  },
+  proteinLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: "600",
+  },
+  proteinMeta: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+  },
+  proteinValueRow: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  proteinValue: {
+    fontSize: 26,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
+  },
+  proteinTarget: {
+    fontSize: fontSizes.md,
+    color: colors.muted,
+    fontWeight: "400",
+  },
+  proteinTrack: {
+    height: 6,
+    borderRadius: radii.full,
+    backgroundColor: colors.border,
+    overflow: "hidden",
+  },
+  proteinFill: {
+    height: "100%",
+    borderRadius: radii.full,
+    backgroundColor: colors.accent,
   },
 });

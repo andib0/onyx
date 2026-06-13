@@ -17,6 +17,9 @@ interface ChecklistSectionProps {
   onToggle: (id: string) => void;
   checkColor?: string;
   emptyMessage?: string;
+  // Cap visible rows; surplus collapses behind a "+N more" link
+  maxVisible?: number;
+  onShowMore?: () => void;
 }
 
 export default function ChecklistSection({
@@ -26,6 +29,8 @@ export default function ChecklistSection({
   onToggle,
   checkColor = colors.good,
   emptyMessage = "No items.",
+  maxVisible,
+  onShowMore,
 }: ChecklistSectionProps) {
   if (items.length === 0) {
     return (
@@ -40,14 +45,22 @@ export default function ChecklistSection({
     onToggle(id);
   };
 
+  const visible = maxVisible ? items.slice(0, maxVisible) : items;
+  const hidden = items.length - visible.length;
+
   return (
     <Card title={title}>
-      {items.map((item) => {
+      {visible.map((item, index) => {
         const isChecked = checkMap[item.id] || false;
+        const isLast = index === visible.length - 1 && hidden <= 0;
         return (
           <Pressable
             key={item.id}
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [
+              styles.row,
+              isLast && styles.rowLast,
+              pressed && styles.rowPressed,
+            ]}
             onPress={() => handleToggle(item.id)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isChecked }}
@@ -75,6 +88,14 @@ export default function ChecklistSection({
           </Pressable>
         );
       })}
+      {hidden > 0 ? (
+        <Pressable
+          style={({ pressed }) => [styles.moreRow, pressed && styles.rowPressed]}
+          onPress={onShowMore}
+        >
+          <Text style={styles.moreText}>+{hidden} more</Text>
+        </Pressable>
+      ) : null}
     </Card>
   );
 }
@@ -89,8 +110,20 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     minHeight: 52,
   },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
   rowPressed: {
     opacity: 0.7,
+  },
+  moreRow: {
+    paddingTop: spacing.md,
+    alignItems: "center",
+  },
+  moreText: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
+    fontWeight: "600",
   },
   textContainer: {
     flex: 1,
