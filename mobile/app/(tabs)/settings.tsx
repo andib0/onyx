@@ -1,11 +1,13 @@
 import { View, Text, TextInput, Switch, StyleSheet } from "react-native";
 import Constants from "expo-constants";
-import { updateProfile } from "../../api/auth";
-import { updatePreferences } from "../../api/preferences";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { updateProfile } from "../../api/auth";
+import { updatePreferences } from "../../api/preferences";
 import { useSupplements } from "../../contexts/SupplementsContext";
 import { useToastContext } from "../../contexts/ToastContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 import {
   loadNotificationPrefs,
   saveNotificationPrefs,
@@ -14,16 +16,15 @@ import {
   syncCheckInReminder,
   type NotificationPrefs,
 } from "../../utils/notifications";
-import { useAuth } from "../../contexts/AuthContext";
-import { useData } from "../../contexts/DataContext";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import SectionTitle from "../../components/ui/SectionTitle";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import { SettingsGroup, GroupTitle, Row } from "../../components/ui/SettingsGroup";
 import WeightTrend from "../../components/log/WeightTrend";
-import { buildWeightTrend } from "../../utils/trends";
+import BarChart from "../../components/ui/BarChart";
+import { buildWeightTrend, buildWeeklyAdherence } from "../../utils/trends";
 import { colors, spacing, fontSizes } from "../../theme";
 
 export default function SettingsScreen() {
@@ -36,7 +37,10 @@ export default function SettingsScreen() {
     cancelImport,
     confirmImport,
     logEntries,
+    appState,
   } = useData();
+  const { showToast } = useToastContext();
+  const { supplementsList } = useSupplements();
 
   const [showLogout, setShowLogout] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -44,7 +48,17 @@ export default function SettingsScreen() {
   const [editWeight, setEditWeight] = useState("");
   const [editCutoff, setEditCutoff] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+
   const weightTrend = buildWeightTrend(logEntries);
+  const adherence = buildWeeklyAdherence(appState, supplementsList);
+  const adherenceAvg = adherence.length
+    ? Math.round(adherence.reduce((s, b) => s + b.value, 0) / adherence.length)
+    : 0;
+
+  useEffect(() => {
+    loadNotificationPrefs().then(setNotifPrefs);
+  }, []);
 
   const startEditProfile = () => {
     setEditUsername(user?.username || "");
@@ -60,9 +74,7 @@ export default function SettingsScreen() {
       const profilePatch: { username?: string; weight?: number } = {};
       if (editUsername.trim()) profilePatch.username = editUsername.trim();
       if (!isNaN(weight)) profilePatch.weight = weight;
-      if (Object.keys(profilePatch).length) {
-        await updateProfile(profilePatch);
-      }
+      if (Object.keys(profilePatch).length) await updateProfile(profilePatch);
       const cutoff = editCutoff.trim();
       if (cutoff && /^\d{1,2}:\d{2}$/.test(cutoff)) {
         await updatePreferences({ caffeineCutoff: cutoff });
@@ -76,13 +88,6 @@ export default function SettingsScreen() {
       setSavingProfile(false);
     }
   };
-  const { showToast } = useToastContext();
-  const { supplementsList } = useSupplements();
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
-
-  useEffect(() => {
-    loadNotificationPrefs().then(setNotifPrefs);
-  }, []);
 
   const toggleNotif = async (key: keyof NotificationPrefs, value: boolean) => {
     if (!notifPrefs) return;
@@ -96,11 +101,8 @@ export default function SettingsScreen() {
     const next = Object.assign({}, notifPrefs, { [key]: value });
     setNotifPrefs(next);
     await saveNotificationPrefs(next);
-    if (key === "supplements") {
-      await syncSupplementReminders(value, supplementsList);
-    } else if (key === "checkIn") {
-      await syncCheckInReminder(value);
-    }
+    if (key === "supplements") await syncSupplementReminders(value, supplementsList);
+    else if (key === "checkIn") await syncCheckInReminder(value);
   };
 
   const handleLogout = async () => {
@@ -109,65 +111,68 @@ export default function SettingsScreen() {
     router.replace("/(auth)/login");
   };
 
+  const renderSwitch = (key: keyof NotificationPrefs) => (
+    <Switch
+      value={notifPrefs ? notifPrefs[key] : false}
+      onValueChange={(v) => toggleNotif(key, v)}
+      trackColor={{ true: colors.accent }}
+    />
+  );
+
   return (
     <ScreenContainer>
       <Header title="Settings" />
 
-      {/* Account */}
-      <SectionTitle label="Account" />
-      <Card>
-        <View style={styles.accountRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(user?.username || user?.email || "?").charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.accountInfo}>
-            <Text style={styles.accountName}>{user?.username || "Account"}</Text>
-            <Text style={styles.accountEmail}>{user?.email || ""}</Text>
-          </View>
-        </View>
-        {user?.weight ? (
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Weight on file</Text>
-            <Text style={styles.metaValue}>{user.weight} kg</Text>
-          </View>
-        ) : null}
-        {user?.preferences?.caffeineCutoff ? (
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Caffeine cutoff</Text>
-            <Text style={styles.metaValue}>{user.preferences.caffeineCutoff}</Text>
-          </View>
-        ) : null}
+      {/* PROFILE */}
+      <GroupTitle label="Profile" />
+      <SettingsGroup>
+        <Row
+          first
+          label={user?.username || "Account"}
+          sublabel={user?.email || ""}
+          right={
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user?.username || user?.email || "?").charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          }
+        />
         {editingProfile ? (
-          <View style={styles.editBox}>
-            <Text style={styles.editLabel}>Username</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editUsername}
-              onChangeText={setEditUsername}
-              placeholder="Username"
-              placeholderTextColor={colors.muted}
-              maxLength={50}
-            />
-            <Text style={styles.editLabel}>Weight (kg)</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editWeight}
-              onChangeText={setEditWeight}
-              placeholder="75"
-              placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad"
-            />
-            <Text style={styles.editLabel}>Caffeine cutoff (HH:MM)</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editCutoff}
-              onChangeText={setEditCutoff}
-              placeholder="15:40"
-              placeholderTextColor={colors.muted}
-              maxLength={5}
-            />
+          <>
+            <View style={styles.editRow}>
+              <Text style={styles.editLabel}>Name</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editUsername}
+                onChangeText={setEditUsername}
+                placeholder="Username"
+                placeholderTextColor={colors.muted}
+                maxLength={50}
+              />
+            </View>
+            <View style={styles.editRow}>
+              <Text style={styles.editLabel}>Weight (kg)</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editWeight}
+                onChangeText={setEditWeight}
+                placeholder="75"
+                placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={styles.editRow}>
+              <Text style={styles.editLabel}>Caffeine cutoff (HH:MM)</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editCutoff}
+                onChangeText={setEditCutoff}
+                placeholder="15:40"
+                placeholderTextColor={colors.muted}
+                maxLength={5}
+              />
+            </View>
             <View style={styles.editActions}>
               <Button
                 label={savingProfile ? "Saving..." : "Save"}
@@ -184,95 +189,77 @@ export default function SettingsScreen() {
                 style={styles.editBtn}
               />
             </View>
-          </View>
-        ) : (
-          <Button
-            label="Edit profile"
-            variant="secondary"
-            size="sm"
-            onPress={startEditProfile}
-            style={styles.editProfileBtn}
-          />
-        )}
-      </Card>
-
-      {/* Progress */}
-      <SectionTitle label="Progress" />
-      <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
-      <Button
-        label="Open full log"
-        variant="secondary"
-        onPress={() => router.push("/log")}
-      />
-
-      {/* Notifications */}
-      <SectionTitle label="Notifications" />
-      <Card>
-        {notifPrefs ? (
-          <>
-            <View style={styles.notifRow}>
-              <View style={styles.notifText}>
-                <Text style={styles.notifLabel}>Supplement reminders</Text>
-                <Text style={styles.notifSub}>Daily, at each supplement's time</Text>
-              </View>
-              <Switch
-                value={notifPrefs.supplements}
-                onValueChange={(value) => toggleNotif("supplements", value)}
-                trackColor={{ true: colors.accent }}
-              />
-            </View>
-            <View style={[styles.notifRow, styles.notifRowBorder]}>
-              <View style={styles.notifText}>
-                <Text style={styles.notifLabel}>Evening check-in</Text>
-                <Text style={styles.notifSub}>Daily at 20:00</Text>
-              </View>
-              <Switch
-                value={notifPrefs.checkIn}
-                onValueChange={(value) => toggleNotif("checkIn", value)}
-                trackColor={{ true: colors.accent }}
-              />
-            </View>
-            <View style={[styles.notifRow, styles.notifRowBorder]}>
-              <View style={styles.notifText}>
-                <Text style={styles.notifLabel}>Rest timer</Text>
-                <Text style={styles.notifSub}>Buzz when rest ends, even locked</Text>
-              </View>
-              <Switch
-                value={notifPrefs.rest}
-                onValueChange={(value) => toggleNotif("rest", value)}
-                trackColor={{ true: colors.accent }}
-              />
-            </View>
           </>
-        ) : null}
-      </Card>
+        ) : (
+          <>
+            <Row label="Weight" value={user?.weight ? `${user.weight} kg` : "—"} />
+            <Row
+              label="Caffeine cutoff"
+              value={user?.preferences?.caffeineCutoff || "—"}
+            />
+            <Row label="Edit profile" onPress={startEditProfile} />
+          </>
+        )}
+      </SettingsGroup>
 
-      {/* Data */}
-      <SectionTitle label="Data" />
+      {/* PROGRESS */}
+      <GroupTitle label="Progress" />
+      {weightTrend.points.length >= 2 ? (
+        <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
+      ) : null}
       <Card>
-        <View style={styles.dataButtons}>
-          <Button
-            label="Export"
-            variant="secondary"
-            onPress={exportJson}
-            style={styles.dataBtn}
-          />
-          <Button
-            label="Import"
-            variant="secondary"
-            onPress={handleImportClick}
-            style={styles.dataBtn}
-          />
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>ADHERENCE · 7 DAYS</Text>
+          <Text style={styles.chartAvg}>{adherenceAvg}% avg</Text>
         </View>
+        <BarChart bars={adherence} maxValue={100} color={colors.good} />
       </Card>
+      <SettingsGroup>
+        <Row first label="Full history & trends" onPress={() => router.push("/log")} />
+      </SettingsGroup>
 
-      {/* About */}
+      {/* NOTIFICATIONS */}
+      <GroupTitle label="Notifications" />
+      <SettingsGroup>
+        <Row
+          first
+          label="Supplement reminders"
+          sublabel="Daily, at each supplement's time"
+          right={renderSwitch("supplements")}
+        />
+        <Row
+          label="Evening check-in"
+          sublabel="Daily at 20:00"
+          right={renderSwitch("checkIn")}
+        />
+        <Row
+          label="Rest timer"
+          sublabel="Buzz when rest ends, even locked"
+          right={renderSwitch("rest")}
+        />
+      </SettingsGroup>
+
+      {/* DATA */}
+      <GroupTitle label="Data" />
+      <SettingsGroup>
+        <Row first icon="download-outline" label="Export backup" onPress={exportJson} />
+        <Row icon="cloud-upload-outline" label="Import backup" onPress={handleImportClick} />
+      </SettingsGroup>
+
+      {/* ACCOUNT */}
+      <GroupTitle label="Account" />
+      <SettingsGroup>
+        <Row
+          first
+          icon="log-out-outline"
+          label="Sign out"
+          destructive
+          onPress={() => setShowLogout(true)}
+        />
+      </SettingsGroup>
       <Text style={styles.aboutText}>
         Onyx · v{Constants.expoConfig?.version || "1.0.0"}
       </Text>
-
-      {/* Sign out */}
-      <Button label="Sign Out" variant="danger" onPress={() => setShowLogout(true)} />
 
       <ConfirmModal
         visible={showImportModal}
@@ -296,70 +283,31 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  accountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
-    fontSize: fontSizes.xl,
+    fontSize: fontSizes.md,
     fontWeight: "700",
     color: "#0b0f14",
   },
-  accountInfo: {
-    flex: 1,
-  },
-  accountName: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  accountEmail: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+  editRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  metaLabel: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  metaValue: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  editProfileBtn: {
-    marginTop: spacing.md,
-  },
-  editBox: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.xs,
+    gap: 4,
   },
   editLabel: {
     fontSize: fontSizes.xs,
     color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginTop: spacing.xs,
   },
   editInput: {
     backgroundColor: colors.bg,
@@ -375,50 +323,32 @@ const styles = StyleSheet.create({
   editActions: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    padding: spacing.lg,
   },
   editBtn: {
     flex: 1,
+  },
+  chartHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
+  },
+  chartTitle: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: "600",
+  },
+  chartAvg: {
+    fontSize: fontSizes.sm,
+    color: colors.good,
+    fontWeight: "700",
   },
   aboutText: {
     fontSize: fontSizes.xs,
     color: colors.faint,
     textAlign: "center",
-  },
-  notifRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  notifRowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  notifText: {
-    flex: 1,
-  },
-  notifLabel: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  notifSub: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  dataButtons: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  dataBtn: {
-    flex: 1,
-  },
-  dataHint: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
 });

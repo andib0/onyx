@@ -17,6 +17,36 @@ export function dateKeyDaysAgo(daysAgo: number): string {
   return `${year}-${month}-${day}`;
 }
 
+const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
+
+export type DayBar = { label: string; value: number };
+
+// Last 7 days (oldest→today) completion % across tasks + supplements + meals
+export function buildWeeklyAdherence(
+  appState: AppState,
+  supplementsList: SupplementItem[]
+): DayBar[] {
+  const taskTotal = appState.schedule.length;
+  const suppTotal = supplementsList.length;
+  const bars: DayBar[] = [];
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const date = dateKeyDaysAgo(daysAgo);
+    const completion = appState.completion[date] || {};
+    const supps = appState.suppLog[date] || {};
+    const meals = appState.mealLog[date] || {};
+    const mealTotal = Object.keys(meals).length;
+    const total = taskTotal + suppTotal + mealTotal;
+    const done =
+      Object.values(completion).filter(Boolean).length +
+      Object.values(supps).filter(Boolean).length +
+      Object.values(meals).filter(Boolean).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const weekday = new Date(date + "T00:00:00").getDay();
+    bars.push({ label: DAY_INITIALS[weekday], value: pct });
+  }
+  return bars;
+}
+
 // Bodyweight points (last `windowDays`) plus weekly rate of change from a
 // least-squares fit, so a single odd weigh-in doesn't dominate the rate.
 export function buildWeightTrend(logEntries: LogEntry[], windowDays = 28): WeightTrend {

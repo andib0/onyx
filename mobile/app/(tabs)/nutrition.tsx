@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useToastContext } from "../../contexts/ToastContext";
@@ -14,7 +14,7 @@ import ChipSelector from "../../components/shared/ChipSelector";
 import SectionTitle from "../../components/ui/SectionTitle";
 import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
-import ChecklistSection from "../../components/shared/ChecklistSection";
+import { SettingsGroup, Row } from "../../components/ui/SettingsGroup";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import MealCard from "../../components/nutrition/MealCard";
 import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
@@ -34,7 +34,7 @@ import {
   computeMacroTargets,
 } from "../../utils/nutrition";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
-import { colors, spacing, fontSizes } from "../../theme";
+import { colors, spacing } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 export default function NutritionScreen() {
@@ -43,8 +43,7 @@ export default function NutritionScreen() {
   const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
   const { programGoal } = useProgram();
-  const { supplementsList, supplementChecksForToday, setSupplementChecked } =
-    useSupplements();
+  const { supplementsList, supplementChecksForToday } = useSupplements();
   const {
     selectedMealDay,
     setSelectedMealDay,
@@ -147,24 +146,9 @@ export default function NutritionScreen() {
   const hydrationMatch = hydrationValue.match(/\d+(\.\d+)?/);
   const waterTargetMl = hydrationMatch ? parseFloat(hydrationMatch[0]) * 1000 : 2500;
 
-  const supplementItems = useMemo(
-    () =>
-      supplementsList.map((s) => ({
-        id: s.id || "",
-        label: s.item,
-        subline: `${s.dose}${s.timeAt ? ` · ${s.timeAt}` : ""}`,
-      })),
-    [supplementsList]
-  );
   const suppDoneCount = supplementsList.filter(
     (s) => supplementChecksForToday[s.id || ""]
   ).length;
-
-  const handleSuppToggle = (id: string) => {
-    setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
-    });
-  };
 
   // Fill empty weekdays with the current day's meals (non-destructive)
   const handleCopyToEmptyDays = async () => {
@@ -290,21 +274,10 @@ export default function NutritionScreen() {
         )}
       </Card>
 
-      {/* Copy current day's meals to empty days */}
-      {mealTemplatesForDay.length > 0 ? (
-        <Button
-          label="Copy this day to empty days"
-          variant="ghost"
-          size="sm"
-          onPress={handleCopyToEmptyDays}
-        />
-      ) : null}
-
-      {/* Food search behind progressive disclosure */}
+      {/* Single add entry: search + quick-add together, progressive disclosure */}
       {showFoodSearch ? (
         <>
-          {/* Quick add custom meal */}
-          <Card title="Quick add">
+          <Card title="Quick add a meal">
             <View style={styles.quickRow}>
               <TextInput
                 style={[sharedStyles.formInput, styles.quickName]}
@@ -350,60 +323,39 @@ export default function NutritionScreen() {
             onRemoveFood={handleRemoveUserFood}
           />
           <Button
-            label="Done adding"
+            label="Done"
             variant="ghost"
             size="sm"
             onPress={() => setShowFoodSearch(false)}
           />
         </>
       ) : (
-        <Button
-          label="+ Add food"
-          variant="secondary"
-          onPress={() => setShowFoodSearch(true)}
-        />
+        <SettingsGroup>
+          <Row
+            first
+            icon="add-circle-outline"
+            label="Add food or meal"
+            onPress={() => setShowFoodSearch(true)}
+          />
+          {mealTemplatesForDay.length > 0 ? (
+            <Row
+              icon="copy-outline"
+              label="Copy this day to empty days"
+              onPress={handleCopyToEmptyDays}
+            />
+          ) : null}
+          <Row
+            icon="flask-outline"
+            label="Supplements"
+            sublabel={
+              supplementsList.length
+                ? `${suppDoneCount}/${supplementsList.length} taken today`
+                : "None yet"
+            }
+            onPress={() => router.push("/supplements")}
+          />
+        </SettingsGroup>
       )}
-
-      {/* Supplements */}
-      <SectionTitle
-        label="Supplements"
-        meta={
-          supplementsList.length
-            ? `${suppDoneCount}/${supplementsList.length} taken`
-            : undefined
-        }
-      />
-      {supplementsList.length > 0 ? (
-        <ChecklistSection
-          title="Daily stack"
-          items={supplementItems}
-          checkMap={supplementChecksForToday}
-          onToggle={handleSuppToggle}
-          checkColor={colors.supplement}
-        />
-      ) : (
-        <Card>
-          <Text style={sharedStyles.emptyText}>No supplements yet.</Text>
-        </Card>
-      )}
-      <Button
-        label="Manage supplements"
-        variant="secondary"
-        onPress={() => router.push("/supplements")}
-      />
-
-      {/* Targets */}
-      {nutritionTargets.length > 0 ? (
-        <Card title="Targets">
-          {nutritionTargets.map((target, idx) => (
-            <View key={`target-${idx}`} style={styles.targetRow}>
-              <Text style={styles.targetKey}>{target.k}</Text>
-              <Text style={styles.targetValue}>{target.v}</Text>
-              {target.n ? <Text style={styles.targetNote}>{target.n}</Text> : null}
-            </View>
-          ))}
-        </Card>
-      ) : null}
 
       <ConfirmModal
         visible={deleteTarget !== null}
@@ -419,9 +371,6 @@ export default function NutritionScreen() {
 }
 
 const styles = StyleSheet.create({
-  macroGrid: {
-    gap: spacing.md,
-  },
   quickRow: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -433,24 +382,5 @@ const styles = StyleSheet.create({
   },
   quickField: {
     flex: 1,
-  },
-  targetRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  targetKey: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  targetValue: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  targetNote: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 2,
   },
 });

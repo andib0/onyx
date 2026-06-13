@@ -12,6 +12,7 @@ import LoadingScreen from "../../components/shared/LoadingScreen";
 import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import Segmented from "../../components/ui/Segmented";
 import SectionTitle from "../../components/ui/SectionTitle";
 import EmptyState from "../../components/ui/EmptyState";
 import type { ProgramSummary } from "../../api/programs";
@@ -167,15 +168,8 @@ export default function ProgramScreen() {
         </Pressable>
       )}
 
-      {/* Program management */}
+      {/* Program management: one consistent action set */}
       <View style={styles.manageRow}>
-        <Button
-          label="+ New program"
-          variant="secondary"
-          size="sm"
-          onPress={() => router.push("/program-editor")}
-          style={styles.manageBtn}
-        />
         {selectedProgramId ? (
           selectedIsCustom ? (
             <>
@@ -201,7 +195,7 @@ export default function ProgramScreen() {
             </>
           ) : (
             <Button
-              label="Customize"
+              label="Customize this program"
               variant="secondary"
               size="sm"
               onPress={() =>
@@ -214,32 +208,25 @@ export default function ProgramScreen() {
             />
           )
         ) : null}
+        <Button
+          label="+ New"
+          variant="secondary"
+          size="sm"
+          onPress={() => router.push("/program-editor")}
+          style={styles.manageBtn}
+        />
       </View>
 
-      {/* Day picker: segmented row */}
+      {/* Day picker: segmented control */}
       {days.length > 0 ? (
         <>
           <SectionTitle label="Today's session" />
-          <View style={styles.daysRow}>
-            {days.map((day) => {
-              const active = day.id === selectedProgramDayId;
-              return (
-                <Pressable
-                  key={day.id}
-                  onPress={() => setSelectedProgramDayId(day.id)}
-                  style={({ pressed }) => [
-                    styles.dayBtn,
-                    active && styles.dayBtnActive,
-                    pressed && sharedStyles.pressed,
-                  ]}
-                >
-                  <Text style={[styles.dayBtnText, active && styles.dayBtnTextActive]}>
-                    {day.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Segmented
+            options={days.map((d) => d.id)}
+            selected={selectedProgramDayId}
+            onSelect={setSelectedProgramDayId}
+            getLabel={(id) => days.find((d) => d.id === id)?.name || id}
+          />
         </>
       ) : null}
 
@@ -400,37 +387,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.muted,
     lineHeight: 18,
-  },
-  /* day segmented row */
-  daysRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  dayBtn: {
-    flexGrow: 1,
-    flexBasis: "30%",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  dayBtnActive: {
-    backgroundColor: tints.accent,
-    borderColor: colors.accent,
-  },
-  dayBtnText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  dayBtnTextActive: {
-    color: colors.text,
   },
   /* session */
   sessionHeader: {
