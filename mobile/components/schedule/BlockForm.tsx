@@ -78,6 +78,8 @@ interface BlockFormProps {
   initialBlock?: ScheduleBlock;
   onSubmit: (block: ScheduleBlock | Partial<ScheduleBlock>) => void;
   onCancel: () => void;
+  // When rendered inside a Sheet, skip the Card chrome + title
+  embedded?: boolean;
 }
 
 export default function BlockForm({
@@ -85,6 +87,7 @@ export default function BlockForm({
   initialBlock,
   onSubmit,
   onCancel,
+  embedded,
 }: BlockFormProps) {
   const initialIsPreset =
     !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
@@ -126,9 +129,8 @@ export default function BlockForm({
 
   const getTagColor = (tag: string) => TAG_COLORS[tag] || colors.muted;
 
-  return (
-    <Card title={mode === "add" ? "Add task" : "Edit task"}>
-      <View style={sharedStyles.formGrid}>
+  const body = (
+    <View style={sharedStyles.formGrid}>
         <View style={sharedStyles.formRow}>
           <TimeField
             label="Start"
@@ -208,8 +210,10 @@ export default function BlockForm({
           </Pressable>
         </View>
       </View>
-    </Card>
   );
+
+  if (embedded) return body;
+  return <Card title={mode === "add" ? "Add task" : "Edit task"}>{body}</Card>;
 }
 
 const styles = StyleSheet.create({

@@ -16,6 +16,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
 import { SettingsGroup, Row } from "../../components/ui/SettingsGroup";
 import Segmented from "../../components/ui/Segmented";
+import Sheet from "../../components/ui/Sheet";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import MealCard from "../../components/nutrition/MealCard";
 import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
@@ -332,19 +333,22 @@ export default function NutritionScreen() {
         )}
       </Card>
 
-      {/* Single add card with Food | Supplement switch */}
-      {showAdd ? (
-        <Card>
-          <View style={styles.addHeader}>
-            <Segmented
-              options={["food", "supplement"]}
-              selected={addMode}
-              onSelect={(m) => setAddMode(m as "food" | "supplement")}
-              getLabel={(m) => (m === "food" ? "Food" : "Supplement")}
-            />
-          </View>
+      {/* Add via bottom sheet with Food | Supplement switch */}
+      <Sheet
+        visible={showAdd}
+        title="Add food or supplement"
+        onClose={() => setShowAdd(false)}
+      >
+        <View style={styles.addHeader}>
+          <Segmented
+            options={["food", "supplement"]}
+            selected={addMode}
+            onSelect={(m) => setAddMode(m as "food" | "supplement")}
+            getLabel={(m) => (m === "food" ? "Food" : "Supplement")}
+          />
+        </View>
 
-          {addMode === "food" ? (
+        {addMode === "food" ? (
             <>
               <View style={styles.quickRow}>
                 <TextInput
@@ -431,40 +435,33 @@ export default function NutritionScreen() {
             </>
           )}
 
-          <Button
-            label="Done"
-            variant="ghost"
-            size="sm"
-            onPress={() => setShowAdd(false)}
-          />
-        </Card>
-      ) : (
-        <SettingsGroup>
+      </Sheet>
+
+      <SettingsGroup>
+        <Row
+          first
+          icon="add-circle-outline"
+          label="Add food or supplement"
+          onPress={() => openAdd("food")}
+        />
+        {mealTemplatesForDay.length > 0 ? (
           <Row
-            first
-            icon="add-circle-outline"
-            label="Add food or supplement"
-            onPress={() => openAdd("food")}
+            icon="copy-outline"
+            label="Copy this day to empty days"
+            onPress={handleCopyToEmptyDays}
           />
-          {mealTemplatesForDay.length > 0 ? (
-            <Row
-              icon="copy-outline"
-              label="Copy this day to empty days"
-              onPress={handleCopyToEmptyDays}
-            />
-          ) : null}
-          <Row
-            icon="flask-outline"
-            label="Supplements"
-            sublabel={
-              supplementsList.length
-                ? `${suppDoneCount}/${supplementsList.length} taken today`
-                : "None yet"
-            }
-            onPress={() => router.push("/supplements")}
-          />
-        </SettingsGroup>
-      )}
+        ) : null}
+        <Row
+          icon="flask-outline"
+          label="Supplements"
+          sublabel={
+            supplementsList.length
+              ? `${suppDoneCount}/${supplementsList.length} taken today`
+              : "None yet"
+          }
+          onPress={() => router.push("/supplements")}
+        />
+      </SettingsGroup>
 
       <ConfirmModal
         visible={deleteTarget !== null}

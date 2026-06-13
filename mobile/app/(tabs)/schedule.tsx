@@ -11,6 +11,7 @@ import Card from "../../components/ui/Card";
 import ProgressBar from "../../components/ui/ProgressBar";
 import FAB from "../../components/ui/FAB";
 import EmptyState from "../../components/ui/EmptyState";
+import Sheet from "../../components/ui/Sheet";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import BlockItem from "../../components/schedule/BlockItem";
 import BlockForm from "../../components/schedule/BlockForm";
@@ -111,15 +112,6 @@ export default function ScheduleScreen() {
         <ProgressBar progress={timelineProgressPercent} color={colors.good} height={6} />
       </Card>
 
-      {editingBlock && !editingBlock.readonly ? (
-        <BlockForm
-          mode="edit"
-          initialBlock={editingBlock}
-          onSubmit={handleEditSave}
-          onCancel={() => setEditingBlockId(null)}
-        />
-      ) : null}
-
       {timelineBlocks.map((block) => {
         const blockId = block.id || "";
         return (
@@ -146,13 +138,34 @@ export default function ScheduleScreen() {
         </Card>
       ) : null}
 
-      {showAddForm ? (
+      <Sheet
+        visible={showAddForm}
+        title="Add task"
+        onClose={() => setShowAddForm(false)}
+      >
         <BlockForm
           mode="add"
+          embedded
           onSubmit={handleAddBlock}
           onCancel={() => setShowAddForm(false)}
         />
-      ) : null}
+      </Sheet>
+
+      <Sheet
+        visible={Boolean(editingBlock && !editingBlock.readonly)}
+        title="Edit task"
+        onClose={() => setEditingBlockId(null)}
+      >
+        {editingBlock && !editingBlock.readonly ? (
+          <BlockForm
+            mode="edit"
+            embedded
+            initialBlock={editingBlock}
+            onSubmit={handleEditSave}
+            onCancel={() => setEditingBlockId(null)}
+          />
+        ) : null}
+      </Sheet>
 
       <ConfirmModal
         visible={deleteTarget !== null}
