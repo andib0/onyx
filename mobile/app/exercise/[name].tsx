@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import Card from "../../components/ui/Card";
+import StatBlock from "../../components/ui/StatBlock";
 import BarChart, { type Bar } from "../../components/ui/BarChart";
 import { getExerciseSessions, type ExerciseSession } from "../../api/workouts";
 import { colors, spacing, fontSizes, fonts } from "../../theme";
@@ -85,18 +86,9 @@ export default function ExerciseDetailScreen() {
           {/* Headline stats */}
           <Card>
             <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{topWeight(sessions[0])}</Text>
-                <Text style={styles.statLabel}>last top kg</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{allTimeBest}</Text>
-                <Text style={styles.statLabel}>best e1RM</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{sessions.length}</Text>
-                <Text style={styles.statLabel}>sessions</Text>
-              </View>
+              <StatBlock value={topWeight(sessions[0])} label="last top kg" />
+              <StatBlock value={allTimeBest} label="best e1RM" color={colors.accent} />
+              <StatBlock value={sessions.length} label="sessions" />
             </View>
           </Card>
 
@@ -156,23 +148,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-  },
-  stat: {
-    alignItems: "center",
-    gap: 2,
-  },
-  statValue: {
-    fontSize: fontSizes.xxl,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-    fontVariant: ["tabular-nums"],
-  },
-  statLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   chartTitle: {
     fontSize: fontSizes.xs,

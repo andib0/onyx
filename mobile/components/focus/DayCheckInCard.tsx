@@ -1,11 +1,12 @@
 ﻿import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
+import Input from "../ui/Input";
 import type { LogEntry } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+import { colors, spacing, fontSizes } from "../../theme";
 
 export const CHECK_IN_HOUR = 19;
 export const CHECKIN_DISMISS_KEY = "onyx_checkin_dismissed";
@@ -19,40 +20,6 @@ interface DayCheckInCardProps {
   onSave: (entry: LogEntry) => Promise<void>;
   showToast: (message: string) => void;
   onDismiss?: () => void;
-}
-
-function Field({
-  label,
-  unit,
-  value,
-  onChangeText,
-  placeholder,
-  decimal,
-}: {
-  label: string;
-  unit: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-  decimal?: boolean;
-}) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldInputWrap}>
-        <TextInput
-          style={styles.fieldInput}
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={decimal ? "decimal-pad" : "number-pad"}
-          placeholder={placeholder}
-          placeholderTextColor={colors.border}
-          maxLength={6}
-        />
-        <Text style={styles.fieldUnit}>{unit}</Text>
-      </View>
-    </View>
-  );
 }
 
 export default function DayCheckInCard({
@@ -130,29 +97,41 @@ export default function DayCheckInCard({
       </View>
 
       <View style={styles.fieldsRow}>
-        <Field
-          label="Weight"
-          unit="kg"
-          value={weight}
-          onChangeText={setWeight}
-          placeholder="72.5"
-          decimal
-        />
-        <Field
-          label="Sleep"
-          unit="h"
-          value={sleep}
-          onChangeText={setSleep}
-          placeholder="7.5"
-          decimal
-        />
-        <Field
-          label="Steps"
-          unit=""
-          value={steps}
-          onChangeText={setSteps}
-          placeholder="8000"
-        />
+        <View style={styles.fieldCol}>
+          <Input
+            label="Weight"
+            unit="kg"
+            value={weight}
+            onChangeText={setWeight}
+            placeholder="72.5"
+            keyboardType="decimal-pad"
+            maxLength={6}
+            mono
+          />
+        </View>
+        <View style={styles.fieldCol}>
+          <Input
+            label="Sleep"
+            unit="h"
+            value={sleep}
+            onChangeText={setSleep}
+            placeholder="7.5"
+            keyboardType="decimal-pad"
+            maxLength={6}
+            mono
+          />
+        </View>
+        <View style={styles.fieldCol}>
+          <Input
+            label="Steps"
+            value={steps}
+            onChangeText={setSteps}
+            placeholder="8000"
+            keyboardType="number-pad"
+            maxLength={6}
+            mono
+          />
+        </View>
       </View>
 
       <Button
@@ -184,46 +163,12 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 1,
   },
-  dismiss: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    paddingLeft: spacing.md,
-  },
   fieldsRow: {
     flexDirection: "row",
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  field: {
+  fieldCol: {
     flex: 1,
-    gap: 4,
-  },
-  fieldLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  fieldInputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    height: 42,
-  },
-  fieldInput: {
-    flex: 1,
-    color: colors.text,
-    fontSize: fontSizes.md,
-    fontFamily: fonts.mono,
-    padding: 0,
-  },
-  fieldUnit: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginLeft: 2,
   },
 });

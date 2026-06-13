@@ -3,10 +3,11 @@ import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
 import IconButton from "../ui/IconButton";
+import StatBlock from "../ui/StatBlock";
 import { getWorkoutSessions } from "../../api/workouts";
 import { buildWeightTrend, dateKeyDaysAgo } from "../../utils/trends";
 import type { AppState, LogEntry, SupplementItem } from "../../types/appTypes";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { colors, spacing, fontSizes } from "../../theme";
 
 export const WEEKLY_DISMISS_KEY = "onyx_weekly_recap_dismissed";
 const DISMISS_KEY = WEEKLY_DISMISS_KEY;
@@ -107,30 +108,17 @@ export default function WeeklyRecapCard({
       </View>
       <View style={styles.statsRow}>
         {weightDelta !== null ? (
-          <View style={styles.stat}>
-            <Text
-              style={[
-                styles.statValue,
-                { color: weightDelta >= 0 ? colors.good : colors.warning },
-              ]}
-            >
-              {weightDelta >= 0 ? "+" : ""}
-              {weightDelta.toFixed(1)}
-            </Text>
-            <Text style={styles.statLabel}>kg</Text>
-          </View>
+          <StatBlock
+            value={`${weightDelta >= 0 ? "+" : ""}${weightDelta.toFixed(1)}`}
+            label="kg"
+            color={weightDelta >= 0 ? colors.good : colors.warning}
+          />
         ) : null}
         {adherence !== null ? (
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{adherence}%</Text>
-            <Text style={styles.statLabel}>adherence</Text>
-          </View>
+          <StatBlock value={`${adherence}%`} label="adherence" />
         ) : null}
         {weekSets !== null && weekSets > 0 ? (
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{weekSets}</Text>
-            <Text style={styles.statLabel}>sets</Text>
-          </View>
+          <StatBlock value={weekSets} label="sets" />
         ) : null}
       </View>
     </Card>
@@ -154,21 +142,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: spacing.xs,
-  },
-  stat: {
-    alignItems: "center",
-    gap: 1,
-  },
-  statValue: {
-    fontSize: fontSizes.xxl,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
 });
