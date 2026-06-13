@@ -41,7 +41,8 @@ import WeeklyRecapCard, {
   WEEKLY_DISMISS_KEY,
   weekKey,
 } from "../../components/focus/WeeklyRecapCard";
-import { buildYesterdayRecap, supplementStreak } from "../../utils/trends";
+import { buildYesterdayRecap, scoreStreak } from "../../utils/trends";
+import { postScore } from "../../api/scores";
 import { colors, fontSizes, fonts, spacing, radii, tints } from "../../theme";
 
 const getGreeting = (minutes: number): string => {
@@ -130,6 +131,7 @@ export default function FocusScreen() {
     addLogEntry,
     loadError,
     reloadState,
+    scoreHistory,
   } = useData();
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
@@ -138,7 +140,7 @@ export default function FocusScreen() {
     setRefreshing(false);
   };
   const { showToast } = useToastContext();
-  const { scheduleBlocks } = useSchedule();
+  const { scheduleBlocks, completionByBlockId } = useSchedule();
   const { supplementsList, supplementChecksForToday, setSupplementChecked } =
     useSupplements();
   const { mealTemplatesForToday, mealCheckMap, setMealChecked } = useMeals();
@@ -256,9 +258,13 @@ export default function FocusScreen() {
   const suppDoneCount = supplementsList.filter(
     (s) => supplementChecksForToday[s.id || ""]
   ).length;
+  const tasksTotal = scheduleBlocks.length;
+  const tasksDone = scheduleBlocks.filter(
+    (b) => completionByBlockId[b.id || ""]
+  ).length;
 
   const recap = buildYesterdayRecap(appState, supplementsList);
-  const streak = supplementStreak(appState, supplementsList);
+  const streak = scoreStreak(scoreHistory, todayKeyValue, timelineProgressPercent);
 
   const anythingChecked =
     Object.values(mealCheckMap).some(Boolean) ||
@@ -280,6 +286,37 @@ export default function FocusScreen() {
   const gymActive = blocksToShow.some(
     (fb) => !fb.isUpcoming && fb.context === "gym"
   );
+
+  // Day-close spine: debounce-snapshot today's score whenever it changes.
+  // Today's row stays current; it freezes naturally once the day rolls over.
+  useEffect(() => {
+    if (stateLoading) return undefined;
+    const handle = setTimeout(() => {
+      postScore({
+        date: todayKeyValue,
+        score: timelineProgressPercent,
+        tasksDone,
+        tasksTotal,
+        suppDone: suppDoneCount,
+        suppTotal: supplementsList.length,
+        mealsDone: mealDoneCount,
+        mealsTotal: mealTemplatesForToday.length,
+        workoutDone: workoutCompletedToday,
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(handle);
+  }, [
+    stateLoading,
+    todayKeyValue,
+    timelineProgressPercent,
+    tasksDone,
+    tasksTotal,
+    suppDoneCount,
+    supplementsList.length,
+    mealDoneCount,
+    mealTemplatesForToday.length,
+    workoutCompletedToday,
+  ]);
 
   useEffect(() => {
     let cancelled = false;

@@ -33,6 +33,7 @@ model User {
   userFoods      UserFood[]
   workoutSessions WorkoutSession[]
   workoutSetLogs  WorkoutSetLog[]
+  dailyScores     DailyScore[]
 }
 
 model UserPreferences {
@@ -250,6 +251,29 @@ model SupplementDatabase {
   timingRecommendation String?
   benefits             String?
   precautions          String?
+}
+
+// ============================================
+// DAILY SCORE SNAPSHOTS (historical spine)
+// ============================================
+
+model DailyScore {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String   // "YYYY-MM-DD"
+  score       Int      // 0-100 overall completion
+  tasksDone   Int      @default(0)
+  tasksTotal  Int      @default(0)
+  suppDone    Int      @default(0)
+  suppTotal   Int      @default(0)
+  mealsDone   Int      @default(0)
+  mealsTotal  Int      @default(0)
+  workoutDone Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
 
 // ============================================

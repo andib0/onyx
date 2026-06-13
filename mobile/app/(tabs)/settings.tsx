@@ -24,7 +24,11 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 import { SettingsGroup, GroupTitle, Row } from "../../components/ui/SettingsGroup";
 import WeightTrend from "../../components/log/WeightTrend";
 import BarChart from "../../components/ui/BarChart";
-import { buildWeightTrend, buildWeeklyAdherence } from "../../utils/trends";
+import {
+  buildWeightTrend,
+  buildWeeklyAdherence,
+  scoreBarsFromHistory,
+} from "../../utils/trends";
 import { colors, spacing, fontSizes } from "../../theme";
 
 export default function SettingsScreen() {
@@ -38,6 +42,7 @@ export default function SettingsScreen() {
     confirmImport,
     logEntries,
     appState,
+    scoreHistory,
   } = useData();
   const { showToast } = useToastContext();
   const { supplementsList } = useSupplements();
@@ -51,7 +56,11 @@ export default function SettingsScreen() {
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
 
   const weightTrend = buildWeightTrend(logEntries);
-  const adherence = buildWeeklyAdherence(appState, supplementsList);
+  // Prefer durable score snapshots; fall back to recomputing from logs
+  const adherence =
+    scoreHistory.length > 0
+      ? scoreBarsFromHistory(scoreHistory)
+      : buildWeeklyAdherence(appState, supplementsList);
   const adherenceAvg = adherence.length
     ? Math.round(adherence.reduce((s, b) => s + b.value, 0) / adherence.length)
     : 0;

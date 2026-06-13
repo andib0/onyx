@@ -13,6 +13,7 @@ import { useToastContext } from "./ToastContext";
 import useLog from "../hooks/useLog";
 import useImportExport from "../hooks/useImportExport";
 import { exportUserData } from "../api/sync";
+import { getScores, type DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
@@ -38,6 +39,8 @@ interface DataContextType {
   resetProgram: () => void;
   loadError: boolean;
   reloadState: () => Promise<void>;
+  scoreHistory: DailyScore[];
+  refreshScores: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -57,7 +60,13 @@ export function DataProvider({
   const [appState, setAppState] = useState<AppState>(() => normalizeState({}));
   const [stateLoading, setStateLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [scoreHistory, setScoreHistory] = useState<DailyScore[]>([]);
   const todayKeyValue = todayKey();
+
+  const refreshScores = useCallback(async () => {
+    const result = await getScores(30);
+    if (result.success && result.data) setScoreHistory(result.data);
+  }, []);
 
   // Load app state from backend
   useEffect(() => {
@@ -67,8 +76,10 @@ export function DataProvider({
       resetProgram();
       setStateLoading(false);
       setLoadError(false);
+      setScoreHistory([]);
       return undefined;
     }
+    refreshScores().catch(() => {});
     let cancelled = false;
     setStateLoading(true);
     exportUserData()
@@ -91,7 +102,7 @@ export function DataProvider({
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isAuthenticated, resetProgram]);
+  }, [authLoading, isAuthenticated, resetProgram, refreshScores]);
 
   // Manual refresh (pull-to-refresh, error retry)
   const reloadState = useCallback(async () => {
@@ -147,6 +158,8 @@ export function DataProvider({
         resetProgram,
         loadError,
         reloadState,
+        scoreHistory,
+        refreshScores,
       }}
     >
       {children}

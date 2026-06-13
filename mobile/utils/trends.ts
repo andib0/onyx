@@ -19,7 +19,45 @@ export function dateKeyDaysAgo(daysAgo: number): string {
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
+// Consecutive days (ending today, or yesterday if today not there yet) with
+// score >= threshold, from snapshotted DailyScore rows merged with today's live.
+export function scoreStreak(
+  history: Array<{ date: string; score: number }>,
+  todayKeyValue: string,
+  todayScore: number,
+  threshold = 80
+): number {
+  const map: Record<string, number> = {};
+  for (const row of history) map[row.date] = row.score;
+  map[todayKeyValue] = todayScore; // live value wins for today
+
+  let streak = 0;
+  // If today already qualifies, count from today; else start from yesterday
+  const startOffset = (map[todayKeyValue] ?? 0) >= threshold ? 0 : 1;
+  for (let daysAgo = startOffset; daysAgo <= 365; daysAgo++) {
+    const score = map[dateKeyDaysAgo(daysAgo)];
+    if (score === undefined || score < threshold) break;
+    streak++;
+  }
+  return streak;
+}
+
 export type DayBar = { label: string; value: number };
+
+// Last 7 days of bars from snapshotted scores (preferred over log-recompute)
+export function scoreBarsFromHistory(
+  history: Array<{ date: string; score: number }>
+): DayBar[] {
+  const map: Record<string, number> = {};
+  for (const row of history) map[row.date] = row.score;
+  const bars: DayBar[] = [];
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const date = dateKeyDaysAgo(daysAgo);
+    const weekday = new Date(date + "T00:00:00").getDay();
+    bars.push({ label: DAY_INITIALS[weekday], value: map[date] ?? 0 });
+  }
+  return bars;
+}
 
 // Last 7 days (oldest→today) completion % across tasks + supplements + meals
 export function buildWeeklyAdherence(

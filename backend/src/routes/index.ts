@@ -11,6 +11,7 @@ import syncRoutes from './sync.routes.js';
 import preferencesRoutes from './preferences.routes.js';
 import userFoodsRoutes from './userFoods.routes.js';
 import workoutsRoutes from './workouts.routes.js';
+import scoresRoutes from './scores.routes.js';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use('/sync', syncRoutes);
 router.use('/preferences', preferencesRoutes);
 router.use('/user-foods', userFoodsRoutes);
 router.use('/workouts', workoutsRoutes);
+router.use('/scores', scoresRoutes);
 
 // Health check
 router.get('/health', (_, res) => {
