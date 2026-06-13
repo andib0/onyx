@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { deleteProgram } from "../../api/programs";
+import { getExerciseHistory, type ExerciseHistory } from "../../api/workouts";
+import { suggestProgression } from "../../utils/progression";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -72,6 +74,7 @@ export default function ProgramScreen() {
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [history, setHistory] = useState<ExerciseHistory>({});
   const { stateLoading } = useData();
   const { showToast } = useToastContext();
   const {
@@ -87,6 +90,24 @@ export default function ProgramScreen() {
     setSelectedProgramDayId,
     refreshPrograms,
   } = useProgram();
+
+  // Last-session sets per exercise for "last" + progression chips on the card
+  const exerciseNames = programRows.map((r) => r.ex).join("|");
+  useEffect(() => {
+    const names = exerciseNames ? exerciseNames.split("|") : [];
+    if (names.length === 0) {
+      setHistory({});
+      return;
+    }
+    let cancelled = false;
+    getExerciseHistory(names).then((result) => {
+      if (cancelled) return;
+      setHistory(result.success && result.data ? result.data : {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [exerciseNames]);
 
   if (stateLoading) return <LoadingScreen />;
 
@@ -264,6 +285,36 @@ export default function ProgramScreen() {
                         <Text style={styles.exStat}>RIR {row.rir}</Text>
                         <Text style={styles.exStat}>Rest {row.rest}</Text>
                       </View>
+                      {(() => {
+                        const h = history[row.ex];
+                        if (!h) return null;
+                        const sug = suggestProgression(row.ex, h.sets, row.reps);
+                        return (
+                          <View style={styles.exHistory}>
+                            <Text style={styles.exLast} numberOfLines={1}>
+                              last{" "}
+                              {h.sets
+                                .map((s) => (s.reps !== null ? s.reps : "-"))
+                                .join("/")}
+                              {h.sets[0]?.weightKg != null
+                                ? ` @ ${h.sets[0].weightKg}kg`
+                                : ""}
+                            </Text>
+                            {sug ? (
+                              <Text
+                                style={[
+                                  styles.exSuggest,
+                                  sug.isProgress && styles.exSuggestProgress,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {sug.isProgress ? "↑ " : ""}
+                                {sug.text}
+                              </Text>
+                            ) : null}
+                          </View>
+                        );
+                      })()}
                       {row.notes ? (
                         <Text style={styles.exNotes}>{row.notes}</Text>
                       ) : null}
@@ -456,6 +507,22 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xl,
     color: colors.faint,
     alignSelf: "center",
+  },
+  exHistory: {
+    gap: 1,
+  },
+  exLast: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+  },
+  exSuggest: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontWeight: "600",
+  },
+  exSuggestProgress: {
+    color: colors.good,
   },
   exNotes: {
     fontSize: fontSizes.sm,

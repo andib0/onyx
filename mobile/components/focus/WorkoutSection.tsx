@@ -8,6 +8,7 @@ import Glow from "../ui/Glow";
 import Burst from "../ui/Burst";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
+import { suggestProgression } from "../../utils/progression";
 import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
 
 const formatSeconds = (totalSeconds: number) => {
@@ -120,7 +121,12 @@ export default function WorkoutSection({
   const history = workout.historyByExercise[exerciseName];
   const sessionSets = workout.setsThisSession[exerciseName] || [];
 
-  // Prefill: last set this session, else last session's matching set, else blank.
+  const suggestion = currentRow
+    ? suggestProgression(exerciseName, history?.sets ?? [], currentRow.reps)
+    : null;
+  const suggestedWeight = suggestion?.suggestedWeightKg ?? null;
+
+  // Prefill: last set this session, else progression suggestion, else last match.
   useEffect(() => {
     const prevThisSession = sessionSets.length
       ? sessionSets[sessionSets.length - 1]
@@ -129,8 +135,15 @@ export default function WorkoutSection({
       history && history.sets[workout.currentSet - 1]
         ? history.sets[workout.currentSet - 1]
         : null;
-    const source = prevThisSession || fromHistory;
-    setWeightInput(source && source.weightKg !== null ? String(source.weightKg) : "");
+    if (prevThisSession && prevThisSession.weightKg !== null) {
+      setWeightInput(String(prevThisSession.weightKg));
+    } else if (suggestedWeight !== null) {
+      setWeightInput(String(suggestedWeight));
+    } else if (fromHistory && fromHistory.weightKg !== null) {
+      setWeightInput(String(fromHistory.weightKg));
+    } else {
+      setWeightInput("");
+    }
     setRepsInput(fromHistory && fromHistory.reps !== null ? String(fromHistory.reps) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-prefill when position changes
   }, [workout.exerciseIndex, workout.currentSet, workout.isActive]);
@@ -354,6 +367,25 @@ export default function WorkoutSection({
             <View style={styles.lastBadge}>
               <Text style={styles.lastBadgeText} numberOfLines={1}>
                 Last: {formatLastSession(history.sets)}
+              </Text>
+            </View>
+          ) : null}
+          {suggestion ? (
+            <View
+              style={[
+                styles.suggestBadge,
+                suggestion.isProgress && styles.suggestBadgeProgress,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.suggestText,
+                  suggestion.isProgress && styles.suggestTextProgress,
+                ]}
+                numberOfLines={1}
+              >
+                {suggestion.isProgress ? "↑ " : ""}
+                {suggestion.text}
               </Text>
             </View>
           ) : null}
@@ -707,6 +739,25 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.accent,
     fontFamily: fonts.mono,
+  },
+  suggestBadge: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    backgroundColor: colors.surface2,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  suggestBadgeProgress: {
+    backgroundColor: tints.good,
+  },
+  suggestText: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    fontWeight: "600",
+  },
+  suggestTextProgress: {
+    color: colors.good,
   },
   liftNotes: {
     fontSize: fontSizes.sm,
