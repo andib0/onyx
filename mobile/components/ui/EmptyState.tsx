@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Button from "./Button";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, type Palette } from "../../theme";
+import { spacing, fontSizes, type Palette, type TintSet } from "../../theme";
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,12 +20,12 @@ export default function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={28} color={colors.muted} />
+        <Ionicons name={icon} size={26} color={colors.accent} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -36,7 +36,7 @@ export default function EmptyState({
   );
 }
 
-const makeStyles = (colors: Palette) =>
+const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
     container: {
       alignItems: "center",
@@ -48,9 +48,9 @@ const makeStyles = (colors: Palette) =>
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: colors.surface,
+      backgroundColor: tints.accent,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.accentDim,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: spacing.xs,

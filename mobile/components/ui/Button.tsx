@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Pressable, Text, StyleSheet, type ViewStyle } from "react-native";
+import { Pressable, Text, View, StyleSheet, type ViewStyle } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -27,6 +28,7 @@ interface ButtonProps {
   size?: Size;
   disabled?: boolean;
   haptic?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
 }
 
@@ -37,11 +39,18 @@ export default function Button({
   size = "md",
   disabled = false,
   haptic = true,
+  icon,
   style,
 }: ButtonProps) {
   const { colors, tints } = useTheme();
   const variantStyles = useMemo(() => makeVariantStyles(colors, tints), [colors, tints]);
   const labelVariants = useMemo(() => makeLabelVariants(colors), [colors]);
+  const iconColors: Record<Variant, string> = {
+    primary: "#0b0f14",
+    secondary: colors.text,
+    danger: colors.danger,
+    ghost: colors.muted,
+  };
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -75,9 +84,18 @@ export default function Button({
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Text style={[styles.label, labelSizes[size], labelVariants[variant]]}>
-        {label}
-      </Text>
+      <View style={styles.content}>
+        {icon ? (
+          <Ionicons
+            name={icon}
+            size={size === "lg" ? 20 : 16}
+            color={iconColors[variant]}
+          />
+        ) : null}
+        <Text style={[styles.label, labelSizes[size], labelVariants[variant]]}>
+          {label}
+        </Text>
+      </View>
     </AnimatedPressable>
   );
 }
@@ -87,6 +105,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   disabled: {
     opacity: 0.4,

@@ -7,13 +7,15 @@ interface PillProps {
   label: string;
   value: string;
   color?: string;
+  dot?: string;
 }
 
-export default function Pill({ label, value, color }: PillProps) {
+export default function Pill({ label, value, color, dot }: PillProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.pill}>
+      {dot ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
       <Text style={styles.label}>{label}</Text>
       <Text style={[styles.value, color ? { color } : null]}>{value}</Text>
     </View>
@@ -32,6 +34,11 @@ const makeStyles = (colors: Palette) =>
       paddingVertical: spacing.xs,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
     },
     label: {
       fontSize: fontSizes.xs,

@@ -1,5 +1,12 @@
-import { useMemo } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, StyleSheet, type LayoutChangeEvent } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { tap } from "../../utils/haptics";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette } from "../../theme";
@@ -11,7 +18,9 @@ interface SegmentedProps<T extends string> {
   getLabel?: (value: T) => string;
 }
 
-// Equal-width segmented control for a small set of options
+const PAD = 4;
+
+// Equal-width segmented control with a sliding accent thumb.
 export default function Segmented<T extends string>({
   options,
   selected,
@@ -20,8 +29,35 @@ export default function Segmented<T extends string>({
 }: SegmentedProps<T>) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
+  const [trackW, setTrackW] = useState(0);
+
+  const n = options.length;
+  const segW = trackW > 0 ? (trackW - PAD * 2) / n : 0;
+  const index = Math.max(options.indexOf(selected), 0);
+  const tx = useSharedValue(0);
+
+  useEffect(() => {
+    const target = index * segW;
+    tx.value = reduceMotion
+      ? target
+      : withTiming(target, { duration: 220, easing: Easing.out(Easing.cubic) });
+  }, [index, segW, reduceMotion, tx]);
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }],
+  }));
+
+  const onLayout = (e: LayoutChangeEvent) => setTrackW(e.nativeEvent.layout.width);
+
   return (
-    <View style={styles.track}>
+    <View style={styles.track} onLayout={onLayout}>
+      {segW > 0 ? (
+        <Animated.View
+          style={[styles.thumb, { width: segW }, thumbStyle]}
+          pointerEvents="none"
+        />
+      ) : null}
       {options.map((option) => {
         const active = option === selected;
         return (
@@ -31,7 +67,7 @@ export default function Segmented<T extends string>({
               tap();
               onSelect(option);
             }}
-            style={[styles.segment, active && styles.segmentActive]}
+            style={styles.segment}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
@@ -56,8 +92,15 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radii.md,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: 3,
-      gap: 3,
+      padding: PAD,
+    },
+    thumb: {
+      position: "absolute",
+      top: PAD,
+      left: PAD,
+      bottom: PAD,
+      backgroundColor: colors.accent,
+      borderRadius: radii.sm,
     },
     segment: {
       flex: 1,
@@ -66,9 +109,6 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center",
       justifyContent: "center",
       minHeight: 40,
-    },
-    segmentActive: {
-      backgroundColor: colors.accent,
     },
     label: {
       fontSize: fontSizes.sm,
