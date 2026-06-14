@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, type Palette } from "../../theme";
+import { spacing, fontSizes, radii, type Palette } from "../../theme";
 
 interface SectionTitleProps {
   label: string;
@@ -13,7 +13,10 @@ export default function SectionTitle({ label, meta }: SectionTitleProps) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.left}>
+        <View style={styles.tick} />
+        <Text style={styles.label}>{label}</Text>
+      </View>
       {meta ? (
         <Text style={styles.meta} numberOfLines={1}>
           {meta}
@@ -27,13 +30,24 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     row: {
       flexDirection: "row",
-      alignItems: "baseline",
+      alignItems: "center",
       justifyContent: "space-between",
       marginTop: spacing.sm,
       marginBottom: -spacing.sm,
     },
+    left: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      flexShrink: 1,
+    },
+    tick: {
+      width: 3,
+      height: 12,
+      borderRadius: radii.full,
+      backgroundColor: colors.accent,
+    },
     label: {
-      flexShrink: 0,
       fontSize: fontSizes.sm,
       color: colors.muted,
       textTransform: "uppercase",
