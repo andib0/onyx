@@ -215,8 +215,10 @@ const makeStyles = (colors: Palette) =>
   macroPill: {
     flexDirection: "row",
     gap: 3,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.surface2,
     borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
