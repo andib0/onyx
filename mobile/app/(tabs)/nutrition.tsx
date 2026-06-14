@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useMeals } from "../../contexts/MealsContext";
@@ -38,6 +39,7 @@ import {
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
+import { suggestProteinTarget } from "../../utils/adaptiveTargets";
 import { colors, spacing, fontSizes } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
@@ -182,6 +184,7 @@ export default function NutritionScreen() {
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
+  const proteinSuggestion = suggestProteinTarget(scoreHistory, macroTargets.protein || 0);
   const proteinBars = last7Bars(scoreHistory, (r) => r.protein);
   const proteinMax = proteinBars.reduce((m, b) => Math.max(m, b.value), 0) || 1;
   const hydrationValue =
@@ -304,6 +307,15 @@ export default function NutritionScreen() {
             maxValue={Math.max(macroTargets.protein || 0, proteinMax)}
             color={colors.accent}
           />
+          {proteinSuggestion ? (
+            <View style={styles.suggestRow}>
+              <Ionicons name="bulb-outline" size={14} color={colors.accent} />
+              <Text style={styles.suggestText}>
+                Averaging {proteinSuggestion.avg}g/day over {proteinSuggestion.days}{" "}
+                days — a {proteinSuggestion.suggested}g target may fit better.
+              </Text>
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -512,5 +524,17 @@ const styles = StyleSheet.create({
   trendTarget: {
     fontSize: fontSizes.xs,
     color: colors.muted,
+  },
+  suggestRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  suggestText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    lineHeight: 18,
   },
 });
