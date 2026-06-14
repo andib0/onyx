@@ -1,6 +1,13 @@
-import { useState, useMemo } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { View, Text, StyleSheet, type LayoutChangeEvent } from "react-native";
-import Svg, { Rect, Defs, LinearGradient, Stop, Line } from "react-native-svg";
+import Svg, {
+  Rect,
+  Defs,
+  LinearGradient,
+  Stop,
+  Line,
+  Text as SvgText,
+} from "react-native-svg";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
@@ -17,7 +24,8 @@ interface BarChartProps {
   unit?: string;
 }
 
-const PAD_TOP = 8;
+// Headroom above the tallest bar so the current-bar value label never clips
+const PAD_TOP = 16;
 
 export default function BarChart({
   bars,
@@ -63,15 +71,30 @@ export default function BarChart({
               const y = height - h;
               const last = i === n - 1;
               return (
-                <Rect
-                  key={`bar-${i}`}
-                  x={x}
-                  y={y}
-                  width={barW}
-                  height={h}
-                  rx={Math.min(barW / 2, 4)}
-                  fill={last ? "url(#barFill)" : colors.border}
-                />
+                <Fragment key={`bar-${i}`}>
+                  <Rect
+                    x={x}
+                    y={y}
+                    width={barW}
+                    height={h}
+                    rx={Math.min(barW / 2, 4)}
+                    fill={last ? "url(#barFill)" : colors.border}
+                  />
+                  {last && bar.value > 0 ? (
+                    <SvgText
+                      x={x + barW / 2}
+                      y={Math.max(y - 5, 9)}
+                      fontSize={10}
+                      fontFamily={fonts.mono}
+                      fontWeight="700"
+                      fill={barColor}
+                      textAnchor="middle"
+                    >
+                      {Math.round(bar.value)}
+                      {unit}
+                    </SvgText>
+                  ) : null}
+                </Fragment>
               );
             })}
           </Svg>
