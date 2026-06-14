@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import Checkbox from "../shared/Checkbox";
 import IconButton from "../ui/IconButton";
 import type { ScheduleBlock } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes, fonts, TAG_COLORS } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, TAG_COLORS, type Palette } from "../../theme";
 
 interface BlockItemProps {
   block: ScheduleBlock;
@@ -20,6 +22,8 @@ export default function BlockItem({
   onEdit,
   onDelete,
 }: BlockItemProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
   const isReadonly = block.readonly;
 
@@ -77,7 +81,8 @@ export default function BlockItem({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   blockItem: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,

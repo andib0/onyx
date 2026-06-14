@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Platform } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Card from "../ui/Card";
 import ChipSelector from "../shared/ChipSelector";
 import type { ScheduleBlock } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes, TAG_COLORS } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, TAG_COLORS, type Palette } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 const TAG_OPTIONS = ["Work", "Training", "Nutrition", "Recovery", "Sleep"];
@@ -30,6 +31,8 @@ function TimeField({
   value: string;
   onChange: (time: string) => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showPicker, setShowPicker] = useState(false);
   return (
     <View style={sharedStyles.formField}>
@@ -89,6 +92,8 @@ export default function BlockForm({
   onCancel,
   embedded,
 }: BlockFormProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const initialIsPreset =
     !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
   const [draft, setDraft] = useState<ScheduleBlock>(
@@ -216,7 +221,8 @@ export default function BlockForm({
   return <Card title={mode === "add" ? "Add task" : "Edit task"}>{body}</Card>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   timeField: {
     justifyContent: "center",
     minHeight: 44,

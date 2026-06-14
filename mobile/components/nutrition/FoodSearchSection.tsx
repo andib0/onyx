@@ -6,9 +6,11 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
+import { useMemo } from "react";
 import Card from "../ui/Card";
 import type { Food } from "../../api/foods";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 interface FoodSearchSectionProps {
@@ -30,6 +32,8 @@ export default function FoodSearchSection({
   onAddFood,
   onSaveFood,
 }: FoodSearchSectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Card title="Search Foods">
       <TextInput
@@ -90,7 +94,8 @@ export default function FoodSearchSection({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   searchInput: {
     borderWidth: 1,
     borderColor: colors.border,

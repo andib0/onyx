@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import type { Food } from "../../api/foods";
 import type { UserFood } from "../../api/userFoods";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 interface MyFoodsSectionProps {
   myFoods: UserFood[];
@@ -15,6 +17,8 @@ export default function MyFoodsSection({
   onAddFood,
   onRemoveFood,
 }: MyFoodsSectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   if (myFoods.length === 0) return null;
 
   return (
@@ -53,7 +57,8 @@ export default function MyFoodsSection({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   foodResult: {
     flexDirection: "row",
     alignItems: "center",

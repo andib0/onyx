@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -13,7 +13,8 @@ import Ring from "../ui/Ring";
 import Glow from "../ui/Glow";
 import AnimatedNumber from "../ui/AnimatedNumber";
 import type { ConsumedMacros } from "../../utils/nutrition";
-import { colors, spacing, fontSizes, fonts, radii } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, radii, type Palette } from "../../theme";
 
 interface MacroTargets {
   protein: number;
@@ -42,6 +43,8 @@ function MacroBar({
   target: number;
   color: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const over = target > 0 && current > target;
   const percent = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const reduceMotion = useReducedMotion();
@@ -88,6 +91,8 @@ export default function MacroDashboard({
   waterTargetMl,
   onAddWater,
 }: MacroDashboardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const calPercent =
     targets.calories > 0 ? (consumed.calories / targets.calories) * 100 : 0;
   const kcalLeft = Math.max(Math.round(targets.calories - consumed.calories), 0);
@@ -167,7 +172,8 @@ export default function MacroDashboard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",

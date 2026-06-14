@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
 import Checkbox from "../shared/Checkbox";
 import IconButton from "../ui/IconButton";
 import type { MealTemplate } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
 
 const GRAM_PRESETS = [100, 150, 200];
 
@@ -33,6 +34,8 @@ export default function MealCard({
   onGramsChange,
   onDelete,
 }: MealCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const hasGrams = meal.grams != null;
   const [localGrams, setLocalGrams] = useState(meal.grams != null ? meal.grams : 100);
 
@@ -122,7 +125,8 @@ export default function MealCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   mealCard: {
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
