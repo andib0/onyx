@@ -29,7 +29,7 @@ import {
   buildWeeklyAdherence,
   scoreBarsFromHistory,
 } from "../../utils/trends";
-import { colors, spacing, fontSizes } from "../../theme";
+import { colors, spacing, fontSizes, radii, isLight } from "../../theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -260,6 +260,17 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       {/* DATA */}
+      <GroupTitle label="Appearance" />
+      <SettingsGroup>
+        <Row
+          first
+          icon={isLight ? "sunny-outline" : "moon-outline"}
+          label="Theme"
+          sublabel="Follows your phone's light/dark setting"
+          value={isLight ? "Light" : "Dark"}
+        />
+      </SettingsGroup>
+
       <GroupTitle label="Data" />
       <SettingsGroup>
         <Row first icon="download-outline" label="Export backup" onPress={exportJson} />
@@ -333,12 +344,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radii.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     color: colors.text,
     fontSize: fontSizes.md,
-    minHeight: 44,
+    minHeight: 48,
   },
   editActions: {
     flexDirection: "row",
