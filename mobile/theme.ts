@@ -54,6 +54,12 @@ export const colorScheme: "light" | "dark" =
 export const isLight = colorScheme === "light";
 export const colors = isLight ? lightColors : darkColors;
 
+export type Scheme = "light" | "dark";
+export type Palette = typeof darkColors;
+export function getPalette(s: Scheme): Palette {
+  return s === "light" ? lightColors : darkColors;
+}
+
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -109,6 +115,10 @@ const lightTints: typeof darkTints = {
   danger: "rgba(210, 63, 55, 0.10)",
 };
 export const tints = isLight ? lightTints : darkTints;
+export type TintSet = typeof darkTints;
+export function getTints(s: Scheme): TintSet {
+  return s === "light" ? lightTints : darkTints;
+}
 
 // Type ramp presets — use instead of hand-rolled size/weight combos
 export const typeRamp = {

@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import Card from "../ui/Card";
 import Checkbox from "./Checkbox";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 interface ChecklistItem {
   id: string;
@@ -27,11 +29,14 @@ export default function ChecklistSection({
   items,
   checkMap,
   onToggle,
-  checkColor = colors.good,
+  checkColor,
   emptyMessage = "No items.",
   maxVisible,
   onShowMore,
 }: ChecklistSectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const checkFill = checkColor ?? colors.good;
   if (items.length === 0) {
     return (
       <Card title={title}>
@@ -69,7 +74,7 @@ export default function ChecklistSection({
             <Checkbox
               checked={isChecked}
               onToggle={() => handleToggle(item.id)}
-              color={checkColor}
+              color={checkFill}
               size={22}
             />
             <View style={styles.textContainer}>
@@ -100,7 +105,8 @@ export default function ChecklistSection({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",

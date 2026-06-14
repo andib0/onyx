@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Button from "./Button";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -18,6 +20,8 @@ export default function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
@@ -32,37 +36,38 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    textAlign: "center",
-  },
-  action: {
-    marginTop: spacing.sm,
-    minWidth: 180,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: {
+      alignItems: "center",
+      paddingVertical: spacing.xxl,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.sm,
+    },
+    iconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.xs,
+    },
+    title: {
+      fontSize: fontSizes.lg,
+      fontWeight: "600",
+      color: colors.text,
+      textAlign: "center",
+    },
+    subtitle: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      textAlign: "center",
+    },
+    action: {
+      marginTop: spacing.sm,
+      minWidth: 180,
+    },
+  });

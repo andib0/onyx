@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { colors, spacing } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, type Palette } from "../../theme";
 
 interface FABProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -10,6 +12,8 @@ interface FABProps {
 }
 
 export default function FAB({ icon = "add", onPress, label }: FABProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPress();
@@ -27,7 +31,8 @@ export default function FAB({ icon = "add", onPress, label }: FABProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   fab: {
     position: "absolute",
     right: spacing.lg,

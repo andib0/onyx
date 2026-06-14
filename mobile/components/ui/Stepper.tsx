@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
 
 interface StepperProps {
   label: string;
@@ -21,6 +23,8 @@ export default function Stepper({
   max = 999,
   decimals = 0,
 }: StepperProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const bump = (direction: 1 | -1) => {
     Haptics.selectionAsync().catch(() => {});
     const current = parseFloat(value.replace(",", "."));
@@ -61,7 +65,8 @@ export default function Stepper({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     gap: spacing.xs,

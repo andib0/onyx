@@ -3,16 +3,27 @@ import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import NotificationResponder from "../../components/NotificationResponder";
-import { colors, fontSizes, isLight } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { fontSizes } from "../../theme";
 
 export default function TabLayout() {
+  const { colors, isLight } = useTheme();
+  const tabBarBg =
+    Platform.OS === "ios"
+      ? isLight
+        ? "rgba(243, 245, 249, 0.7)"
+        : "rgba(11, 15, 20, 0.6)"
+      : colors.bg;
   return (
     <>
     <NotificationResponder />
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          { backgroundColor: tabBarBg, borderTopColor: colors.border },
+        ],
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: styles.tabLabel,
@@ -95,9 +106,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    backgroundColor:
-      Platform.OS === "ios" ? "rgba(11, 15, 20, 0.6)" : colors.bg,
-    borderTopColor: colors.border,
     borderTopWidth: 1,
     height: 84,
     paddingBottom: 24,

@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
 // Uppercase section header above a grouped card
 export function GroupTitle({ label }: { label: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return <Text style={styles.groupTitle}>{label}</Text>;
 }
 
@@ -15,6 +19,8 @@ export function SettingsGroup({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return <View style={[styles.group, style]}>{children}</View>;
 }
 
@@ -40,6 +46,8 @@ export function Row({
   destructive,
   first,
 }: RowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const labelColor = destructive ? colors.danger : colors.text;
   const body = (
     <>
@@ -93,59 +101,60 @@ export function Row({
   return <View style={[styles.row, !first && styles.rowBorder]}>{body}</View>;
 }
 
-const styles = StyleSheet.create({
-  groupTitle: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    fontWeight: "600",
-    marginBottom: -spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  group: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderTopColor: colors.edgeHighlight,
-    overflow: "hidden",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 52,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  rowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  rowPressed: {
-    backgroundColor: colors.surfaceHover,
-  },
-  icon: {
-    width: 20,
-  },
-  textWrap: {
-    flex: 1,
-  },
-  label: {
-    fontSize: fontSizes.md,
-    fontWeight: "500",
-  },
-  sublabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  value: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-  chevron: {
-    marginLeft: -spacing.xs,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    groupTitle: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      fontWeight: "600",
+      marginBottom: -spacing.sm,
+      marginLeft: spacing.xs,
+    },
+    group: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderTopColor: colors.edgeHighlight,
+      overflow: "hidden",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      minHeight: 52,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      gap: spacing.md,
+    },
+    rowBorder: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    rowPressed: {
+      backgroundColor: colors.surfaceHover,
+    },
+    icon: {
+      width: 20,
+    },
+    textWrap: {
+      flex: 1,
+    },
+    label: {
+      fontSize: fontSizes.md,
+      fontWeight: "500",
+    },
+    sublabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    value: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+    chevron: {
+      marginLeft: -spacing.xs,
+    },
+  });

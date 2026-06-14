@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
 interface ChipSelectorProps {
   options: string[];
@@ -14,16 +16,19 @@ export default function ChipSelector({
   options,
   selected,
   onSelect,
-  color = colors.accent,
+  color,
   getColor,
   getLabel,
 }: ChipSelectorProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const baseColor = color ?? colors.accent;
   return (
     <View style={styles.row}>
       {options.map((option) => {
         const isSelected = selected === option;
         const label = getLabel ? getLabel(option) : option;
-        const chipColor = getColor ? getColor(option) : color;
+        const chipColor = getColor ? getColor(option) : baseColor;
         return (
           <Pressable
             key={option}
@@ -46,24 +51,25 @@ export default function ChipSelector({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 32,
-    justifyContent: "center",
-  },
-  chipText: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontWeight: "500",
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 32,
+      justifyContent: "center",
+    },
+    chipText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontWeight: "500",
+    },
+  });

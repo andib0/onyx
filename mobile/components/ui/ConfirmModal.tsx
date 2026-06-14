@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
 interface ConfirmModalProps {
   visible: boolean;
@@ -22,6 +24,8 @@ export default function ConfirmModal({
   onCancel,
   destructive = false,
 }: ConfirmModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
@@ -56,7 +60,8 @@ export default function ConfirmModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.6)",

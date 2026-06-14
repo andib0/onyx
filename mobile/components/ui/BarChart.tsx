@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, type LayoutChangeEvent } from "react-native";
 import Svg, { Rect, Defs, LinearGradient, Stop, Line } from "react-native-svg";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 export interface Bar {
   label: string;
@@ -21,10 +22,13 @@ const PAD_TOP = 8;
 export default function BarChart({
   bars,
   maxValue = 100,
-  color = colors.accent,
+  color,
   height = 96,
   unit = "",
 }: BarChartProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const barColor = color ?? colors.accent;
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
@@ -40,8 +44,8 @@ export default function BarChart({
           <Svg width={width} height={height}>
             <Defs>
               <LinearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={color} stopOpacity={0.9} />
-                <Stop offset="100%" stopColor={color} stopOpacity={0.4} />
+                <Stop offset="0%" stopColor={barColor} stopOpacity={0.9} />
+                <Stop offset="100%" stopColor={barColor} stopOpacity={0.4} />
               </LinearGradient>
             </Defs>
             <Line
@@ -85,7 +89,8 @@ export default function BarChart({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   labels: {
     flexDirection: "row",
     marginTop: spacing.xs,

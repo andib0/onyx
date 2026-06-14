@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, TextInput, StyleSheet, type KeyboardTypeOptions } from "react-native";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
 
 interface InputProps {
   label?: string;
@@ -25,6 +27,8 @@ export default function Input({
   autoFocus,
   mono,
 }: InputProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -45,39 +49,40 @@ export default function Input({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    gap: spacing.xs,
-  },
-  label: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    fontWeight: "600",
-  },
-  field: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    minHeight: 48,
-  },
-  input: {
-    flex: 1,
-    color: colors.text,
-    fontSize: fontSizes.md,
-    paddingVertical: spacing.sm,
-  },
-  inputMono: {
-    fontFamily: fonts.mono,
-  },
-  unit: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginLeft: spacing.xs,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    wrap: {
+      gap: spacing.xs,
+    },
+    label: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      fontWeight: "600",
+    },
+    field: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
+      minHeight: 48,
+    },
+    input: {
+      flex: 1,
+      color: colors.text,
+      fontSize: fontSizes.md,
+      paddingVertical: spacing.sm,
+    },
+    inputMono: {
+      fontFamily: fonts.mono,
+    },
+    unit: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginLeft: spacing.xs,
+    },
+  });

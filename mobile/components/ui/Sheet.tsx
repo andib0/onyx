@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Modal,
   View,
@@ -18,7 +18,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IconButton from "./IconButton";
-import { colors, spacing, radii, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
 
 interface SheetProps {
   visible: boolean;
@@ -29,6 +30,8 @@ interface SheetProps {
 
 // Lightweight bottom sheet: slide-up panel + dimmed backdrop, no extra deps.
 export default function Sheet({ visible, title, onClose, children }: SheetProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
@@ -88,7 +91,8 @@ export default function Sheet({ visible, title, onClose, children }: SheetProps)
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: "flex-end",

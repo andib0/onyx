@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Pressable, Text, StyleSheet, type ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
@@ -5,7 +6,14 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { confirm } from "../../utils/haptics";
-import { colors, spacing, radii, fontSizes, tints } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  type Palette,
+  type TintSet,
+} from "../../theme";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -31,6 +39,9 @@ export default function Button({
   haptic = true,
   style,
 }: ButtonProps) {
+  const { colors, tints } = useTheme();
+  const variantStyles = useMemo(() => makeVariantStyles(colors, tints), [colors, tints]);
+  const labelVariants = useMemo(() => makeLabelVariants(colors), [colors]);
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -97,24 +108,26 @@ const labelSizes = StyleSheet.create({
   lg: { fontSize: fontSizes.lg, fontWeight: "700" },
 });
 
-const variantStyles = StyleSheet.create({
-  primary: { backgroundColor: colors.accent },
-  secondary: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  danger: {
-    backgroundColor: tints.danger,
-    borderWidth: 1,
-    borderColor: colors.danger + "55",
-  },
-  ghost: { backgroundColor: "transparent" },
-});
+const makeVariantStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
+    primary: { backgroundColor: colors.accent },
+    secondary: {
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    danger: {
+      backgroundColor: tints.danger,
+      borderWidth: 1,
+      borderColor: colors.danger + "55",
+    },
+    ghost: { backgroundColor: "transparent" },
+  });
 
-const labelVariants = StyleSheet.create({
-  primary: { color: "#0b0f14" },
-  secondary: { color: colors.text },
-  danger: { color: colors.danger },
-  ghost: { color: colors.muted },
-});
+const makeLabelVariants = (colors: Palette) =>
+  StyleSheet.create({
+    primary: { color: "#0b0f14" },
+    secondary: { color: colors.text },
+    danger: { color: colors.danger },
+    ghost: { color: colors.muted },
+  });

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import Animated, {
@@ -8,7 +8,8 @@ import Animated, {
   Easing,
   useReducedMotion,
 } from "react-native-reanimated";
-import { colors, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { fontSizes, fonts, type Palette } from "../../theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -29,6 +30,8 @@ export default function Ring({
   value,
   label,
 }: RingProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(Math.max(progress, 0), 100);
@@ -97,7 +100,8 @@ export default function Ring({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: {
     alignItems: "center",
     justifyContent: "center",

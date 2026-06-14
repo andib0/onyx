@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { tap } from "../../utils/haptics";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
 interface SegmentedProps<T extends string> {
   options: T[];
@@ -16,6 +18,8 @@ export default function Segmented<T extends string>({
   onSelect,
   getLabel,
 }: SegmentedProps<T>) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.track}>
       {options.map((option) => {
@@ -44,33 +48,34 @@ export default function Segmented<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
-  track: {
-    flexDirection: "row",
-    backgroundColor: colors.bg,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 3,
-    gap: 3,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 40,
-  },
-  segmentActive: {
-    backgroundColor: colors.accent,
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontWeight: "600",
-  },
-  labelActive: {
-    color: "#0b0f14",
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    track: {
+      flexDirection: "row",
+      backgroundColor: colors.bg,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 3,
+      gap: 3,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.sm,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 40,
+    },
+    segmentActive: {
+      backgroundColor: colors.accent,
+    },
+    label: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      fontWeight: "600",
+    },
+    labelActive: {
+      color: "#0b0f14",
+    },
+  });

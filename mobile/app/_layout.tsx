@@ -15,16 +15,18 @@ import {
 
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { AppStateProvider } from "../contexts/AppStateContext";
+import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
-import { colors, isLight } from "../theme";
+import { colors } from "../theme";
 
 function RootStack() {
   const { isLoading } = useAuth();
+  const { colors: c } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.loading, { backgroundColor: c.bg }]}>
+        <ActivityIndicator size="large" color={c.accent} />
       </View>
     );
   }
@@ -32,11 +34,11 @@ function RootStack() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
+        headerStyle: { backgroundColor: c.bg },
+        headerTintColor: c.text,
         headerTitleStyle: { fontWeight: "600" },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.bg },
+        contentStyle: { backgroundColor: c.bg },
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -73,17 +75,24 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <AppStateProvider>
-            <ErrorBoundary>
-              <StatusBar style={isLight ? "dark" : "light"} />
-              <RootStack />
-            </ErrorBoundary>
-          </AppStateProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppStateProvider>
+              <ErrorBoundary>
+                <ThemedStatusBar />
+                <RootStack />
+              </ErrorBoundary>
+            </AppStateProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function ThemedStatusBar() {
+  const { isLight } = useTheme();
+  return <StatusBar style={isLight ? "dark" : "light"} />;
 }
 
 const styles = StyleSheet.create({

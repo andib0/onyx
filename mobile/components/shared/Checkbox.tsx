@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors, radii } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { radii, type Palette } from "../../theme";
 
 interface CheckboxProps {
   checked: boolean;
@@ -11,9 +13,12 @@ interface CheckboxProps {
 export default function Checkbox({
   checked,
   onToggle,
-  color = colors.good,
+  color,
   size = 24,
 }: CheckboxProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const fill = color ?? colors.good;
   return (
     <Pressable
       onPress={onToggle}
@@ -25,27 +30,28 @@ export default function Checkbox({
         style={[
           styles.box,
           { width: size, height: size },
-          checked && { backgroundColor: color, borderColor: color },
+          checked && { backgroundColor: fill, borderColor: fill },
         ]}
       >
         {checked ? (
-          <Text style={[styles.checkmark, { fontSize: size * 0.58 }]}>{"\u2713"}</Text>
+          <Text style={[styles.checkmark, { fontSize: size * 0.58 }]}>{"✓"}</Text>
         ) : null}
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  box: {
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkmark: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    box: {
+      borderRadius: radii.sm,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkmark: {
+      color: "#fff",
+      fontWeight: "700",
+    },
+  });

@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, radii, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
 interface ProgressBarProps {
   progress: number; // 0-100
@@ -14,10 +16,13 @@ export default function ProgressBar({
   progress,
   label,
   sublabel,
-  color = colors.accent,
+  color,
   height = 6,
   showPercent = false,
 }: ProgressBarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const fillColor = color ?? colors.accent;
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
   return (
@@ -27,7 +32,7 @@ export default function ProgressBar({
           {label ? <Text style={styles.label}>{label}</Text> : null}
           {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
           {showPercent ? (
-            <Text style={[styles.percent, { color }]}>
+            <Text style={[styles.percent, { color: fillColor }]}>
               {Math.round(clampedProgress)}%
             </Text>
           ) : null}
@@ -39,7 +44,7 @@ export default function ProgressBar({
             styles.fill,
             {
               width: `${clampedProgress}%`,
-              backgroundColor: color,
+              backgroundColor: fillColor,
               height,
             },
           ]}
@@ -49,34 +54,35 @@ export default function ProgressBar({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.xs,
-  },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  sublabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  percent: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
-  },
-  track: {
-    backgroundColor: colors.border,
-    borderRadius: radii.full,
-    overflow: "hidden",
-  },
-  fill: {
-    borderRadius: radii.full,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: {
+      gap: spacing.xs,
+    },
+    labelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    label: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    sublabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    percent: {
+      fontSize: fontSizes.xs,
+      fontWeight: "600",
+    },
+    track: {
+      backgroundColor: colors.border,
+      borderRadius: radii.full,
+      overflow: "hidden",
+    },
+    fill: {
+      borderRadius: radii.full,
+    },
+  });

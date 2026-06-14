@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { fontSizes, fonts, type Palette } from "../../theme";
 
 interface StatBlockProps {
   value: string | number;
@@ -14,17 +16,20 @@ interface StatBlockProps {
 export default function StatBlock({
   value,
   label,
-  color = colors.text,
+  color,
   size = "md",
   align = "center",
 }: StatBlockProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const valueColor = color ?? colors.text;
   return (
     <View style={[styles.wrap, { alignItems: align }]}>
       <Text
         style={[
           styles.value,
           size === "lg" ? styles.valueLg : styles.valueMd,
-          { color },
+          { color: valueColor },
         ]}
         maxFontSizeMultiplier={1.3}
         numberOfLines={1}
@@ -36,27 +41,28 @@ export default function StatBlock({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    gap: 2,
-  },
-  value: {
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -0.5,
-  },
-  valueMd: {
-    fontSize: fontSizes.xxl,
-  },
-  valueLg: {
-    fontSize: 34,
-  },
-  label: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    wrap: {
+      gap: 2,
+    },
+    value: {
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      color: colors.text,
+      fontVariant: ["tabular-nums"],
+      letterSpacing: -0.5,
+    },
+    valueMd: {
+      fontSize: fontSizes.xxl,
+    },
+    valueLg: {
+      fontSize: 34,
+    },
+    label: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+    },
+  });
