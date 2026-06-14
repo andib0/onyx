@@ -11,6 +11,8 @@ import { useAppState } from "../contexts/AppStateContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
+import Checkbox from "../components/shared/Checkbox";
+import IconButton from "../components/ui/IconButton";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { searchSupplementDb, type SupplementDbItem } from "../api/supplementDb";
@@ -45,11 +47,12 @@ function SupplementCard({
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.suppCard}>
-      <Pressable onPress={onToggle} hitSlop={8}>
-        <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
-          {isChecked ? <Text style={styles.checkmark}>{"\u2713"}</Text> : null}
-        </View>
-      </Pressable>
+      <Checkbox
+        checked={isChecked}
+        onToggle={onToggle}
+        color={colors.supplement}
+        size={22}
+      />
       <View style={styles.suppInfo}>
         <Text style={[styles.suppName, isChecked && styles.suppNameDone]}>
           {supplement.item}
@@ -61,12 +64,8 @@ function SupplementCard({
         </Text>
       </View>
       <View style={styles.suppActions}>
-        <Pressable onPress={onEdit} hitSlop={8}>
-          <Text style={styles.editText}>Edit</Text>
-        </Pressable>
-        <Pressable onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteText}>x</Text>
-        </Pressable>
+        <IconButton icon="pencil-outline" onPress={onEdit} label="Edit supplement" />
+        <IconButton icon="trash-outline" onPress={onDelete} label="Delete supplement" />
       </View>
     </View>
   );
