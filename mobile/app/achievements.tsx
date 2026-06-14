@@ -12,7 +12,43 @@ import {
   evaluateAchievements,
   type Achievement,
 } from "../utils/achievements";
-import { colors, spacing, fontSizes } from "../theme";
+import { colors, spacing, fontSizes, fonts, tints, radii } from "../theme";
+
+function nudge(pct: number): string {
+  if (pct >= 80) return "So close — almost yours.";
+  if (pct >= 50) return "Over halfway there.";
+  if (pct >= 20) return "Building momentum.";
+  return "Just getting started.";
+}
+
+// Featured "next up" — the nearest locked badge, framed to build anticipation
+function NextUpCard({ a }: { a: Achievement }) {
+  const pct = a.target > 0 ? (a.progress / a.target) * 100 : 0;
+  const remaining = Math.max(a.target - a.progress, 0);
+  return (
+    <Card style={styles.nextCard}>
+      <Text style={styles.nextEyebrow}>Next badge</Text>
+      <View style={styles.row}>
+        <View style={styles.nextBadge}>
+          <Ionicons
+            name={a.icon as keyof typeof Ionicons.glyphMap}
+            size={26}
+            color={colors.accent}
+          />
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.nextTitle}>{a.title}</Text>
+          <Text style={styles.desc}>{a.description}</Text>
+        </View>
+        <Text style={styles.nextRemaining}>{remaining}</Text>
+      </View>
+      <View style={styles.barWrap}>
+        <ProgressBar progress={pct} color={colors.accent} height={6} />
+      </View>
+      <Text style={styles.nudge}>{nudge(pct)}</Text>
+    </Card>
+  );
+}
 
 function AchievementRow({ a }: { a: Achievement }) {
   const pct = a.target > 0 ? (a.progress / a.target) * 100 : 0;
@@ -60,18 +96,31 @@ export default function AchievementsScreen() {
   }, [scoreHistory, logEntries]);
 
   const unlocked = achievements.filter((a) => a.unlocked);
-  const locked = achievements.filter((a) => !a.unlocked);
+  // Nearest-first drives the goal-gradient effect — closest badge on top
+  const locked = achievements
+    .filter((a) => !a.unlocked)
+    .sort(
+      (a, b) =>
+        (b.target ? b.progress / b.target : 0) -
+        (a.target ? a.progress / a.target : 0)
+    );
+  const nextUp = locked.find((a) => a.progress > 0) ?? locked[0] ?? null;
+  const rest = nextUp ? locked.filter((a) => a.id !== nextUp.id) : locked;
 
   return (
     <ScreenContainer hasNativeHeader>
       <Text style={styles.heading}>
         {unlocked.length} of {achievements.length} unlocked
       </Text>
+
+      {nextUp ? <NextUpCard a={nextUp} /> : null}
+
+      {unlocked.length ? <Text style={styles.sectionLabel}>EARNED</Text> : null}
       {unlocked.map((a) => (
         <AchievementRow key={a.id} a={a} />
       ))}
-      {locked.length ? <Text style={styles.sectionLabel}>IN PROGRESS</Text> : null}
-      {locked.map((a) => (
+      {rest.length ? <Text style={styles.sectionLabel}>IN PROGRESS</Text> : null}
+      {rest.map((a) => (
         <AchievementRow key={a.id} a={a} />
       ))}
     </ScreenContainer>
@@ -80,9 +129,50 @@ export default function AchievementsScreen() {
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
+    fontSize: fontSizes.xl,
+    fontFamily: fonts.display,
     color: colors.text,
+  },
+  nextCard: {
+    borderColor: colors.accentDim,
+    borderWidth: 1,
+    backgroundColor: tints.accent,
+  },
+  nextEyebrow: {
+    fontSize: fontSizes.xs,
+    color: colors.accent,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+  },
+  nextBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.accentDim,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nextTitle: {
+    fontSize: fontSizes.lg,
+    fontFamily: fonts.display,
+    color: colors.text,
+  },
+  nextRemaining: {
+    fontSize: 30,
+    fontFamily: fonts.mono,
+    fontWeight: "700",
+    color: colors.accent,
+    fontVariant: ["tabular-nums"],
+  },
+  nudge: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
+    marginTop: spacing.sm,
+    fontWeight: "600",
   },
   sectionLabel: {
     fontSize: fontSizes.xs,

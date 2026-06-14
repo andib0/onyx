@@ -30,6 +30,7 @@ import ChecklistSection from "../../components/shared/ChecklistSection";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
+import InsightsTeaserCard from "../../components/focus/InsightsTeaserCard";
 import DayCheckInCard, {
   CHECK_IN_HOUR,
   CHECKIN_DISMISS_KEY,
@@ -494,6 +495,8 @@ export default function FocusScreen() {
           </Card>
         </Pressable>
       </Animated.View>
+
+      <InsightsTeaserCard scoreHistory={scoreHistory} logEntries={logEntries} />
 
       {/* Hero: what matters right now, with the matching one-tap action.
           Active gym block renders the workout card itself — no duplicate. */}
