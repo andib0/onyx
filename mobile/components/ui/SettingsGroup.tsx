@@ -52,12 +52,13 @@ export function Row({
   const body = (
     <>
       {icon ? (
-        <Ionicons
-          name={icon}
-          size={18}
-          color={destructive ? colors.danger : colors.muted}
-          style={styles.icon}
-        />
+        <View style={[styles.iconChip, destructive && styles.iconChipDanger]}>
+          <Ionicons
+            name={icon}
+            size={16}
+            color={destructive ? colors.danger : colors.accent}
+          />
+        </View>
       ) : null}
       <View style={styles.textWrap}>
         <Text style={[styles.label, { color: labelColor }]} numberOfLines={1}>
@@ -135,8 +136,19 @@ const makeStyles = (colors: Palette) =>
     rowPressed: {
       backgroundColor: colors.surfaceHover,
     },
-    icon: {
-      width: 20,
+    iconChip: {
+      width: 30,
+      height: 30,
+      borderRadius: radii.xs,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconChipDanger: {
+      backgroundColor: colors.surface2,
+      borderColor: colors.danger + "44",
     },
     textWrap: {
       flex: 1,

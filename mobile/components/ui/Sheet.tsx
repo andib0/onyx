@@ -130,7 +130,10 @@ const makeStyles = (colors: Palette) =>
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingBottom: spacing.sm,
     marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: fontSizes.xl,

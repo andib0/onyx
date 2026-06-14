@@ -92,7 +92,7 @@ const makeStyles = (colors: Palette) =>
     overflow: "hidden",
   },
   pressed: {
-    opacity: 0.8,
+    backgroundColor: colors.surfaceHover,
   },
   blockBorder: {
     width: 4,
