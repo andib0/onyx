@@ -10,7 +10,8 @@ import {
   daysUntilInsights,
   type Insight,
 } from "../utils/insights";
-import { colors, spacing, fontSizes, fonts, radii } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, radii, type Palette } from "../theme";
 
 function CompareBar({ label, value, max, highlight }: {
   label: string;
@@ -18,6 +19,8 @@ function CompareBar({ label, value, max, highlight }: {
   max: number;
   highlight: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
     <View style={styles.cmpRow}>
@@ -36,6 +39,8 @@ function CompareBar({ label, value, max, highlight }: {
 }
 
 function InsightCard({ insight }: { insight: Insight }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const max = Math.max(insight.aValue, insight.bValue, 1);
   return (
     <Card>
@@ -64,6 +69,8 @@ function InsightCard({ insight }: { insight: Insight }) {
 
 export default function InsightsScreen() {
   const { scoreHistory, logEntries } = useData();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insights = useMemo(
     () => buildInsights(scoreHistory, logEntries),
     [scoreHistory, logEntries]
@@ -106,7 +113,8 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",

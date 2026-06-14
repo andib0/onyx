@@ -12,7 +12,15 @@ import {
   evaluateAchievements,
   type Achievement,
 } from "../utils/achievements";
-import { colors, spacing, fontSizes, fonts, tints, radii } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import {
+  spacing,
+  fontSizes,
+  fonts,
+  radii,
+  type Palette,
+  type TintSet,
+} from "../theme";
 
 function nudge(pct: number): string {
   if (pct >= 80) return "So close — almost yours.";
@@ -23,6 +31,8 @@ function nudge(pct: number): string {
 
 // Featured "next up" — the nearest locked badge, framed to build anticipation
 function NextUpCard({ a }: { a: Achievement }) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const pct = a.target > 0 ? (a.progress / a.target) * 100 : 0;
   const remaining = Math.max(a.target - a.progress, 0);
   return (
@@ -51,6 +61,8 @@ function NextUpCard({ a }: { a: Achievement }) {
 }
 
 function AchievementRow({ a }: { a: Achievement }) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const pct = a.target > 0 ? (a.progress / a.target) * 100 : 0;
   return (
     <Card style={!a.unlocked ? styles.locked : undefined}>
@@ -87,6 +99,8 @@ function AchievementRow({ a }: { a: Achievement }) {
 
 export default function AchievementsScreen() {
   const { scoreHistory, logEntries } = useData();
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
 
   const achievements = useMemo(() => {
     const todayScore = scoreHistory.find((s) => s.date === todayKey())?.score ?? 0;
@@ -127,7 +141,8 @@ export default function AchievementsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   heading: {
     fontSize: fontSizes.xl,
     fontFamily: fonts.display,

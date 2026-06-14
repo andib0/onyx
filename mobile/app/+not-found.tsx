@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { colors, spacing, fontSizes, radii } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, fontSizes, radii, type Palette } from "../theme";
 
 export default function NotFoundScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
@@ -21,7 +25,8 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,

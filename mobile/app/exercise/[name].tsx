@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import ScreenContainer from "../../components/layout/ScreenContainer";
@@ -6,7 +6,8 @@ import Card from "../../components/ui/Card";
 import StatBlock from "../../components/ui/StatBlock";
 import BarChart, { type Bar } from "../../components/ui/BarChart";
 import { getExerciseSessions, type ExerciseSession } from "../../api/workouts";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 // Epley estimated 1RM
 function est1RM(weight: number, reps: number): number {
@@ -37,6 +38,8 @@ const shortDate = (date: string) => {
 };
 
 export default function ExerciseDetailScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const params = useLocalSearchParams<{ name?: string }>();
   const name = typeof params.name === "string" ? params.name : "";
   const [sessions, setSessions] = useState<ExerciseSession[] | null>(null);
@@ -134,7 +137,8 @@ export default function ExerciseDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   title: {
     fontSize: fontSizes.title,
     fontWeight: "700",

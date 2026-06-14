@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,13 +16,22 @@ import {
   saveNotificationPrefs,
   syncCheckInReminder,
 } from "../utils/notifications";
-import { colors, spacing, radii, fontSizes, tints } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  type Palette,
+  type TintSet,
+} from "../theme";
 import { sharedStyles } from "../theme/sharedStyles";
 
 const TOTAL_STEPS = 3;
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const { refreshUser } = useAuth();
   const {
     programs,
@@ -170,7 +179,8 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
