@@ -32,8 +32,9 @@ const lightColors: typeof darkColors = {
   surfaceHover: "#e3e8f0",
   edgeHighlight: "rgba(17, 24, 39, 0.05)",
   text: "rgba(17, 24, 39, 0.96)",
-  muted: "rgba(17, 24, 39, 0.55)",
-  faint: "rgba(17, 24, 39, 0.38)",
+  // Bumped from 0.55 → ~0.64 so secondary text clears ~4.5:1 on white
+  muted: "rgba(17, 24, 39, 0.64)",
+  faint: "rgba(17, 24, 39, 0.45)",
   border: "rgba(17, 24, 39, 0.10)",
   borderLight: "rgba(17, 24, 39, 0.16)",
   shadow: "rgba(17, 24, 39, 0.12)",

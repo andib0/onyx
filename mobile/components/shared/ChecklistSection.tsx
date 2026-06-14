@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Card from "../ui/Card";
 import Checkbox from "./Checkbox";
@@ -99,6 +100,7 @@ export default function ChecklistSection({
           onPress={onShowMore}
         >
           <Text style={styles.moreText}>+{hidden} more</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.accent} />
         </Pressable>
       ) : null}
     </Card>
@@ -123,8 +125,11 @@ const makeStyles = (colors: Palette) =>
     opacity: 0.7,
   },
   moreRow: {
-    paddingTop: spacing.md,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.md,
   },
   moreText: {
     fontSize: fontSizes.sm,

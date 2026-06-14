@@ -139,6 +139,7 @@ export default function DayCheckInCard({
 
       <Button
         label={saving ? "Saving..." : "Save"}
+        icon={saving ? undefined : "checkmark"}
         onPress={handleSave}
         disabled={saving || !hasInput}
       />

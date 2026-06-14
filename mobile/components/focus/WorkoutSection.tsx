@@ -252,7 +252,7 @@ export default function WorkoutSection({
             );
           })}
         </View>
-        <Button label="Start Workout" size="lg" onPress={onStart} />
+        <Button label="Start Workout" size="lg" icon="barbell" onPress={onStart} />
       </Card>
     );
   }

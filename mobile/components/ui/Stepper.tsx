@@ -94,7 +94,9 @@ const makeStyles = (colors: Palette) =>
     justifyContent: "center",
   },
   pressed: {
-    opacity: 0.7,
+    backgroundColor: colors.surfaceHover,
+    borderColor: colors.accentDim,
+    transform: [{ scale: 0.94 }],
   },
   bumpText: {
     fontSize: 22,
