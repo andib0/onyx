@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, type LayoutChangeEvent } from "react-native";
 import Svg, {
   Path,
@@ -10,7 +10,8 @@ import Svg, {
 } from "react-native-svg";
 import Card from "../ui/Card";
 import type { WeightTrend as WeightTrendData } from "../../utils/trends";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 interface WeightTrendProps {
   trend: WeightTrendData;
@@ -35,6 +36,8 @@ function smoothPath(points: Array<{ x: number; y: number }>): string {
 }
 
 export default function WeightTrend({ trend, goalNote }: WeightTrendProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [width, setWidth] = useState(0);
   const onLayout = (event: LayoutChangeEvent) => {
     setWidth(event.nativeEvent.layout.width);
@@ -121,7 +124,8 @@ export default function WeightTrend({ trend, goalNote }: WeightTrendProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",

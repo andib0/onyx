@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
@@ -7,7 +7,8 @@ import StatBlock from "../ui/StatBlock";
 import { getWorkoutSessions } from "../../api/workouts";
 import { buildWeightTrend, dateKeyDaysAgo } from "../../utils/trends";
 import type { AppState, LogEntry, SupplementItem } from "../../types/appTypes";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 export const WEEKLY_DISMISS_KEY = "onyx_weekly_recap_dismissed";
 const DISMISS_KEY = WEEKLY_DISMISS_KEY;
@@ -54,6 +55,8 @@ export default function WeeklyRecapCard({
   logEntries,
   onDismiss,
 }: WeeklyRecapCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [dismissed, setDismissed] = useState(true);
   const [weekSets, setWeekSets] = useState<number | null>(null);
 
@@ -125,7 +128,8 @@ export default function WeeklyRecapCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

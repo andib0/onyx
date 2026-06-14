@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -10,7 +11,15 @@ import {
   daysUntilInsights,
   INSIGHTS_MIN_DAYS,
 } from "../../utils/insights";
-import { colors, spacing, fontSizes, fonts, tints, radii } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import {
+  spacing,
+  fontSizes,
+  fonts,
+  radii,
+  type Palette,
+  type TintSet,
+} from "../../theme";
 
 interface InsightsTeaserCardProps {
   scoreHistory: DailyScore[];
@@ -24,6 +33,8 @@ export default function InsightsTeaserCard({
   logEntries,
 }: InsightsTeaserCardProps) {
   const router = useRouter();
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
 
   // Too early to bother — GettingStarted covers the first few days
   if (scoreHistory.length < 4) return null;
@@ -80,7 +91,8 @@ export default function InsightsTeaserCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   head: {
     flexDirection: "row",
     alignItems: "center",

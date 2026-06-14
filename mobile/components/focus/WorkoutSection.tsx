@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
@@ -10,7 +10,15 @@ import StatBlock from "../ui/StatBlock";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
 import { suggestProgression } from "../../utils/progression";
-import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  fonts,
+  type Palette,
+  type TintSet,
+} from "../../theme";
 
 const formatSeconds = (totalSeconds: number) => {
   const m = Math.floor(totalSeconds / 60);
@@ -44,6 +52,8 @@ function SetPills({
   current: number;
   logged: Array<{ weightKg: number | null; reps: number | null }>;
 }) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   return (
     <View style={styles.pillsRow}>
       {Array.from({ length: total }).map((_, idx) => {
@@ -113,6 +123,8 @@ export default function WorkoutSection({
   onExtendRest,
   compact = false,
 }: WorkoutSectionProps) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
   const [showFullList, setShowFullList] = useState(false);
@@ -482,7 +494,8 @@ export default function WorkoutSection({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   restDayTitle: {
     fontSize: fontSizes.lg,
     fontWeight: "600",

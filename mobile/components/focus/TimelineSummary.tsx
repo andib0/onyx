@@ -3,7 +3,8 @@ import Card from "../ui/Card";
 import ProgressBar from "../ui/ProgressBar";
 import Pill from "../ui/Pill";
 import type { ScheduleBlock } from "../../types/appTypes";
-import { colors, spacing } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing } from "../../theme";
 
 interface TimelineSummaryProps {
   timelineBlocks: ScheduleBlock[];
@@ -20,6 +21,7 @@ export default function TimelineSummary({
   nextStartBlock,
   nextStartInMinutes,
 }: TimelineSummaryProps) {
+  const { colors } = useTheme();
   const doneCount = timelineBlocks.length - remainingCount;
   return (
     <Card>

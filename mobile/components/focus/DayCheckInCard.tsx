@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
@@ -6,7 +6,8 @@ import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import Input from "../ui/Input";
 import type { LogEntry } from "../../types/appTypes";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 export const CHECK_IN_HOUR = 19;
 export const CHECKIN_DISMISS_KEY = "onyx_checkin_dismissed";
@@ -31,6 +32,8 @@ export default function DayCheckInCard({
   showToast,
   onDismiss,
 }: DayCheckInCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [dismissed, setDismissed] = useState(true);
   const [saving, setSaving] = useState(false);
   const [weight, setWeight] = useState("");
@@ -143,7 +146,8 @@ export default function DayCheckInCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",

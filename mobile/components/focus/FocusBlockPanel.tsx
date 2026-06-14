@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import ProgressBar from "../ui/ProgressBar";
 import Button from "../ui/Button";
 import type { FocusPanelBlock } from "../../types/appTypes";
-import { colors, spacing, radii, fontSizes, TAG_COLORS } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, radii, fontSizes, TAG_COLORS, type Palette } from "../../theme";
 
 export interface FocusPanelAction {
   label: string;
@@ -16,6 +18,8 @@ export default function FocusBlockPanel({
   focusBlock: FocusPanelBlock;
   action?: FocusPanelAction | null;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const block = focusBlock.block;
   const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
 
@@ -57,7 +61,8 @@ export default function FocusBlockPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   focusPanel: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,

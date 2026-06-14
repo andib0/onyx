@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import StatBlock from "../ui/StatBlock";
 import type { YesterdayRecap } from "../../utils/trends";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 interface RecapCardProps {
   recap: YesterdayRecap | null;
@@ -10,6 +12,8 @@ interface RecapCardProps {
 }
 
 export default function RecapCard({ recap, streak }: RecapCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   if (!recap && streak === 0) return null;
 
   const suppsOk = recap ? recap.missedSupplements.length === 0 : false;
@@ -41,7 +45,8 @@ export default function RecapCard({ recap, streak }: RecapCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   title: {
     fontSize: fontSizes.xs,
     color: colors.muted,

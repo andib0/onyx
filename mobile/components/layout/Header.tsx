@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 interface HeaderProps {
   title: string;
@@ -8,6 +10,8 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, right }: HeaderProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.header}>
       <View style={styles.left}>
@@ -19,28 +23,29 @@ export default function Header({ title, subtitle, right }: HeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.sm,
-  },
-  left: {
-    flex: 1,
-  },
-  right: {
-    flexShrink: 0,
-  },
-  title: {
-    fontSize: fontSizes.xxl,
-    fontFamily: fonts.display,
-    color: colors.text,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 2,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing.sm,
+    },
+    left: {
+      flex: 1,
+    },
+    right: {
+      flexShrink: 0,
+    },
+    title: {
+      fontSize: fontSizes.xxl,
+      fontFamily: fonts.display,
+      color: colors.text,
+      letterSpacing: -0.3,
+    },
+    subtitle: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginTop: 2,
+    },
+  });

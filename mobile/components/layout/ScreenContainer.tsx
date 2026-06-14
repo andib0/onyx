@@ -6,8 +6,10 @@ import {
   StyleSheet,
   type ViewStyle,
 } from "react-native";
+import { useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, type Palette } from "../../theme";
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -31,6 +33,8 @@ export default function ScreenContainer({
   floatingAction,
   hasNativeHeader = false,
 }: ScreenContainerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const edges: Array<"top"> = hasNativeHeader ? [] : ["top"];
 
   if (!scrollable) {
@@ -72,7 +76,8 @@ export default function ScreenContainer({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.bg,

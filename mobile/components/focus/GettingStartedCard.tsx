@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Card from "../ui/Card";
 import IconButton from "../ui/IconButton";
 import ProgressBar from "../ui/ProgressBar";
-import { colors, spacing, fontSizes } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, type Palette } from "../../theme";
 
 export const GETTING_STARTED_DISMISS_KEY = "onyx_getting_started_dismissed";
 const DISMISS_KEY = GETTING_STARTED_DISMISS_KEY;
@@ -22,6 +23,8 @@ export default function GettingStartedCard({
   dayLogged,
   onDismiss,
 }: GettingStartedCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -85,7 +88,8 @@ export default function GettingStartedCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
