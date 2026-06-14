@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -16,9 +16,12 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 import BlockItem from "../../components/schedule/BlockItem";
 import BlockForm from "../../components/schedule/BlockForm";
 import type { ScheduleBlock } from "../../types/appTypes";
-import { colors, spacing, fontSizes, fonts } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 export default function ScheduleScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { stateLoading } = useData();
   const { showToast } = useToastContext();
   const {
@@ -180,7 +183,8 @@ export default function ScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   progressRow: {
     flexDirection: "row",
     justifyContent: "space-between",

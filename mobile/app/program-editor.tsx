@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useToastContext } from "../contexts/ToastContext";
@@ -20,7 +20,8 @@ import {
 } from "../api/programs";
 import { searchExercises, type ExerciseLibraryItem } from "../api/exercises";
 import useDebouncedValue from "../hooks/useDebouncedValue";
-import { colors, spacing, radii, fontSizes } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../theme";
 import { sharedStyles } from "../theme/sharedStyles";
 
 const GOALS = ["bulk", "cut", "recomp", "strength", "general"];
@@ -40,6 +41,8 @@ const emptyDay = (index: number): ProgramDayInput => ({
 });
 
 export default function ProgramEditorScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { showToast } = useToastContext();
   const { refreshPrograms, handleSelectProgram } = useProgram();
@@ -374,7 +377,8 @@ export default function ProgramEditorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   cancelLink: {
     fontSize: fontSizes.md,
     color: colors.muted,

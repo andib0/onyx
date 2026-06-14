@@ -17,7 +17,8 @@ import type { LogEntry } from "../types/appTypes";
 import { todayKey } from "../utils/storage";
 import { buildWeightTrend } from "../utils/trends";
 import WeightTrend from "../components/log/WeightTrend";
-import { colors, spacing, radii, fontSizes, fonts } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, radii, fontSizes, fonts, type Palette } from "../theme";
 
 const DAY_OPTIONS = ["Push", "Pull", "Legs+Shoulders", "Rest"];
 
@@ -32,6 +33,8 @@ const DEFAULT_FORM: LogEntry = {
 };
 
 function LogEntryCard({ entry, onDelete }: { entry: LogEntry; onDelete: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.entryCard}>
       <View style={styles.entryHeader}>
@@ -76,6 +79,8 @@ function LogEntryCard({ entry, onDelete }: { entry: LogEntry; onDelete: () => vo
 }
 
 export default function LogScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const {
     stateLoading,
     logEntries,
@@ -301,7 +306,8 @@ export default function LogScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

@@ -50,7 +50,15 @@ import {
   detectNewUnlocks,
 } from "../../utils/achievements";
 import { success } from "../../utils/haptics";
-import { colors, fontSizes, fonts, spacing, radii, tints } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import {
+  fontSizes,
+  fonts,
+  spacing,
+  radii,
+  type Palette,
+  type TintSet,
+} from "../../theme";
 
 const getGreeting = (minutes: number): string => {
   const hour = Math.floor(minutes / 60);
@@ -102,6 +110,8 @@ function ProteinCard({
   mealsLabel: string;
   onPress: () => void;
 }) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const consumed = computeConsumedMacros(mealTemplates, mealCheckMap);
   const targets = computeMacroTargets(nutritionTargets);
   if (!targets.protein) return null;
@@ -128,6 +138,8 @@ function ProteinCard({
 }
 
 export default function FocusScreen() {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const router = useRouter();
   const {
     stateLoading,
@@ -623,7 +635,8 @@ export default function FocusScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   headerWash: {
     position: "absolute",
     top: -spacing.xl,

@@ -1,6 +1,6 @@
 import { View, Text, TextInput, Switch, StyleSheet } from "react-native";
 import Constants from "expo-constants";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { updateProfile } from "../../api/auth";
 import { updatePreferences } from "../../api/preferences";
@@ -29,10 +29,14 @@ import {
   buildWeeklyAdherence,
   scoreBarsFromHistory,
 } from "../../utils/trends";
-import { colors, spacing, fontSizes, radii, isLight } from "../../theme";
+import Segmented from "../../components/ui/Segmented";
+import { useTheme, type ThemeMode } from "../../contexts/ThemeContext";
+import { spacing, fontSizes, radii, type Palette } from "../../theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { colors, mode, setMode } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { logout, user, refreshUser } = useAuth();
   const {
     handleImportClick,
@@ -261,15 +265,21 @@ export default function SettingsScreen() {
 
       {/* DATA */}
       <GroupTitle label="Appearance" />
-      <SettingsGroup>
-        <Row
-          first
-          icon={isLight ? "sunny-outline" : "moon-outline"}
-          label="Theme"
-          sublabel="Follows your phone's light/dark setting"
-          value={isLight ? "Light" : "Dark"}
+      <View style={styles.appearanceWrap}>
+        <Segmented
+          options={["system", "light", "dark"]}
+          selected={mode}
+          onSelect={(m) => setMode(m as ThemeMode)}
+          getLabel={(m) =>
+            m === "system" ? "System" : m === "light" ? "Light" : "Dark"
+          }
         />
-      </SettingsGroup>
+        <Text style={styles.appearanceHint}>
+          {mode === "system"
+            ? "Matches your phone's light/dark setting."
+            : `Always ${mode}, ignoring the system setting.`}
+        </Text>
+      </View>
 
       <GroupTitle label="Data" />
       <SettingsGroup>
@@ -313,7 +323,16 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+  appearanceWrap: {
+    gap: spacing.sm,
+  },
+  appearanceHint: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    marginLeft: spacing.xs,
+  },
   avatar: {
     width: 36,
     height: 36,

@@ -15,7 +15,8 @@ import ConfirmModal from "../components/ui/ConfirmModal";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { searchSupplementDb, type SupplementDbItem } from "../api/supplementDb";
 import type { SupplementItem } from "../types/appTypes";
-import { colors, spacing, radii, fontSizes } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, radii, fontSizes, type Palette } from "../theme";
 
 const TIERS = ["Core", "Additional", "Other"];
 
@@ -40,6 +41,8 @@ function SupplementCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.suppCard}>
       <Pressable onPress={onToggle} hitSlop={8}>
@@ -80,6 +83,8 @@ function SupplementForm({
   onCancel: () => void;
   saveLabel: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [draft, setDraft] = useState<SupplementItem>(Object.assign({}, initial));
 
   const updateField = (field: keyof SupplementItem, value: string) => {
@@ -175,6 +180,8 @@ function SupplementForm({
 }
 
 export default function SupplementsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const {
     stateLoading,
     supplementsList,
@@ -445,7 +452,8 @@ export default function SupplementsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

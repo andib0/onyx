@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -18,7 +18,15 @@ import Segmented from "../../components/ui/Segmented";
 import SectionTitle from "../../components/ui/SectionTitle";
 import EmptyState from "../../components/ui/EmptyState";
 import type { ProgramSummary } from "../../api/programs";
-import { colors, spacing, radii, fontSizes, fonts, tints } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  fonts,
+  type Palette,
+  type TintSet,
+} from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 const GOAL_LABELS: Record<string, string> = {
@@ -38,6 +46,8 @@ function ProgramCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   return (
     <Pressable
       onPress={onSelect}
@@ -71,6 +81,8 @@ function ProgramCard({
 }
 
 export default function ProgramScreen() {
+  const { colors, tints } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -351,7 +363,8 @@ export default function ProgramScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette, tints: TintSet) =>
+  StyleSheet.create({
   manageRow: {
     flexDirection: "row",
     gap: spacing.sm,
