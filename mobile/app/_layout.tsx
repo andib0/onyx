@@ -16,7 +16,7 @@ import {
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { AppStateProvider } from "../contexts/AppStateContext";
 import ErrorBoundary from "../components/shared/ErrorBoundary";
-import { colors } from "../theme";
+import { colors, isLight } from "../theme";
 
 function RootStack() {
   const { isLoading } = useAuth();
@@ -76,7 +76,7 @@ export default function RootLayout() {
         <AuthProvider>
           <AppStateProvider>
             <ErrorBoundary>
-              <StatusBar style="light" />
+              <StatusBar style={isLight ? "dark" : "light"} />
               <RootStack />
             </ErrorBoundary>
           </AppStateProvider>

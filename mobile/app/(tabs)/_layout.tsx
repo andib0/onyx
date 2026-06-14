@@ -3,7 +3,7 @@ import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import NotificationResponder from "../../components/NotificationResponder";
-import { colors, fontSizes } from "../../theme";
+import { colors, fontSizes, isLight } from "../../theme";
 
 export default function TabLayout() {
   return (
@@ -20,7 +20,7 @@ export default function TabLayout() {
           Platform.OS === "ios" ? (
             <BlurView
               intensity={50}
-              tint="dark"
+              tint={isLight ? "light" : "dark"}
               style={StyleSheet.absoluteFill}
             />
           ) : null,

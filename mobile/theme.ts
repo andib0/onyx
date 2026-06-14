@@ -1,7 +1,7 @@
-import { Platform } from "react-native";
+import { Platform, Appearance } from "react-native";
 
-export const colors = {
-  // Near-black with a cool undertone; tonal surface steps (not alpha films)
+// Dark palette — near-black with a cool undertone; tonal surface steps (not alpha films)
+const darkColors = {
   bg: "#0a0d11",
   surface: "#12161c",
   surface2: "#1a1f27",
@@ -23,6 +23,36 @@ export const colors = {
   danger: "#e2554b",
   supplement: "#2dd4bf",
 };
+
+// Light palette — cool near-whites, slate text, accent deepened for white-bg contrast
+const lightColors: typeof darkColors = {
+  bg: "#f3f5f9",
+  surface: "#ffffff",
+  surface2: "#eef1f6",
+  surfaceHover: "#e3e8f0",
+  edgeHighlight: "rgba(17, 24, 39, 0.05)",
+  text: "rgba(17, 24, 39, 0.96)",
+  muted: "rgba(17, 24, 39, 0.55)",
+  faint: "rgba(17, 24, 39, 0.38)",
+  border: "rgba(17, 24, 39, 0.10)",
+  borderLight: "rgba(17, 24, 39, 0.16)",
+  shadow: "rgba(17, 24, 39, 0.12)",
+  accent: "#3b66e0",
+  accentDim: "rgba(59, 102, 224, 0.35)",
+  accent2: "#5a86f5",
+  good: "#15a06b",
+  warning: "#c6841a",
+  danger: "#d23f37",
+  supplement: "#0fae9b",
+};
+
+// Resolved once at module load from the OS appearance. Switching the phone's
+// dark/light setting takes effect on next app launch (no live runtime swap —
+// every StyleSheet.create snapshots these values at import time).
+export const colorScheme: "light" | "dark" =
+  Appearance.getColorScheme() === "light" ? "light" : "dark";
+export const isLight = colorScheme === "light";
+export const colors = isLight ? lightColors : darkColors;
 
 export const spacing = {
   xs: 4,
@@ -65,13 +95,20 @@ export const fontSizes = {
   hero: 44,
 };
 
-// Soft tints for colored chips/fills on dark bg
-export const tints = {
+// Soft tints for colored chips/fills, per scheme
+const darkTints = {
   accent: "rgba(77, 124, 255, 0.16)",
   good: "rgba(52, 201, 138, 0.14)",
   warning: "rgba(232, 168, 56, 0.14)",
   danger: "rgba(226, 85, 75, 0.12)",
 };
+const lightTints: typeof darkTints = {
+  accent: "rgba(59, 102, 224, 0.10)",
+  good: "rgba(21, 160, 107, 0.11)",
+  warning: "rgba(198, 132, 26, 0.13)",
+  danger: "rgba(210, 63, 55, 0.10)",
+};
+export const tints = isLight ? lightTints : darkTints;
 
 // Type ramp presets — use instead of hand-rolled size/weight combos
 export const typeRamp = {
