@@ -29,14 +29,11 @@ Foundation shipped; remaining = centralize the values still living as inline lit
 - [x] Radii scale (`xs8/sm12/md16/lg24/full`)
 - [x] Fonts (Archivo display, JetBrains mono, system sans)
 - [x] Spacing scale (4/8 rhythm)
-- [ ] **Add `motion` tokens** — durations + easings are scattered as literals (220/240/600ms, `Easing.out(Easing.cubic)`, spring damping/stiffness). Centralize:
-  - `motion.fast = 150`, `motion.base = 220`, `motion.slow = 320`, `motion.exit = base*0.65`
-  - `motion.spring = { damping: 18, stiffness: 220 }`, `motion.springTight = { damping: 12, stiffness: 320 }`
-  - `motion.easeOut`, `motion.easeIn` presets
-- [ ] **Add `elevation` tokens** — shadow values are per-component literals (FAB, Toast, Card edge). Define `elevation.sm/md/lg` (shadowColor/opacity/radius/offset + elevation) so cards/sheets/FAB/toast share one ramp.
-- [ ] **Add `zIndex` scale** — Toast uses `1000`, sheets use Modal; define `z.base/nav/overlay/toast` to avoid magic numbers.
-- [ ] **Add `hitSlop` default token** (e.g. `6`) used by all icon-sized Pressables.
-- [ ] `iconSizes` token (`sm14/md16/lg18/xl22`) — icon sizes are ad-hoc (13/14/15/16/18/22/26). Pick a scale.
+- [x] **`motion` tokens** — `fast/base/slow/exit` + `spring`/`springTight`. (Sheet/Segmented/Checkbox/Toast/FAB migrated; more inline literals remain to migrate over time.)
+- [x] **`elevation` tokens** — `sm/md/lg` ramp. (Applied to Toast; apply to cards/sheets/FAB over time.)
+- [x] **`zLayer` scale** — `base/nav/overlay/toast`. (Toast migrated.)
+- [x] **`hitSlopDefault`** token. (Used in Input password toggle; roll out to other icon Pressables.)
+- [x] **`iconSizes`** token (`sm14/md16/lg18/xl22`). (Defined; roll out to replace ad-hoc sizes over time.)
 - [x] `TAG_COLORS` (decorative, static — fine on both schemes)
 
 ---
@@ -63,7 +60,7 @@ Rules: 150–300ms micro, transform/opacity only, ease-out enter / ease-in exit,
 
 - [~] **`accessibilityLabel` on icon-only controls** — IconButton ✓. Audit raw `Pressable`s: program overflow menu, nutrition chips, segment options (Segmented has role+state ✓), MealCard quick-chips.
 - [ ] **`accessibilityRole`** on all custom buttons/links (many `Pressable` lack `role="button"`).
-- [ ] **Chart a11y** — Ring has `progressbar` ✓. BarChart + WeightTrend + MacroDashboard: add `accessibilityLabel` summarizing the key value/trend (screen-reader can't read SVG).
+- [x] **Chart a11y** — BarChart + WeightTrend + MacroDashboard now expose `accessibilityLabel` summaries; Ring has `progressbar`.
 - [ ] **Contrast audit both schemes** — light `muted/faint` bumped ✓; verify: `faint` placeholders, tint-on-tint chips, `accentDim` borders, disabled 0.4 opacity all ≥3:1 (UI) / 4.5:1 (text). Test dark independently.
 - [ ] **Dynamic Type** — only StatBlock sets `maxFontSizeMultiplier`. Audit truncation at largest text size on: tab labels, Header title, MealCard, BlockItem, Row label/value, StatBlock labels. Prefer wrap over clip.
 - [ ] **Reduced-motion** (see §2).
@@ -104,9 +101,9 @@ Define one voice: **terse, second-person, sentence case for sentences, UPPERCASE
 ## 6. Component-by-component (43)
 
 ### UI primitives (`components/ui/`)
-- [x] **Button** — variants, spring press, leading icon. [ ] add `loading` state (spinner + disabled) for async CTAs.
+- [x] **Button** — variants, spring press, leading icon, **loading state** (spinner + busy a11y).
 - [x] **Card** — header icon + right slot, edge highlight. [ ] optional `onPress` variant with press scale for tappable cards.
-- [x] **Input** — focus border + tint + icon. [ ] error state (danger border + helper text), `password` toggle, semantic `textContentType`/`autoComplete`.
+- [x] **Input** — focus border + tint + icon, **error state** (danger border + helper), **secure-entry + show/hide toggle**, autofill (`autoComplete`/`textContentType`/`returnKeyType`).
 - [x] **Sheet** — slide-up, grabber, header divider, keyboard-aware. [ ] swipe-down-to-dismiss; [ ] confirm-on-dismiss when form dirty.
 - [x] **StatBlock** — mono number + label, `maxFontSizeMultiplier`.
 - [x] **Ring** — gradient, animated, progressbar role.
@@ -171,9 +168,10 @@ Each screen checklist: **layout/hierarchy · single primary CTA · empty · load
 - [~] **Log / History** (`log.tsx`) — weight trend + entries. [ ] virtualize entries, [ ] empty state, [ ] `ActivityIndicator` → skeleton.
 - [~] **Supplements** (`supplements.tsx`) — unified card (Checkbox + IconButtons) ✓. [ ] `ActivityIndicator` → skeleton, [ ] search results virtualization, [ ] form inline validation.
 - [~] **Program editor** (`program-editor.tsx`) — exercise autocomplete, smallInput cells. [ ] inline validation + first-invalid focus, [ ] reorder affordance polish, [ ] unsaved-changes confirm on dismiss.
-- [~] **Onboarding** (`onboarding.tsx`) — 3 steps + seed. [ ] step progress indicator, [ ] entrance motion, [ ] copy pass.
-- [~] **Auth — login / register** (`(auth)/*`) — pre-redesign era. [ ] migrate inputs to canonical `Input`, [ ] error states, [ ] `ActivityIndicator` → button loading, [ ] keyboard types + autofill, [ ] brand/hero polish.
-- [ ] **+not-found** — restyle to EmptyState look with a "Back to Focus" action.
+- [x] **Onboarding** (`onboarding.tsx`) — pill progress dots, per-step entrance, selected checkmark, loading CTA, display title.
+- [x] **Auth — login / register** (`(auth)/*`) — rebuilt on canonical `Input` (icon fields, password toggle, inline errors, autofill) + `Button` loading.
+- [x] **+not-found** — EmptyState look with "Back to Focus" action.
+- [x] **Onboarding** — display title, pill progress dots, per-step entrance (reduced-motion aware), selected-program checkmark, loading CTA.
 - [x] **index / `_layout` / `(auth)/_layout`** — routing + theme chrome (StatusBar, headers, tab bar) ✓.
 
 ---
