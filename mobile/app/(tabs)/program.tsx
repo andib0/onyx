@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { deleteProgram } from "../../api/programs";
@@ -14,7 +15,6 @@ import LoadingScreen from "../../components/shared/LoadingScreen";
 import Header from "../../components/layout/Header";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import Segmented from "../../components/ui/Segmented";
 import SectionTitle from "../../components/ui/SectionTitle";
 import EmptyState from "../../components/ui/EmptyState";
 import type { ProgramSummary } from "../../api/programs";
@@ -250,94 +250,131 @@ export default function ProgramScreen() {
         />
       </View>
 
-      {/* Day picker: segmented control */}
+      {/* Day picker: scrollable pills (handles long day names without crowding) */}
       {days.length > 0 ? (
         <>
-          <SectionTitle label="Today's session" />
-          <Segmented
-            options={days.map((d) => d.id)}
-            selected={selectedProgramDayId}
-            onSelect={setSelectedProgramDayId}
-            getLabel={(id) => days.find((d) => d.id === id)?.name || id}
-          />
+          <SectionTitle label="Training day" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dayPills}
+          >
+            {days.map((d) => {
+              const active = d.id === selectedProgramDayId;
+              return (
+                <Pressable
+                  key={d.id}
+                  onPress={() => setSelectedProgramDayId(d.id)}
+                  style={[styles.dayPill, active && styles.dayPillActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text
+                    style={[styles.dayPillText, active && styles.dayPillTextActive]}
+                    numberOfLines={1}
+                  >
+                    {d.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </>
       ) : null}
 
-      {/* Session detail */}
+      {/* Session detail — one roomy card per exercise */}
       {selectedProgramDay ? (
         trainingDayActive ? (
-          <Card>
+          <>
             <View style={styles.sessionHeader}>
-              <Text style={styles.sessionTitle}>{selectedProgramDay.name}</Text>
-              <Button label="Copy" variant="secondary" size="sm" onPress={handleCopy} />
+              <Text style={styles.sessionTitle} numberOfLines={1}>
+                {selectedProgramDay.name}
+              </Text>
+              <Button
+                label="Copy"
+                variant="secondary"
+                size="sm"
+                icon="copy-outline"
+                onPress={handleCopy}
+              />
             </View>
-            <View style={styles.exerciseList}>
-              {programRows.map((row, idx) => (
+            {programRows.map((row, idx) => {
+              const h = history[row.ex];
+              const sug = h ? suggestProgression(row.ex, h.sets, row.reps) : null;
+              const lastStr = h
+                ? h.sets.map((s) => (s.reps !== null ? s.reps : "-")).join("/") +
+                  (h.sets[0]?.weightKg != null ? ` @ ${h.sets[0].weightKg}kg` : "")
+                : null;
+              return (
                 <Pressable
                   key={`row-${idx}`}
-                  style={({ pressed }) => [
-                    styles.exerciseRow,
-                    pressed && sharedStyles.pressed,
-                  ]}
                   onPress={() =>
                     router.push({
                       pathname: "/exercise/[name]",
                       params: { name: row.ex },
                     })
                   }
+                  style={({ pressed }) => (pressed ? sharedStyles.pressed : undefined)}
                 >
-                  <View style={styles.exerciseTop}>
-                    <Text style={styles.exIndex}>{idx + 1}</Text>
-                    <View style={styles.exMain}>
-                      <Text style={styles.exName}>{row.ex}</Text>
-                      <View style={styles.exDetails}>
-                        <Text style={styles.exStat}>
+                  <Card>
+                    <View style={styles.exHead}>
+                      <View style={styles.exIndexBadge}>
+                        <Text style={styles.exIndexText}>{idx + 1}</Text>
+                      </View>
+                      <Text style={styles.exName} numberOfLines={2}>
+                        {row.ex}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                    </View>
+                    <View style={styles.exStats}>
+                      <View style={styles.statChip}>
+                        <Ionicons name="repeat" size={12} color={colors.muted} />
+                        <Text style={styles.statChipText}>
                           {row.sets}×{row.reps}
                         </Text>
-                        <Text style={styles.exStat}>RIR {row.rir}</Text>
-                        <Text style={styles.exStat}>Rest {row.rest}</Text>
                       </View>
-                      {(() => {
-                        const h = history[row.ex];
-                        if (!h) return null;
-                        const sug = suggestProgression(row.ex, h.sets, row.reps);
-                        return (
-                          <View style={styles.exHistory}>
-                            <Text style={styles.exLast} numberOfLines={1}>
-                              last{" "}
-                              {h.sets
-                                .map((s) => (s.reps !== null ? s.reps : "-"))
-                                .join("/")}
-                              {h.sets[0]?.weightKg != null
-                                ? ` @ ${h.sets[0].weightKg}kg`
-                                : ""}
-                            </Text>
-                            {sug ? (
-                              <Text
-                                style={[
-                                  styles.exSuggest,
-                                  sug.isProgress && styles.exSuggestProgress,
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {sug.isProgress ? "↑ " : ""}
-                                {sug.text}
-                              </Text>
-                            ) : null}
-                          </View>
-                        );
-                      })()}
-                      {row.notes ? (
-                        <Text style={styles.exNotes}>{row.notes}</Text>
-                      ) : null}
-                      {row.prog ? <Text style={styles.exProg}>{row.prog}</Text> : null}
+                      <View style={styles.statChip}>
+                        <Text style={styles.statChipLabel}>RIR</Text>
+                        <Text style={styles.statChipText}>{row.rir}</Text>
+                      </View>
+                      <View style={styles.statChip}>
+                        <Ionicons name="time-outline" size={12} color={colors.muted} />
+                        <Text style={styles.statChipText}>{row.rest}</Text>
+                      </View>
                     </View>
-                    <Text style={styles.exChevron}>›</Text>
-                  </View>
+                    {lastStr ? (
+                      <View style={styles.histRow}>
+                        <Text style={styles.histText} numberOfLines={1}>
+                          Last {lastStr}
+                        </Text>
+                        {sug ? (
+                          <View
+                            style={[styles.progChip, sug.isProgress && styles.progChipUp]}
+                          >
+                            {sug.isProgress ? (
+                              <Ionicons name="arrow-up" size={11} color={colors.good} />
+                            ) : null}
+                            <Text
+                              style={[
+                                styles.progText,
+                                sug.isProgress && styles.progTextUp,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {sug.text}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                    {row.notes ? (
+                      <Text style={styles.exNotes}>{row.notes}</Text>
+                    ) : null}
+                  </Card>
                 </Pressable>
-              ))}
-            </View>
-          </Card>
+              );
+            })}
+          </>
         ) : (
           <Card>
             <View style={styles.restDay}>
@@ -465,86 +502,142 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
     color: colors.muted,
     lineHeight: 18,
   },
+  /* day pills */
+  dayPills: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingRight: spacing.lg,
+  },
+  dayPill: {
+    paddingHorizontal: spacing.lg,
+    minHeight: 40,
+    justifyContent: "center",
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  dayPillActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  dayPillText: {
+    fontSize: fontSizes.sm,
+    color: colors.muted,
+    fontWeight: "600",
+  },
+  dayPillTextActive: {
+    color: "#0b0f14",
+  },
   /* session */
   sessionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.md,
     gap: spacing.md,
+    marginTop: spacing.sm,
   },
   sessionTitle: {
     flex: 1,
     fontSize: fontSizes.xl,
-    fontWeight: "700",
+    fontFamily: fonts.display,
     color: colors.text,
   },
-  exerciseList: {
-    gap: spacing.sm,
-  },
-  exerciseRow: {
-    backgroundColor: colors.bg,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-  },
-  exerciseTop: {
+  /* exercise card */
+  exHead: {
     flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  exIndex: {
+  exIndexBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: radii.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exIndexText: {
     fontSize: fontSizes.sm,
-    color: colors.muted,
     fontFamily: fonts.mono,
-    width: 18,
-    paddingTop: 3,
-  },
-  exMain: {
-    flex: 1,
-    gap: spacing.xs,
+    fontWeight: "700",
+    color: colors.muted,
   },
   exName: {
+    flex: 1,
     fontSize: fontSizes.lg,
-    fontWeight: "600",
+    fontFamily: fonts.display,
     color: colors.text,
   },
-  exDetails: {
+  exStats: {
     flexDirection: "row",
-    gap: spacing.md,
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
-  exStat: {
+  statChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  statChipText: {
     fontSize: fontSizes.sm,
-    color: colors.muted,
     fontFamily: fonts.mono,
+    fontWeight: "600",
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
   },
-  exChevron: {
-    fontSize: fontSizes.xl,
-    color: colors.faint,
-    alignSelf: "center",
-  },
-  exHistory: {
-    gap: 1,
-  },
-  exLast: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
-  exSuggest: {
+  statChipLabel: {
     fontSize: fontSizes.xs,
     color: colors.muted,
     fontWeight: "600",
   },
-  exSuggestProgress: {
+  histRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  histText: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontFamily: fonts.mono,
+  },
+  progChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: colors.surface2,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  progChipUp: {
+    backgroundColor: tints.good,
+  },
+  progText: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    fontWeight: "600",
+  },
+  progTextUp: {
     color: colors.good,
   },
   exNotes: {
     fontSize: fontSizes.sm,
     color: colors.muted,
     fontStyle: "italic",
-  },
-  exProg: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
+    marginTop: spacing.sm,
   },
   restDay: {
     alignItems: "center",
