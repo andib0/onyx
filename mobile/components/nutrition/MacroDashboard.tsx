@@ -106,7 +106,16 @@ export default function MacroDashboard({
         y={compact ? 52 : 62}
         opacity={0.08}
       />
-      <View style={styles.row}>
+      <View
+        style={styles.row}
+        accessible
+        accessibilityLabel={
+          `Calories ${Math.round(consumed.calories)} of ${Math.round(targets.calories)}. ` +
+          `Protein ${Math.round(consumed.protein)} of ${Math.round(targets.protein)} grams. ` +
+          `Carbs ${Math.round(consumed.carbs)} of ${Math.round(targets.carbs)} grams. ` +
+          `Fat ${Math.round(consumed.fat)} of ${Math.round(targets.fat)} grams.`
+        }
+      >
         <Ring
           size={compact ? 84 : 104}
           strokeWidth={compact ? 7 : 9}

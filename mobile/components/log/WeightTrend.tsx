@@ -82,7 +82,14 @@ export default function WeightTrend({ trend, goalNote }: WeightTrendProps) {
         ) : null}
       </View>
 
-      <View onLayout={onLayout} style={styles.chartWrap}>
+      <View
+        onLayout={onLayout}
+        style={styles.chartWrap}
+        accessible
+        accessibilityLabel={`Bodyweight trend over 4 weeks. Current ${
+          trend.currentKg ?? "unknown"
+        } kg${rateLabel ? `, ${rateLabel}` : ""}.`}
+      >
         {width > 0 ? (
           <Svg width={width} height={CHART_HEIGHT}>
             <Defs>

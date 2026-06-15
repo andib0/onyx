@@ -45,8 +45,14 @@ export default function BarChart({
   const barW = n > 0 ? Math.max((width - gap * (n - 1)) / n, 2) : 0;
   const chartH = height - PAD_TOP;
 
+  const last = n > 0 ? bars[n - 1] : null;
+  const a11y =
+    n === 0
+      ? "Bar chart, no data"
+      : `Bar chart, ${n} bars, latest ${Math.round(last?.value ?? 0)}${unit ? ` ${unit}` : ""}`;
+
   return (
-    <View>
+    <View accessible accessibilityLabel={a11y}>
       <View onLayout={onLayout} style={{ height }}>
         {width > 0 ? (
           <Svg width={width} height={height}>
