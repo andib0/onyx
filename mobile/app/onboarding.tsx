@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useAuth } from "../contexts/AuthContext";
 import { useProgram } from "../contexts/ProgramContext";
 import { useData } from "../contexts/DataContext";
@@ -21,6 +23,8 @@ import {
   spacing,
   radii,
   fontSizes,
+  fonts,
+  motion,
   type Palette,
   type TintSet,
 } from "../theme";
@@ -32,6 +36,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { colors, tints } = useTheme();
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
+  const reduceMotion = useReducedMotion();
   const { refreshUser } = useAuth();
   const {
     programs,
@@ -78,9 +83,11 @@ export default function OnboardingScreen() {
     await finish();
   };
 
+  const enter = reduceMotion ? undefined : FadeInDown.duration(motion.base);
+
   return (
     <ScreenContainer>
-      {/* Step dots */}
+      {/* Progress dots — active is a pill */}
       <View style={styles.dotsRow}>
         {Array.from({ length: TOTAL_STEPS }).map((_, idx) => (
           <View
@@ -91,7 +98,7 @@ export default function OnboardingScreen() {
       </View>
 
       {step === 0 ? (
-        <>
+        <Animated.View key="s0" entering={enter} style={styles.step}>
           <Text style={styles.title}>Pick your program</Text>
           <Text style={styles.subtitle}>
             Sets your training days and exercises. Change anytime.
@@ -108,11 +115,22 @@ export default function OnboardingScreen() {
                     selected && styles.programCardSelected,
                     pressed && sharedStyles.pressed,
                   ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
                 >
-                  <Text style={styles.programName}>{program.name}</Text>
-                  <Text style={styles.programMeta}>
-                    {program.goal} · {program.days.length} days/week
-                  </Text>
+                  <View style={styles.programInfo}>
+                    <Text style={styles.programName}>{program.name}</Text>
+                    <Text style={styles.programMeta}>
+                      {program.goal} · {program.days.length} days/week
+                    </Text>
+                  </View>
+                  {selected ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color={colors.accent}
+                    />
+                  ) : null}
                 </Pressable>
               );
             })
@@ -123,16 +141,22 @@ export default function OnboardingScreen() {
           )}
           <Button
             label="Continue"
+            icon="arrow-forward"
             size="lg"
             onPress={() => setStep(1)}
             disabled={!selectedProgramId}
           />
-          <Button label="Skip for now" variant="ghost" size="sm" onPress={() => setStep(1)} />
-        </>
+          <Button
+            label="Skip for now"
+            variant="ghost"
+            size="sm"
+            onPress={() => setStep(1)}
+          />
+        </Animated.View>
       ) : null}
 
       {step === 1 ? (
-        <>
+        <Animated.View key="s1" entering={enter} style={styles.step}>
           <Text style={styles.title}>Your bodyweight</Text>
           <Text style={styles.subtitle}>
             Sets your protein and calorie targets. Optional.
@@ -148,23 +172,29 @@ export default function OnboardingScreen() {
               decimals={1}
             />
           </Card>
-          <Button label="Continue" size="lg" onPress={nextFromWeight} />
-          <Button label="Skip for now" variant="ghost" size="sm" onPress={() => setStep(2)} />
-        </>
+          <Button label="Continue" icon="arrow-forward" size="lg" onPress={nextFromWeight} />
+          <Button
+            label="Skip for now"
+            variant="ghost"
+            size="sm"
+            onPress={() => setStep(2)}
+          />
+        </Animated.View>
       ) : null}
 
       {step === 2 ? (
-        <>
+        <Animated.View key="s2" entering={enter} style={styles.step}>
           <Text style={styles.title}>Reminders</Text>
           <Text style={styles.subtitle}>
             Evening check-in nudge and rest-timer alerts. You stay in control —
             every category can be toggled in Settings.
           </Text>
           <Button
-            label={finishing ? "Setting up…" : "Enable reminders"}
+            label="Enable reminders"
+            icon="notifications-outline"
             size="lg"
+            loading={finishing}
             onPress={enableReminders}
-            disabled={finishing}
           />
           <Button
             label="Not now"
@@ -173,7 +203,7 @@ export default function OnboardingScreen() {
             onPress={finish}
             disabled={finishing}
           />
-        </>
+        </Animated.View>
       ) : null}
     </ScreenContainer>
   );
@@ -181,52 +211,63 @@ export default function OnboardingScreen() {
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-  dotsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-  },
-  dotActive: {
-    backgroundColor: colors.accent,
-    transform: [{ scale: 1.3 }],
-  },
-  title: {
-    fontSize: fontSizes.title,
-    fontWeight: "700",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    marginTop: -spacing.sm,
-  },
-  programCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  programCardSelected: {
-    borderColor: colors.accent,
-    backgroundColor: tints.accent,
-  },
-  programName: {
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  programMeta: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 2,
-  },
-});
+    dotsRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: radii.full,
+      backgroundColor: colors.border,
+    },
+    dotActive: {
+      width: 22,
+      backgroundColor: colors.accent,
+    },
+    step: {
+      gap: spacing.lg,
+    },
+    title: {
+      fontSize: fontSizes.title,
+      fontFamily: fonts.display,
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      marginTop: -spacing.md,
+    },
+    programCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+    },
+    programCardSelected: {
+      borderColor: colors.accent,
+      backgroundColor: tints.accent,
+    },
+    programInfo: {
+      flex: 1,
+    },
+    programName: {
+      fontSize: fontSizes.lg,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    programMeta: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginTop: 2,
+    },
+  });
