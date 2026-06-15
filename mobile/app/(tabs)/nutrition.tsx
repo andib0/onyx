@@ -40,13 +40,15 @@ import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
 import { suggestProteinTarget } from "../../utils/adaptiveTargets";
+import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, type Palette } from "../../theme";
+import { spacing, fontSizes, motion, type Palette } from "../../theme";
 import { sharedStyles } from "../../theme/sharedStyles";
 
 export default function NutritionScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const { stateLoading, nutritionTargets, appState, todayKeyValue, scoreHistory } =
     useData();
@@ -326,17 +328,25 @@ export default function NutritionScreen() {
       <SectionTitle label={`Meals · ${selectedMealDay}`} />
       <Card>
         {mealTemplatesForDay.length > 0 ? (
-          mealTemplatesForDay.map((meal) => {
+          mealTemplatesForDay.map((meal, i) => {
             const mealId = meal.id || "";
             return (
-              <MealCard
+              <Animated.View
                 key={mealId}
-                meal={meal}
-                isChecked={mealCheckMap[mealId] || false}
-                onToggle={() => setMealChecked(mealId, !mealCheckMap[mealId])}
-                onGramsChange={(text) => handleGramsChange(mealId, text)}
-                onDelete={() => setDeleteTarget(mealId)}
-              />
+                entering={
+                  reduceMotion
+                    ? undefined
+                    : FadeInDown.delay(Math.min(i, 8) * 40).duration(motion.base)
+                }
+              >
+                <MealCard
+                  meal={meal}
+                  isChecked={mealCheckMap[mealId] || false}
+                  onToggle={() => setMealChecked(mealId, !mealCheckMap[mealId])}
+                  onGramsChange={(text) => handleGramsChange(mealId, text)}
+                  onDelete={() => setDeleteTarget(mealId)}
+                />
+              </Animated.View>
             );
           })
         ) : (

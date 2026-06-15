@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
+import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useSchedule } from "../../contexts/ScheduleContext";
@@ -17,11 +18,12 @@ import BlockItem from "../../components/schedule/BlockItem";
 import BlockForm from "../../components/schedule/BlockForm";
 import type { ScheduleBlock } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, fonts, type Palette } from "../../theme";
+import { spacing, fontSizes, fonts, motion, type Palette } from "../../theme";
 
 export default function ScheduleScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   const { stateLoading } = useData();
   const { showToast } = useToastContext();
   const {
@@ -115,17 +117,25 @@ export default function ScheduleScreen() {
         <ProgressBar progress={timelineProgressPercent} color={colors.good} height={6} />
       </Card>
 
-      {timelineBlocks.map((block) => {
+      {timelineBlocks.map((block, i) => {
         const blockId = block.id || "";
         return (
-          <BlockItem
+          <Animated.View
             key={blockId}
-            block={block}
-            isCompleted={completionByBlockId[blockId] || false}
-            onToggle={() => setBlockCompletion(blockId, !completionByBlockId[blockId])}
-            onEdit={() => setEditingBlockId(blockId)}
-            onDelete={() => setDeleteTarget(blockId)}
-          />
+            entering={
+              reduceMotion
+                ? undefined
+                : FadeInDown.delay(Math.min(i, 8) * 40).duration(motion.base)
+            }
+          >
+            <BlockItem
+              block={block}
+              isCompleted={completionByBlockId[blockId] || false}
+              onToggle={() => setBlockCompletion(blockId, !completionByBlockId[blockId])}
+              onEdit={() => setEditingBlockId(blockId)}
+              onDelete={() => setDeleteTarget(blockId)}
+            />
+          </Animated.View>
         );
       })}
 
