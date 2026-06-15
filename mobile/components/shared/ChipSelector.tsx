@@ -32,14 +32,17 @@ export default function ChipSelector({
         return (
           <Pressable
             key={option}
-            style={[
+            style={({ pressed }) => [
               styles.chip,
               isSelected && {
                 backgroundColor: chipColor + "22",
                 borderColor: chipColor,
               },
+              pressed && styles.chipPressed,
             ]}
             onPress={() => onSelect(option)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
           >
             <Text style={[styles.chipText, isSelected && { color: chipColor }]}>
               {label}
@@ -66,6 +69,10 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.border,
       minHeight: 32,
       justifyContent: "center",
+    },
+    chipPressed: {
+      transform: [{ scale: 0.96 }],
+      opacity: 0.9,
     },
     chipText: {
       fontSize: fontSizes.xs,

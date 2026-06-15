@@ -1,7 +1,14 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
+import Animated, {
+  FadeIn,
+  ZoomIn,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, type Palette } from "../../theme";
+import { spacing, radii, fontSizes, motion, type Palette } from "../../theme";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface ConfirmModalProps {
   visible: boolean;
@@ -26,10 +33,25 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
+      <Animated.View
+        style={styles.backdrop}
+        entering={reduceMotion ? undefined : FadeIn.duration(motion.fast)}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
+        <AnimatedPressable
+          style={styles.sheet}
+          onPress={() => {}}
+          entering={
+            reduceMotion
+              ? undefined
+              : ZoomIn.springify()
+                  .damping(motion.springTight.damping)
+                  .stiffness(motion.springTight.stiffness)
+          }
+        >
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.buttons}>
@@ -54,8 +76,8 @@ export default function ConfirmModal({
               <Text style={styles.confirmText}>{confirmLabel}</Text>
             </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </AnimatedPressable>
+      </Animated.View>
     </Modal>
   );
 }

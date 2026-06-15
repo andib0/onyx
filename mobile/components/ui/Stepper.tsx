@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -25,6 +25,7 @@ export default function Stepper({
 }: StepperProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [focused, setFocused] = useState(false);
   const bump = (direction: 1 | -1) => {
     Haptics.selectionAsync().catch(() => {});
     const current = parseFloat(value.replace(",", "."));
@@ -45,13 +46,15 @@ export default function Stepper({
           <Text style={styles.bumpText}>−</Text>
         </Pressable>
         <TextInput
-          style={styles.input}
+          style={[styles.input, focused && { borderColor: colors.accent }]}
           value={value}
           onChangeText={onChangeText}
           keyboardType={decimals > 0 ? "decimal-pad" : "number-pad"}
           placeholder="0"
           placeholderTextColor={colors.muted}
           textAlign="center"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
         <Pressable
           style={({ pressed }) => [styles.bumpBtn, pressed && styles.pressed]}
