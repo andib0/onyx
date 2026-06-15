@@ -102,6 +102,63 @@ export const fontSizes = {
   hero: 44,
 };
 
+// Consistent icon sizes — use instead of ad-hoc 13/15/20/26 values
+export const iconSizes = {
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 22,
+};
+
+// Default hit area padding for icon-sized Pressables
+export const hitSlopDefault = 6;
+
+// Layered z-index scale (avoid magic numbers)
+export const zLayer = {
+  base: 0,
+  nav: 10,
+  overlay: 100,
+  toast: 1000,
+};
+
+// Motion tokens — one rhythm for the whole app.
+// Durations in ms; spring configs for reanimated withSpring.
+// (Easing functions stay in components — they import from reanimated.)
+export const motion = {
+  fast: 150, // micro feedback
+  base: 220, // standard transition
+  slow: 320, // larger/hero transition
+  exit: 150, // exits ~65% of base, feel responsive
+  spring: { damping: 18, stiffness: 220 } as const,
+  springTight: { damping: 12, stiffness: 320 } as const,
+};
+
+// Elevation ramp — shared shadow scale for cards, sheets, FAB, toast.
+// Neutral shadow reads on both schemes.
+export const elevation = {
+  sm: {
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  md: {
+    shadowColor: "#000",
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  lg: {
+    shadowColor: "#000",
+    shadowOpacity: 0.32,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+};
+
 // Soft tints for colored chips/fills, per scheme
 const darkTints = {
   accent: "rgba(77, 124, 255, 0.16)",

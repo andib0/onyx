@@ -8,7 +8,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { radii, type Palette } from "../../theme";
+import { radii, motion, type Palette } from "../../theme";
 
 interface CheckboxProps {
   checked: boolean;
@@ -34,8 +34,8 @@ export default function Checkbox({
       reduceMotion || !checked
         ? checked
           ? 1
-          : withTiming(0, { duration: 120 })
-        : withSpring(1, { damping: 12, stiffness: 320 });
+          : withTiming(0, { duration: motion.fast })
+        : withSpring(1, motion.springTight);
   }, [checked, reduceMotion, progress]);
 
   const boxStyle = useAnimatedStyle(() => ({

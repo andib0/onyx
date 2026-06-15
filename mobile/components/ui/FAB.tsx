@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Animated, { ZoomIn } from "react-native-reanimated";
+import Animated, { ZoomIn, useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, type Palette } from "../../theme";
+import { spacing, motion, type Palette } from "../../theme";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -17,6 +17,7 @@ interface FABProps {
 export default function FAB({ icon = "add", onPress, label }: FABProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPress();
@@ -24,7 +25,13 @@ export default function FAB({ icon = "add", onPress, label }: FABProps) {
 
   return (
     <AnimatedPressable
-      entering={ZoomIn.springify().damping(14).stiffness(220)}
+      entering={
+        reduceMotion
+          ? undefined
+          : ZoomIn.springify()
+              .damping(motion.spring.damping)
+              .stiffness(motion.spring.stiffness)
+      }
       onPress={handlePress}
       style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
       accessibilityRole="button"

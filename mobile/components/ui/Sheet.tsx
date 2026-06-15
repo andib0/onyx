@@ -19,7 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IconButton from "./IconButton";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
+import { spacing, radii, fontSizes, fonts, motion, type Palette } from "../../theme";
 
 interface SheetProps {
   visible: boolean;
@@ -42,7 +42,7 @@ export default function Sheet({ visible, title, onClose, children }: SheetProps)
         ? visible
           ? 1
           : 0
-        : withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) });
+        : withTiming(1, { duration: motion.base, easing: Easing.out(Easing.cubic) });
     if (!visible) progress.value = 0;
   }, [visible, reduceMotion, progress]);
 

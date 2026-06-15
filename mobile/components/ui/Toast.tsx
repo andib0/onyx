@@ -3,7 +3,15 @@ import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, type Palette } from "../../theme";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  motion,
+  elevation,
+  zLayer,
+  type Palette,
+} from "../../theme";
 import type { ToastType } from "../../hooks/useToast";
 
 interface ToastProps {
@@ -21,9 +29,11 @@ export default function Toast({ message, visible, type = "success" }: ToastProps
 
   return (
     <Animated.View
-      entering={SlideInDown.springify().damping(18).stiffness(220)}
-      exiting={SlideOutDown.duration(200)}
-      style={[styles.toast, isError && styles.toastError]}
+      entering={SlideInDown.springify()
+        .damping(motion.spring.damping)
+        .stiffness(motion.spring.stiffness)}
+      exiting={SlideOutDown.duration(motion.exit)}
+      style={[styles.toast, elevation.md, isError && styles.toastError]}
     >
       <Ionicons
         name={isError ? "alert-circle" : "checkmark-circle"}
@@ -51,13 +61,7 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radii.md,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
-      zIndex: 1000,
-      // Soft lift off the surface
-      shadowColor: "#000",
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 8,
+      zIndex: zLayer.toast,
     },
     toastError: {
       backgroundColor: colors.danger,

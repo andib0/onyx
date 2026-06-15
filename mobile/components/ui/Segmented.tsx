@@ -9,7 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { tap } from "../../utils/haptics";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, type Palette } from "../../theme";
+import { spacing, radii, fontSizes, motion, type Palette } from "../../theme";
 
 interface SegmentedProps<T extends string> {
   options: T[];
@@ -41,7 +41,7 @@ export default function Segmented<T extends string>({
     const target = index * segW;
     tx.value = reduceMotion
       ? target
-      : withTiming(target, { duration: 220, easing: Easing.out(Easing.cubic) });
+      : withTiming(target, { duration: motion.base, easing: Easing.out(Easing.cubic) });
   }, [index, segW, reduceMotion, tx]);
 
   const thumbStyle = useAnimatedStyle(() => ({
