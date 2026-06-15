@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { Pressable, Text, View, StyleSheet, type ViewStyle } from "react-native";
+import {
+  Pressable,
+  Text,
+  View,
+  ActivityIndicator,
+  StyleSheet,
+  type ViewStyle,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
@@ -27,6 +34,7 @@ interface ButtonProps {
   variant?: Variant;
   size?: Size;
   disabled?: boolean;
+  loading?: boolean;
   haptic?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
@@ -38,6 +46,7 @@ export default function Button({
   variant = "primary",
   size = "md",
   disabled = false,
+  loading = false,
   haptic = true,
   icon,
   style,
@@ -57,8 +66,10 @@ export default function Button({
     transform: [{ scale: scale.value }],
   }));
 
+  const isDisabled = disabled || loading;
+
   const handlePress = () => {
-    if (disabled) return;
+    if (isDisabled) return;
     if (haptic) confirm();
     onPress();
   };
@@ -72,29 +83,36 @@ export default function Button({
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 14, stiffness: 300 });
       }}
-      disabled={disabled}
+      disabled={isDisabled}
       style={[
         styles.base,
         sizeStyles[size],
         variantStyles[variant],
-        disabled && styles.disabled,
+        isDisabled && styles.disabled,
         animatedStyle,
         style,
       ]}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       <View style={styles.content}>
-        {icon ? (
-          <Ionicons
-            name={icon}
-            size={size === "lg" ? 20 : 16}
-            color={iconColors[variant]}
-          />
-        ) : null}
-        <Text style={[styles.label, labelSizes[size], labelVariants[variant]]}>
-          {label}
-        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={iconColors[variant]} />
+        ) : (
+          <>
+            {icon ? (
+              <Ionicons
+                name={icon}
+                size={size === "lg" ? 20 : 16}
+                color={iconColors[variant]}
+              />
+            ) : null}
+            <Text style={[styles.label, labelSizes[size], labelVariants[variant]]}>
+              {label}
+            </Text>
+          </>
+        )}
       </View>
     </AnimatedPressable>
   );

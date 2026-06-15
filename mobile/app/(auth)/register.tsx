@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   KeyboardAvoidingView,
@@ -13,7 +12,9 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 export default function RegisterScreen() {
   const { register, error, clearError, isLoading } = useAuth();
@@ -27,6 +28,11 @@ export default function RegisterScreen() {
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [localError, setLocalError] = useState("");
+
+  const clearErrors = () => {
+    if (error) clearError();
+    if (localError) setLocalError("");
+  };
 
   const handleRegister = async () => {
     setLocalError("");
@@ -62,91 +68,102 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.brand}>ONYX</Text>
-          <Text style={styles.subtitle}>Create Account</Text>
+          <Text style={styles.subtitle}>Create account</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Username (optional)"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Username"
+              icon="person-outline"
+              placeholder="Optional"
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
+              autoComplete="username"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Email"
+              icon="mail-outline"
+              placeholder="you@example.com"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
-                if (error) clearError();
-                if (localError) setLocalError("");
+                clearErrors();
               }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Password"
+              icon="lock-closed-outline"
+              placeholder="Choose a password"
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
-                if (localError) setLocalError("");
+                clearErrors();
               }}
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Confirm password"
+              icon="lock-closed-outline"
+              placeholder="Repeat password"
               value={confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
-                if (localError) setLocalError("");
+                clearErrors();
               }}
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
             />
 
             <View style={styles.row}>
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                placeholder="Age"
-                placeholderTextColor={colors.muted}
-                value={age}
-                onChangeText={setAge}
-                keyboardType="numeric"
-              />
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                placeholder="Weight (kg)"
-                placeholderTextColor={colors.muted}
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="numeric"
-              />
+              <View style={styles.half}>
+                <Input
+                  label="Age"
+                  placeholder="—"
+                  value={age}
+                  onChangeText={setAge}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  mono
+                />
+              </View>
+              <View style={styles.half}>
+                <Input
+                  label="Weight"
+                  unit="kg"
+                  placeholder="—"
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="decimal-pad"
+                  maxLength={5}
+                  mono
+                />
+              </View>
             </View>
 
             {displayError ? <Text style={styles.error}>{displayError}</Text> : null}
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed,
-                isLoading && styles.buttonDisabled,
-              ]}
+            <Button
+              label="Create account"
+              icon="person-add-outline"
+              size="lg"
+              loading={isLoading}
               onPress={handleRegister}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>
-                {isLoading ? "Creating..." : "Create Account"}
-              </Text>
-            </Pressable>
+              style={styles.submit}
+            />
 
-            <Pressable onPress={() => router.back()} style={styles.link}>
-              <Text style={styles.linkText}>Already have an account? Sign In</Text>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.link}
+              accessibilityRole="button"
+            >
+              <Text style={styles.linkText}>Already have an account? Sign in</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -157,79 +174,56 @@ export default function RegisterScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-  },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 48,
-    color: colors.text,
-    textAlign: "center",
-    letterSpacing: 8,
-  },
-  subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: "center",
-    marginBottom: spacing.xxl,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  row: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
-  },
-  halfInput: {
-    flex: 1,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: fontSizes.sm,
-    textAlign: "center",
-  },
-  button: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-  },
-  link: {
-    alignItems: "center",
-    paddingVertical: spacing.md,
-  },
-  linkText: {
-    color: colors.accent,
-    fontSize: fontSizes.md,
-  },
-});
+    safe: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    flex: {
+      flex: 1,
+    },
+    container: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.xxl,
+    },
+    brand: {
+      fontFamily: fonts.brand,
+      fontSize: 48,
+      color: colors.text,
+      textAlign: "center",
+      letterSpacing: 8,
+    },
+    subtitle: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      textAlign: "center",
+      marginBottom: spacing.xxl,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    row: {
+      flexDirection: "row",
+      gap: spacing.md,
+    },
+    half: {
+      flex: 1,
+    },
+    error: {
+      color: colors.danger,
+      fontSize: fontSizes.sm,
+      textAlign: "center",
+    },
+    submit: {
+      marginTop: spacing.sm,
+    },
+    link: {
+      alignItems: "center",
+      paddingVertical: spacing.md,
+    },
+    linkText: {
+      color: colors.accent,
+      fontSize: fontSizes.md,
+    },
+  });

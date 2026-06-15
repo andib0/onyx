@@ -3,12 +3,14 @@ import {
   View,
   Text,
   TextInput,
+  Pressable,
   StyleSheet,
   type KeyboardTypeOptions,
+  type TextInputProps,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
+import { spacing, radii, fontSizes, fonts, hitSlopDefault, type Palette } from "../../theme";
 
 interface InputProps {
   label?: string;
@@ -21,10 +23,17 @@ interface InputProps {
   maxLength?: number;
   autoFocus?: boolean;
   mono?: boolean;
+  secureTextEntry?: boolean;
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  autoComplete?: TextInputProps["autoComplete"];
+  textContentType?: TextInputProps["textContentType"];
+  returnKeyType?: TextInputProps["returnKeyType"];
+  onSubmitEditing?: TextInputProps["onSubmitEditing"];
+  error?: string;
 }
 
 // Canonical text input — one treatment for every form across the app.
-// Focused state lifts the border to accent + a faint accent tint for feedback.
+// Focused lifts the border to accent + a faint tint; error turns it danger.
 export default function Input({
   label,
   value,
@@ -36,10 +45,24 @@ export default function Input({
   maxLength,
   autoFocus,
   mono,
+  secureTextEntry,
+  autoCapitalize,
+  autoComplete,
+  textContentType,
+  returnKeyType,
+  onSubmitEditing,
+  error,
 }: InputProps) {
   const { colors, tints } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
+
+  const borderColor = error
+    ? colors.danger
+    : focused
+      ? colors.accent
+      : colors.border;
 
   return (
     <View style={styles.wrap}>
@@ -47,14 +70,15 @@ export default function Input({
       <View
         style={[
           styles.field,
-          focused && { borderColor: colors.accent, backgroundColor: tints.accent },
+          { borderColor },
+          focused && !error && { backgroundColor: tints.accent },
         ]}
       >
         {icon ? (
           <Ionicons
             name={icon}
             size={16}
-            color={focused ? colors.accent : colors.faint}
+            color={error ? colors.danger : focused ? colors.accent : colors.faint}
             style={styles.icon}
           />
         ) : null}
@@ -67,11 +91,33 @@ export default function Input({
           keyboardType={keyboardType}
           maxLength={maxLength}
           autoFocus={autoFocus}
+          secureTextEntry={secureTextEntry && hidden}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
-        {unit ? <Text style={styles.unit}>{unit}</Text> : null}
+        {secureTextEntry ? (
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={hitSlopDefault}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? "Show password" : "Hide password"}
+          >
+            <Ionicons
+              name={hidden ? "eye-outline" : "eye-off-outline"}
+              size={18}
+              color={colors.muted}
+            />
+          </Pressable>
+        ) : unit ? (
+          <Text style={styles.unit}>{unit}</Text>
+        ) : null}
       </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -91,6 +137,7 @@ const makeStyles = (colors: Palette) =>
     field: {
       flexDirection: "row",
       alignItems: "center",
+      gap: spacing.sm,
       backgroundColor: colors.bg,
       borderWidth: 1,
       borderColor: colors.border,
@@ -99,7 +146,7 @@ const makeStyles = (colors: Palette) =>
       minHeight: 48,
     },
     icon: {
-      marginRight: spacing.sm,
+      marginRight: 0,
     },
     input: {
       flex: 1,
@@ -113,6 +160,9 @@ const makeStyles = (colors: Palette) =>
     unit: {
       fontSize: fontSizes.sm,
       color: colors.muted,
-      marginLeft: spacing.xs,
+    },
+    errorText: {
+      fontSize: fontSizes.xs,
+      color: colors.danger,
     },
   });

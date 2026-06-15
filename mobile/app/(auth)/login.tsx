@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   KeyboardAvoidingView,
@@ -13,7 +12,9 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, type Palette } from "../../theme";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import { spacing, fontSizes, fonts, type Palette } from "../../theme";
 
 export default function LoginScreen() {
   const { login, error, clearError, isLoading } = useAuth();
@@ -45,10 +46,10 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Daily Tracker</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Email"
+              icon="mail-outline"
+              placeholder="you@example.com"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -56,39 +57,40 @@ export default function LoginScreen() {
               }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.muted}
+            <Input
+              label="Password"
+              icon="lock-closed-outline"
+              placeholder="Your password"
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
                 if (error) clearError();
               }}
               secureTextEntry
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
+              error={error || undefined}
             />
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed,
-                isLoading && styles.buttonDisabled,
-              ]}
+            <Button
+              label="Sign in"
+              icon="log-in-outline"
+              size="lg"
+              loading={isLoading}
               onPress={handleLogin}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>
-                {isLoading ? "Signing in..." : "Sign In"}
-              </Text>
-            </Pressable>
+              style={styles.submit}
+            />
 
             <Pressable
               onPress={() => router.push("/(auth)/register")}
               style={styles.link}
+              accessibilityRole="button"
             >
               <Text style={styles.linkText}>Don't have an account? Register</Text>
             </Pressable>
@@ -101,72 +103,43 @@ export default function LoginScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-  },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 48,
-    color: colors.text,
-    textAlign: "center",
-    letterSpacing: 8,
-  },
-  subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: "center",
-    marginBottom: spacing.xxl,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: fontSizes.sm,
-    textAlign: "center",
-  },
-  button: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-  },
-  link: {
-    alignItems: "center",
-    paddingVertical: spacing.md,
-  },
-  linkText: {
-    color: colors.accent,
-    fontSize: fontSizes.md,
-  },
-});
+    safe: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    flex: {
+      flex: 1,
+    },
+    container: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: spacing.xl,
+    },
+    brand: {
+      fontFamily: fonts.brand,
+      fontSize: 48,
+      color: colors.text,
+      textAlign: "center",
+      letterSpacing: 8,
+    },
+    subtitle: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      textAlign: "center",
+      marginBottom: spacing.xxl,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    submit: {
+      marginTop: spacing.sm,
+    },
+    link: {
+      alignItems: "center",
+      paddingVertical: spacing.md,
+    },
+    linkText: {
+      color: colors.accent,
+      fontSize: fontSizes.md,
+    },
+  });
