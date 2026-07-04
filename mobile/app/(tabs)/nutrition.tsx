@@ -39,6 +39,7 @@ import {
 } from "../../utils/nutrition";
 import { getRecentFoods, pushRecentFood } from "../../utils/recentFoods";
 import { updatePreferences } from "../../api/preferences";
+import { parseSupplementQuickAdd } from "../../utils/quickParse";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
@@ -83,6 +84,19 @@ export default function NutritionScreen() {
   const [suppName, setSuppName] = useState("");
   const [suppDose, setSuppDose] = useState("");
   const [suppTime, setSuppTime] = useState("");
+
+  // Smart name field: "Creatine 5g 8am" fills dose and time as you type.
+  // Parsed pieces land in their own (still editable) fields.
+  const handleSuppNameChange = (text: string) => {
+    const parsed = parseSupplementQuickAdd(text);
+    if (parsed.dose || parsed.timeAt) {
+      setSuppName(parsed.item);
+      if (parsed.dose) setSuppDose(parsed.dose);
+      if (parsed.timeAt) setSuppTime(parsed.timeAt);
+    } else {
+      setSuppName(text);
+    }
+  };
 
   const openAdd = (mode: "food" | "supplement") => {
     setAddMode(mode);
@@ -485,10 +499,10 @@ export default function NutritionScreen() {
               <View style={styles.quickRow}>
                 <TextInput
                   style={[sharedStyles.formInput, styles.quickName]}
-                  placeholder="Supplement name"
+                  placeholder="Creatine 5g 8am — dose & time parse automatically"
                   placeholderTextColor={colors.muted}
                   value={suppName}
-                  onChangeText={setSuppName}
+                  onChangeText={handleSuppNameChange}
                   maxLength={60}
                 />
               </View>
