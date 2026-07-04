@@ -27,6 +27,7 @@ import {
   enqueueToggle,
   flushMutationQueue,
   pendingMutationCount,
+  subscribePendingCount,
 } from "../mutationQueue";
 
 beforeEach(() => {
@@ -80,6 +81,17 @@ describe("mutationQueue", () => {
     const { remaining } = await flushMutationQueue();
     expect(remaining).toBe(0);
     expect(await pendingMutationCount()).toBe(0);
+  });
+
+  it("notifies subscribers on enqueue and flush", async () => {
+    const seen: number[] = [];
+    const unsubscribe = subscribePendingCount((n) => seen.push(n));
+    await enqueueToggle("completion", "b1", "2026-07-04", true);
+    toggleCompletion.mockResolvedValue({ success: true });
+    await flushMutationQueue();
+    unsubscribe();
+    expect(seen).toContain(1);
+    expect(seen[seen.length - 1]).toBe(0);
   });
 
   it("ignores malformed persisted entries", async () => {

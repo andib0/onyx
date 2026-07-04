@@ -2,13 +2,13 @@
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
 import { useAppState } from "../contexts/AppStateContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
+import Input from "../components/ui/Input";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
 import Checkbox from "../components/shared/Checkbox";
@@ -223,14 +223,15 @@ export default function SupplementsScreen() {
 
       {/* Library Search */}
       <Card title="Library">
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search supplement database..."
-          placeholderTextColor={colors.muted}
-          value={libQuery}
-          onChangeText={setLibQuery}
-          autoCapitalize="none"
-        />
+        <View style={styles.searchInput}>
+          <Input
+            icon="search"
+            placeholder="Search supplement database..."
+            value={libQuery}
+            onChangeText={setLibQuery}
+            autoCapitalize="none"
+          />
+        </View>
         {libSearching ? (
           <ActivityIndicator
             size="small"
@@ -352,13 +353,6 @@ const makeStyles = (colors: Palette) =>
 
   // Library search
   searchInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.bg,
     marginBottom: spacing.sm,
   },
   searchSpinner: {

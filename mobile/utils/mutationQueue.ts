@@ -43,6 +43,21 @@ async function readQueue(): Promise<QueuedToggle[]> {
   }
 }
 
+// UI subscribers (pending-sync pill) notified whenever the queue length changes.
+const listeners = new Set<(count: number) => void>();
+
+export function subscribePendingCount(cb: (count: number) => void): () => void {
+  listeners.add(cb);
+  readQueue().then((q) => cb(q.length));
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+function notify(count: number) {
+  for (const cb of listeners) cb(count);
+}
+
 async function writeQueue(queue: QueuedToggle[]): Promise<void> {
   try {
     if (queue.length === 0) {
@@ -53,6 +68,7 @@ async function writeQueue(queue: QueuedToggle[]): Promise<void> {
   } catch {
     // Queue persistence is best-effort; the optimistic UI state already applied.
   }
+  notify(queue.length);
 }
 
 export async function enqueueToggle(

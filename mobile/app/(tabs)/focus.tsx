@@ -23,6 +23,7 @@ import Glow from "../../components/ui/Glow";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import ChecklistSection from "../../components/shared/ChecklistSection";
+import SyncStatusPill from "../../components/shared/SyncStatusPill";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
 import ProteinCard from "../../components/focus/ProteinCard";
 import {
@@ -351,6 +352,7 @@ export default function FocusScreen() {
             {displayName ? `, ${displayName}` : ""}
           </Text>
           <Text style={styles.dateLine}>{formatToday()}</Text>
+          <SyncStatusPill />
         </Animated.View>
         <Animated.View entering={ZoomIn.delay(150).duration(450)}>
           <Ionicons

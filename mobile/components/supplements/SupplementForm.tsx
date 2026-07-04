@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
+import Input from "../ui/Input";
 import type { SupplementItem } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette } from "../../theme";
@@ -29,48 +30,37 @@ export default function SupplementForm({
   return (
     <Card>
       <View style={styles.formGrid}>
-        <View style={styles.formField}>
-          <Text style={styles.formLabel}>Name</Text>
-          <TextInput
-            style={styles.formInput}
-            value={draft.item}
-            onChangeText={(t) => updateField("item", t)}
-            placeholder="Supplement name"
-            placeholderTextColor={colors.muted}
-          />
-        </View>
+        <Input
+          label="Name"
+          value={draft.item}
+          onChangeText={(t) => updateField("item", t)}
+          placeholder="Supplement name"
+        />
         <View style={styles.formRow}>
           <View style={styles.formField}>
-            <Text style={styles.formLabel}>Dose</Text>
-            <TextInput
-              style={styles.formInput}
+            <Input
+              label="Dose"
               value={draft.dose}
               onChangeText={(t) => updateField("dose", t)}
               placeholder="e.g. 5g"
-              placeholderTextColor={colors.muted}
             />
           </View>
           <View style={styles.formField}>
-            <Text style={styles.formLabel}>Time</Text>
-            <TextInput
-              style={styles.formInput}
+            <Input
+              label="Time"
               value={draft.timeAt}
               onChangeText={(t) => updateField("timeAt", t)}
               placeholder="08:00"
-              placeholderTextColor={colors.muted}
+              mono
             />
           </View>
         </View>
-        <View style={styles.formField}>
-          <Text style={styles.formLabel}>Goal</Text>
-          <TextInput
-            style={styles.formInput}
-            value={draft.goal}
-            onChangeText={(t) => updateField("goal", t)}
-            placeholder="Why you take this"
-            placeholderTextColor={colors.muted}
-          />
-        </View>
+        <Input
+          label="Goal"
+          value={draft.goal}
+          onChangeText={(t) => updateField("goal", t)}
+          placeholder="Why you take this"
+        />
         <View style={styles.formField}>
           <Text style={styles.formLabel}>Tier</Text>
           <View style={styles.tierRow}>
@@ -134,15 +124,6 @@ const makeStyles = (colors: Palette) =>
       fontSize: fontSizes.xs,
       color: colors.muted,
       fontWeight: "500",
-    },
-    formInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.sm,
-      padding: spacing.sm,
-      fontSize: fontSizes.md,
-      color: colors.text,
-      backgroundColor: colors.bg,
     },
     tierRow: {
       flexDirection: "row",
