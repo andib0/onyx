@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../contexts/AuthContext";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useMeals } from "../../contexts/MealsContext";
@@ -37,6 +38,7 @@ import {
   computeMacroTargets,
 } from "../../utils/nutrition";
 import { getRecentFoods, pushRecentFood } from "../../utils/recentFoods";
+import { updatePreferences } from "../../api/preferences";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
@@ -55,6 +57,7 @@ export default function NutritionScreen() {
     useData();
   const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
+  const { refreshUser } = useAuth();
   const { programGoal } = useProgram();
   const { supplementsList, supplementChecksForToday, addSupplementItem } =
     useSupplements();
@@ -196,6 +199,17 @@ export default function NutritionScreen() {
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
   const proteinSuggestion = suggestProteinTarget(scoreHistory, macroTargets.protein || 0);
+  // Apply the suggested target to preferences; nutritionTargets derive from
+  // user prefs, so refreshUser propagates the change everywhere.
+  const handleApplyProteinTarget = async (grams: number) => {
+    const result = await updatePreferences({ proteinTarget: `${grams} g/day` });
+    if (!result.success) {
+      showToast(result.error || "Couldn't update target — try again");
+      return;
+    }
+    await refreshUser();
+    showToast(`Protein target set to ${grams}g/day`);
+  };
   const proteinBars = last7Bars(scoreHistory, (r) => r.protein);
   const proteinMax = proteinBars.reduce((m, b) => Math.max(m, b.value), 0) || 1;
   const hydrationValue =
@@ -339,13 +353,21 @@ export default function NutritionScreen() {
             color={colors.accent}
           />
           {proteinSuggestion ? (
-            <View style={styles.suggestRow}>
-              <Ionicons name="bulb-outline" size={14} color={colors.accent} />
-              <Text style={styles.suggestText}>
-                Averaging {proteinSuggestion.avg}g/day over {proteinSuggestion.days}{" "}
-                days — a {proteinSuggestion.suggested}g target may fit better.
-              </Text>
-            </View>
+            <>
+              <View style={styles.suggestRow}>
+                <Ionicons name="bulb-outline" size={14} color={colors.accent} />
+                <Text style={styles.suggestText}>
+                  Averaging {proteinSuggestion.avg}g/day over {proteinSuggestion.days}{" "}
+                  days — a {proteinSuggestion.suggested}g target may fit better.
+                </Text>
+              </View>
+              <Button
+                label={`Set target to ${proteinSuggestion.suggested}g`}
+                variant="secondary"
+                size="sm"
+                onPress={() => handleApplyProteinTarget(proteinSuggestion.suggested)}
+              />
+            </>
           ) : null}
         </Card>
       ) : null}
