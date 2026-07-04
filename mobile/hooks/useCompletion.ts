@@ -1,7 +1,7 @@
 ﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
-import { enqueueCompletion } from "../utils/mutationQueue";
+import { enqueueToggle } from "../utils/mutationQueue";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
 import * as scheduleApi from "../api/schedule";
 
@@ -37,7 +37,7 @@ function useCompletion(
 
     if (result.networkError) {
       // Offline: keep the optimistic state and queue the write for replay.
-      await enqueueCompletion(blockId, todayKeyValue, isComplete);
+      await enqueueToggle("completion", blockId, todayKeyValue, isComplete);
       showToast("Offline — saved locally, will sync");
       return;
     }

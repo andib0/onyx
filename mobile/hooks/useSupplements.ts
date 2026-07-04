@@ -1,6 +1,7 @@
 ﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
+import { enqueueToggle } from "../utils/mutationQueue";
 import type { AppState, SupplementItem } from "../types/appTypes";
 import * as supplementsApi from "../api/supplements";
 
@@ -18,24 +19,35 @@ function useSupplements(
   const supplementLogByDate = appState.suppLog || {};
 
   const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
+    // Optimistic: reflect the toggle immediately; the server call follows.
+    const applyLocal = (value: boolean) =>
+      setAppState((prev) => {
+        const next = ensureState(Object.assign({}, prev));
+        next.suppLog = Object.assign({}, next.suppLog, {
+          [todayKeyValue]: Object.assign({}, next.suppLog[todayKeyValue] || {}, {
+            [supplementId]: value,
+          }),
+        });
+        return next;
+      });
+
+    applyLocal(isChecked);
+
     const result = await supplementsApi.toggleSupplementLog(
       supplementId,
       todayKeyValue,
       isChecked
     );
-    if (!result.success) {
-      showToast(result.error || "Couldn't update supplement log — try again");
+    if (result.success) return;
+
+    if (result.networkError) {
+      await enqueueToggle("supplement", supplementId, todayKeyValue, isChecked);
+      showToast("Offline — saved locally, will sync");
       return;
     }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.suppLog = Object.assign({}, next.suppLog, {
-        [todayKeyValue]: Object.assign({}, next.suppLog[todayKeyValue] || {}, {
-          [supplementId]: isChecked,
-        }),
-      });
-      return next;
-    });
+
+    applyLocal(!isChecked);
+    showToast(result.error || "Couldn't update supplement log — try again");
   };
 
   const addSupplementItem = async (supplement: SupplementItem) => {

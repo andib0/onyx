@@ -1,33 +1,49 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as scheduleApi from "../api/schedule";
+import { toggleMealLog } from "../api/meals";
+import { toggleSupplementLog } from "../api/supplements";
+import type { ApiResponse } from "../api/client";
 
-// Persisted retry queue for writes that failed offline. Completions only for
-// now — they are the highest-frequency write and the one most often made on
-// gym wifi. Latest toggle per block+date wins.
+// Persisted retry queue for daily-log toggles that failed offline —
+// completions, meal checks, supplement checks. These are the writes most
+// often made on gym wifi. Latest toggle per (kind, id, date) wins.
 
 const QUEUE_KEY = "onyx_mutation_queue_v1";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-export type QueuedCompletion = {
-  type: "completion";
-  blockId: string;
+export type QueuedToggle = {
+  type: "completion" | "meal" | "supplement";
+  targetId: string;
   date: string; // YYYY-MM-DD
   isComplete: boolean;
   queuedAt: number;
 };
 
-async function readQueue(): Promise<QueuedCompletion[]> {
+function replay(mutation: QueuedToggle): Promise<ApiResponse<unknown>> {
+  if (mutation.type === "meal") {
+    return toggleMealLog(mutation.targetId, mutation.date, mutation.isComplete);
+  }
+  if (mutation.type === "supplement") {
+    return toggleSupplementLog(mutation.targetId, mutation.date, mutation.isComplete);
+  }
+  return scheduleApi.toggleCompletion(mutation.targetId, mutation.date, mutation.isComplete);
+}
+
+async function readQueue(): Promise<QueuedToggle[]> {
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Entries written before targetId existed (had blockId) are unreadable —
+    // drop anything without the current shape rather than replaying garbage.
+    return parsed.filter((m) => typeof m.targetId === "string");
   } catch {
     return [];
   }
 }
 
-async function writeQueue(queue: QueuedCompletion[]): Promise<void> {
+async function writeQueue(queue: QueuedToggle[]): Promise<void> {
   try {
     if (queue.length === 0) {
       await AsyncStorage.removeItem(QUEUE_KEY);
@@ -39,21 +55,25 @@ async function writeQueue(queue: QueuedCompletion[]): Promise<void> {
   }
 }
 
-export async function enqueueCompletion(
-  blockId: string,
+export async function enqueueToggle(
+  type: QueuedToggle["type"],
+  targetId: string,
   date: string,
   isComplete: boolean
 ): Promise<void> {
   const queue = await readQueue();
-  const rest = queue.filter((m) => !(m.blockId === blockId && m.date === date));
-  rest.push({ type: "completion", blockId, date, isComplete, queuedAt: Date.now() });
+  const rest = queue.filter(
+    (m) => !(m.type === type && m.targetId === targetId && m.date === date)
+  );
+  rest.push({ type, targetId, date, isComplete, queuedAt: Date.now() });
   await writeQueue(rest);
 }
 
 let flushing = false;
 
-// Replays queued mutations. Entries that fail stay queued (unless stale);
-// entries the server rejects for a deleted block are dropped with the rest.
+// Replays queued mutations. Entries that fail with a network error stay
+// queued (unless stale); server rejections are dropped — retrying a deleted
+// target can never succeed and would wedge the queue.
 export async function flushMutationQueue(): Promise<{ flushed: number; remaining: number }> {
   if (flushing) return { flushed: 0, remaining: 0 };
   flushing = true;
@@ -62,24 +82,17 @@ export async function flushMutationQueue(): Promise<{ flushed: number; remaining
     if (queue.length === 0) return { flushed: 0, remaining: 0 };
 
     const now = Date.now();
-    const remaining: QueuedCompletion[] = [];
+    const remaining: QueuedToggle[] = [];
     let flushed = 0;
 
     for (const mutation of queue) {
       if (now - mutation.queuedAt > MAX_AGE_MS) continue; // too old to matter
-      const result = await scheduleApi.toggleCompletion(
-        mutation.blockId,
-        mutation.date,
-        mutation.isComplete
-      );
+      const result = await replay(mutation);
       if (result.success) {
         flushed++;
       } else if (result.networkError) {
-        // Still offline — keep it and stop hammering.
         remaining.push(mutation);
       }
-      // Non-network failures (block deleted, auth) are dropped: retrying
-      // can never succeed and would wedge the queue.
     }
 
     await writeQueue(remaining);

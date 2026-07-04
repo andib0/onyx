@@ -6,6 +6,7 @@ import {
   updateMealTemplate,
 } from "../api/meals";
 import { ensureState } from "../utils/storage";
+import { enqueueToggle } from "../utils/mutationQueue";
 import { getWeekdayName } from "../utils/time";
 import type { AppState, MealTemplate } from "../types/appTypes";
 
@@ -19,20 +20,31 @@ export default function useMeals(
   const [selectedMealDay, setSelectedMealDay] = useState(weekdayName);
 
   const setMealChecked = async (mealId: string, isChecked: boolean) => {
+    // Optimistic: reflect the toggle immediately; the server call follows.
+    const applyLocal = (value: boolean) =>
+      setAppState((prev) => {
+        const next = ensureState(Object.assign({}, prev));
+        next.mealLog = Object.assign({}, next.mealLog, {
+          [todayKeyValue]: Object.assign({}, next.mealLog[todayKeyValue] || {}, {
+            [mealId]: value,
+          }),
+        });
+        return next;
+      });
+
+    applyLocal(isChecked);
+
     const result = await toggleMealLog(mealId, todayKeyValue, isChecked);
-    if (!result.success) {
-      showToast(result.error || "Couldn't update meal log — try again");
+    if (result.success) return;
+
+    if (result.networkError) {
+      await enqueueToggle("meal", mealId, todayKeyValue, isChecked);
+      showToast("Offline — saved locally, will sync");
       return;
     }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.mealLog = Object.assign({}, next.mealLog, {
-        [todayKeyValue]: Object.assign({}, next.mealLog[todayKeyValue] || {}, {
-          [mealId]: isChecked,
-        }),
-      });
-      return next;
-    });
+
+    applyLocal(!isChecked);
+    showToast(result.error || "Couldn't update meal log — try again");
   };
 
   const updateMealTemplateForDay = async (
