@@ -36,6 +36,7 @@ import {
   computeConsumedMacros,
   computeMacroTargets,
 } from "../../utils/nutrition";
+import { getRecentFoods, pushRecentFood } from "../../utils/recentFoods";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
@@ -113,6 +114,10 @@ export default function NutritionScreen() {
   // Food search state
   const [foodQuery, setFoodQuery] = useState("");
   const debouncedFoodQuery = useDebouncedValue(foodQuery, 300);
+  const [recentFoods, setRecentFoods] = useState<Food[]>([]);
+  useEffect(() => {
+    getRecentFoods().then(setRecentFoods).catch(() => {});
+  }, []);
   const [foodResults, setFoodResults] = useState<Food[]>([]);
   const [foodSearching, setFoodSearching] = useState(false);
 
@@ -155,6 +160,7 @@ export default function NutritionScreen() {
     try {
       await addMealTemplateForDay(selectedMealDay, foodToMealTemplate(food));
       showToast(`Added ${food.name}`);
+      pushRecentFood(food).then(setRecentFoods).catch(() => {});
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't add food — try again");
     }
@@ -444,6 +450,7 @@ export default function NutritionScreen() {
                 debouncedQuery={debouncedFoodQuery}
                 onAddFood={handleAddFoodToDay}
                 onSaveFood={handleSaveFood}
+                recentFoods={recentFoods}
               />
               <MyFoodsSection
                 myFoods={myFoods}

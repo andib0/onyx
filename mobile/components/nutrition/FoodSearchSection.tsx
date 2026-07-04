@@ -21,6 +21,7 @@ interface FoodSearchSectionProps {
   debouncedQuery: string;
   onAddFood: (food: Food) => void;
   onSaveFood: (foodId: string) => void;
+  recentFoods?: Food[];
 }
 
 export default function FoodSearchSection({
@@ -31,9 +32,13 @@ export default function FoodSearchSection({
   debouncedQuery,
   onAddFood,
   onSaveFood,
+  recentFoods = [],
 }: FoodSearchSectionProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Before typing, show the user's repeat foods — most logging is repeats.
+  const showRecents = !query.trim() && recentFoods.length > 0;
+  const listed = showRecents ? recentFoods : results;
   return (
     <Card title="Search Foods">
       <TextInput
@@ -51,7 +56,8 @@ export default function FoodSearchSection({
           style={styles.searchSpinner}
         />
       ) : null}
-      {results.map((food) => (
+      {showRecents ? <Text style={styles.recentLabel}>RECENT</Text> : null}
+      {listed.map((food) => (
         <View key={food.id} style={styles.foodResult}>
           <View style={styles.foodInfo}>
             <Text style={styles.foodName} numberOfLines={1}>
@@ -108,6 +114,13 @@ const makeStyles = (colors: Palette) =>
   },
   searchSpinner: {
     marginVertical: 10,
+  },
+  recentLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: "600",
+    marginBottom: spacing.xs,
   },
   foodResult: {
     flexDirection: "row",
