@@ -40,6 +40,8 @@ import {
 import { getRecentFoods, pushRecentFood } from "../../utils/recentFoods";
 import { updatePreferences } from "../../api/preferences";
 import { parseSupplementQuickAdd } from "../../utils/quickParse";
+import { lookupBarcode } from "../../utils/openFoodFacts";
+import BarcodeScannerSheet from "../../components/nutrition/BarcodeScannerSheet";
 import MacroDashboard from "../../components/nutrition/MacroDashboard";
 import BarChart from "../../components/ui/BarChart";
 import { last7Bars } from "../../utils/trends";
@@ -132,6 +134,16 @@ export default function NutritionScreen() {
   const [foodQuery, setFoodQuery] = useState("");
   const debouncedFoodQuery = useDebouncedValue(foodQuery, 300);
   const [recentFoods, setRecentFoods] = useState<Food[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
+  const handleBarcodeScanned = async (barcode: string) => {
+    const food = await lookupBarcode(barcode);
+    setShowScanner(false);
+    if (!food) {
+      showToast("No nutrition data found for that barcode");
+      return;
+    }
+    await handleAddFoodToDay(food);
+  };
   useEffect(() => {
     getRecentFoods().then(setRecentFoods).catch(() => {});
   }, []);
@@ -478,6 +490,13 @@ export default function NutritionScreen() {
                 <Button label="Add" size="sm" onPress={handleQuickAdd} />
               </View>
               <View style={styles.addDivider} />
+              <Button
+                label="Scan barcode"
+                variant="secondary"
+                size="sm"
+                icon="barcode-outline"
+                onPress={() => setShowScanner(true)}
+              />
               <FoodSearchSection
                 query={foodQuery}
                 onQueryChange={setFoodQuery}
@@ -561,6 +580,12 @@ export default function NutritionScreen() {
           onPress={() => router.push("/supplements")}
         />
       </SettingsGroup>
+
+      <BarcodeScannerSheet
+        visible={showScanner}
+        onScanned={handleBarcodeScanned}
+        onClose={() => setShowScanner(false)}
+      />
 
       <ConfirmModal
         visible={deleteTarget !== null}
