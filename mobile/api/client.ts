@@ -104,6 +104,8 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
+  /** True when the request never reached the server (offline, DNS, timeout). */
+  networkError?: boolean;
 }
 
 export async function apiClient<T = unknown>(
@@ -142,6 +144,7 @@ export async function apiClient<T = unknown>(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Network error",
+      networkError: true,
     };
   }
 }

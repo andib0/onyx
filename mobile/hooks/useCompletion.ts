@@ -1,6 +1,7 @@
 ﻿import type { Dispatch, SetStateAction } from "react";
 
 import { ensureState } from "../utils/storage";
+import { enqueueCompletion } from "../utils/mutationQueue";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
 import * as scheduleApi from "../api/schedule";
 
@@ -17,20 +18,33 @@ function useCompletion(
   const scheduleBlocks = appState.schedule || [];
 
   const setBlockCompletion = async (blockId: string, isComplete: boolean) => {
+    // Optimistic: reflect the toggle immediately; the server call follows.
+    const applyLocal = (value: boolean) =>
+      setAppState((prev) => {
+        const next = ensureState(Object.assign({}, prev));
+        next.completion[todayKeyValue] = Object.assign(
+          {},
+          next.completion[todayKeyValue] || {},
+          { [blockId]: value }
+        );
+        return next;
+      });
+
+    applyLocal(isComplete);
+
     const result = await scheduleApi.toggleCompletion(blockId, todayKeyValue, isComplete);
-    if (!result.success) {
-      showToast(result.error || "Couldn't save — check your connection");
+    if (result.success) return;
+
+    if (result.networkError) {
+      // Offline: keep the optimistic state and queue the write for replay.
+      await enqueueCompletion(blockId, todayKeyValue, isComplete);
+      showToast("Offline — saved locally, will sync");
       return;
     }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.completion[todayKeyValue] = Object.assign(
-        {},
-        next.completion[todayKeyValue] || {},
-        { [blockId]: isComplete }
-      );
-      return next;
-    });
+
+    // Server rejected it (block deleted, auth) — roll back.
+    applyLocal(!isComplete);
+    showToast(result.error || "Couldn't save — try again");
   };
 
   const updateScheduleBlock = async (blockId: string, patch: Partial<ScheduleBlock>) => {

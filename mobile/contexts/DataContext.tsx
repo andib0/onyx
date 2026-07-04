@@ -18,6 +18,7 @@ import { getScores, type DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
+import { flushMutationQueue } from "../utils/mutationQueue";
 import { buildNutritionTargets } from "../utils/nutrition";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
 
@@ -81,6 +82,22 @@ export function DataProvider({
       sub.remove();
     };
   }, []);
+
+  // Replay writes queued while offline: on foreground and once a minute.
+  // flushMutationQueue no-ops when the queue is empty or a flush is running.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const flush = () => flushMutationQueue().catch(() => {});
+    flush();
+    const intervalId = setInterval(flush, 60_000);
+    const sub = RNAppState.addEventListener("change", (status) => {
+      if (status === "active") flush();
+    });
+    return () => {
+      clearInterval(intervalId);
+      sub.remove();
+    };
+  }, [isAuthenticated]);
 
   const refreshScores = useCallback(async () => {
     const result = await getScores(30);
