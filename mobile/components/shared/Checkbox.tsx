@@ -73,7 +73,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "center",
     },
     checkmark: {
-      color: "#fff",
+      color: colors.onFill,
       fontWeight: "700",
     },
   });

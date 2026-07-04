@@ -55,7 +55,7 @@ export default function Button({
   const variantStyles = useMemo(() => makeVariantStyles(colors, tints), [colors, tints]);
   const labelVariants = useMemo(() => makeLabelVariants(colors), [colors]);
   const iconColors: Record<Variant, string> = {
-    primary: "#0b0f14",
+    primary: colors.onAccent,
     secondary: colors.text,
     danger: colors.danger,
     ghost: colors.muted,
@@ -167,7 +167,7 @@ const makeVariantStyles = (colors: Palette, tints: TintSet) =>
 
 const makeLabelVariants = (colors: Palette) =>
   StyleSheet.create({
-    primary: { color: "#0b0f14" },
+    primary: { color: colors.onAccent },
     secondary: { color: colors.text },
     danger: { color: colors.danger },
     ghost: { color: colors.muted },

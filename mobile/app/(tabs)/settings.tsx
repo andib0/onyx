@@ -344,7 +344,7 @@ const makeStyles = (colors: Palette) =>
   avatarText: {
     fontSize: fontSizes.md,
     fontWeight: "700",
-    color: "#0b0f14",
+    color: colors.onAccent,
   },
   editRow: {
     paddingHorizontal: spacing.lg,

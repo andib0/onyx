@@ -248,7 +248,7 @@ const makeStyles = (colors: Palette) =>
     justifyContent: "center",
   },
   submitBtnText: {
-    color: "#fff",
+    color: colors.onFill,
     fontSize: fontSizes.md,
     fontWeight: "600",
   },

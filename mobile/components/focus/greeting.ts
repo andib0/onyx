@@ -1,4 +1,5 @@
 import type { Ionicons } from "@expo/vector-icons";
+import { colors } from "../../theme";
 
 // Time-of-day copy and atmosphere for the Focus header.
 
@@ -15,10 +16,10 @@ export const getGreetingIcon = (
   minutes: number
 ): { name: keyof typeof Ionicons.glyphMap; color: string } => {
   const hour = Math.floor(minutes / 60);
-  if (hour >= 5 && hour < 8) return { name: "partly-sunny", color: "#fbbf24" };
-  if (hour >= 8 && hour < 17) return { name: "sunny", color: "#fbbf24" };
-  if (hour >= 17 && hour < 21) return { name: "cloudy-night", color: "#a78bfa" };
-  return { name: "moon", color: "#a78bfa" };
+  if (hour >= 5 && hour < 8) return { name: "partly-sunny", color: colors.timeSun };
+  if (hour >= 8 && hour < 17) return { name: "sunny", color: colors.timeSun };
+  if (hour >= 17 && hour < 21) return { name: "cloudy-night", color: colors.timeMoon };
+  return { name: "moon", color: colors.timeMoon };
 };
 
 // Time-of-day wash behind the header (Gentler Streak-style atmosphere)

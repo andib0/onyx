@@ -392,7 +392,7 @@ const makeStyles = (colors: Palette) =>
     justifyContent: "center",
   },
   addBtnText: {
-    color: "#fff",
+    color: colors.onFill,
     fontSize: fontSizes.md,
     fontWeight: "600",
   },

@@ -138,7 +138,7 @@ const makeStyles = (colors: Palette) =>
   confirmText: {
     fontSize: fontSizes.md,
     fontWeight: "600",
-    color: "#fff",
+    color: colors.onFill,
   },
   pressed: {
     opacity: 0.85,

@@ -528,7 +528,7 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
     fontWeight: "600",
   },
   dayPillTextActive: {
-    color: "#0b0f14",
+    color: colors.onAccent,
   },
   /* session */
   sessionHeader: {

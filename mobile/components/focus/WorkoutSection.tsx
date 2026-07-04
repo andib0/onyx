@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
+import Typo from "../ui/Typo";
 import Stepper from "../ui/Stepper";
 import Burst from "../ui/Burst";
 import type { ProgramRow } from "../../types/appTypes";
@@ -97,10 +98,10 @@ export default function WorkoutSection({
   if (!trainingDayActive) {
     return (
       <Card>
-        <Text style={styles.restDayTitle}>Rest day</Text>
-        <Text style={styles.restDayText}>
+        <Typo variant="heading">Rest day</Typo>
+        <Typo variant="meta" style={styles.restDayText}>
           Recovery is training too. Eat well, walk, sleep.
-        </Text>
+        </Typo>
       </Card>
     );
   }
@@ -319,14 +320,8 @@ export default function WorkoutSection({
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-    restDayTitle: {
-      fontSize: fontSizes.lg,
-      fontWeight: "600",
-      color: colors.text,
-    },
     restDayText: {
       fontSize: fontSizes.sm,
-      color: colors.muted,
       marginTop: 2,
     },
     /* done for today */

@@ -37,7 +37,7 @@ export default function FAB({ icon = "add", onPress, label }: FABProps) {
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={26} color="#0b0f14" />
+      <Ionicons name={icon} size={26} color={colors.onAccent} />
     </AnimatedPressable>
   );
 }

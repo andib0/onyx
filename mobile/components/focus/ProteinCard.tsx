@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Card from "../ui/Card";
+import Typo from "../ui/Typo";
 import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutrition";
 import type { MealTemplate, NutritionTarget } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -30,8 +31,8 @@ export default function ProteinCard({
     <Pressable onPress={onPress}>
       <Card>
         <View style={styles.proteinHeader}>
-          <Text style={styles.proteinLabel}>PROTEIN</Text>
-          <Text style={styles.proteinMeta}>{mealsLabel}</Text>
+          <Typo variant="label">Protein</Typo>
+          <Typo variant="meta">{mealsLabel}</Typo>
         </View>
         <View style={styles.proteinValueRow}>
           <Text style={styles.proteinValue}>
@@ -53,16 +54,6 @@ const makeStyles = (colors: Palette) =>
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "baseline",
-    },
-    proteinLabel: {
-      fontSize: fontSizes.xs,
-      color: colors.muted,
-      letterSpacing: 1.2,
-      fontWeight: "600",
-    },
-    proteinMeta: {
-      fontSize: fontSizes.xs,
-      color: colors.muted,
     },
     proteinValueRow: {
       marginTop: spacing.xs,

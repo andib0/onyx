@@ -71,7 +71,7 @@ function AchievementRow({ a }: { a: Achievement }) {
           <Ionicons
             name={a.icon as keyof typeof Ionicons.glyphMap}
             size={22}
-            color={a.unlocked ? "#0b0f14" : colors.muted}
+            color={a.unlocked ? colors.onAccent : colors.muted}
           />
         </View>
         <View style={styles.info}>
@@ -177,7 +177,7 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
     color: colors.text,
   },
   nextRemaining: {
-    fontSize: 30,
+    fontSize: fontSizes.title,
     fontFamily: fonts.mono,
     fontWeight: "700",
     color: colors.accent,

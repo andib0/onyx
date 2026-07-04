@@ -38,7 +38,7 @@ export default function Toast({ message, visible, type = "success" }: ToastProps
       <Ionicons
         name={isError ? "alert-circle" : "checkmark-circle"}
         size={18}
-        color="#fff"
+        color={colors.onFill}
       />
       <Text style={styles.text} numberOfLines={2}>
         {message}
@@ -68,7 +68,7 @@ const makeStyles = (colors: Palette) =>
     },
     text: {
       flex: 1,
-      color: "#fff",
+      color: colors.onFill,
       fontSize: fontSizes.md,
       fontWeight: "500",
     },

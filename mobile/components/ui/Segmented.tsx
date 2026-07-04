@@ -116,6 +116,6 @@ const makeStyles = (colors: Palette) =>
       fontWeight: "600",
     },
     labelActive: {
-      color: "#0b0f14",
+      color: colors.onAccent,
     },
   });

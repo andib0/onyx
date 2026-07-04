@@ -22,6 +22,13 @@ const darkColors = {
   warning: "#e8a838",
   danger: "#e2554b",
   supplement: "#2dd4bf",
+  // On-color inks: dark ink for accent-filled controls, white for saturated
+  // fills (danger buttons, toasts, checked boxes)
+  onAccent: "#0b0f14",
+  onFill: "#ffffff",
+  // Time-of-day glyph colors (Focus greeting icon)
+  timeSun: "#fbbf24",
+  timeMoon: "#a78bfa",
 };
 
 // Light palette — cool near-whites, slate text, accent deepened for white-bg contrast
@@ -45,6 +52,10 @@ const lightColors: typeof darkColors = {
   warning: "#c6841a",
   danger: "#d23f37",
   supplement: "#0fae9b",
+  onAccent: "#ffffff",
+  onFill: "#ffffff",
+  timeSun: "#d97706",
+  timeMoon: "#7c3aed",
 };
 
 // Resolved once at module load from the OS appearance. Switching the phone's

@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: fontSizes.md,
-    color: "#fff",
+    color: colors.onAccent,
     fontWeight: "600",
   },
 });
