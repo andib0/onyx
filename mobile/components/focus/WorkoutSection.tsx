@@ -7,7 +7,8 @@ import Stepper from "../ui/Stepper";
 import Burst from "../ui/Burst";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
-import { suggestProgression } from "../../utils/progression";
+import { suggestProgression, isCompound } from "../../utils/progression";
+import { plateBreakdown, warmupRamp } from "../../utils/plates";
 import { formatSeconds, formatLastSession } from "./workout/format";
 import SetPills from "./workout/SetPills";
 import IdleView from "./workout/IdleView";
@@ -220,6 +221,31 @@ export default function WorkoutSection({
             <Text style={styles.liftNotes}>{currentRow.notes}</Text>
           ) : null}
 
+          {(() => {
+            if (!isCompound(exerciseName)) return null;
+            const weight = parseFloat(weightInput.replace(",", "."));
+            const ramp =
+              workout.currentSet === 1 && sessionSets.length === 0
+                ? warmupRamp(weight)
+                : [];
+            const plates = plateBreakdown(weight);
+            if (!ramp.length && !plates) return null;
+            return (
+              <View style={styles.barbellHints}>
+                {ramp.length ? (
+                  <Text style={styles.barbellHintText} numberOfLines={1}>
+                    Warm-up: {ramp.map((s) => `${s.weightKg}×${s.reps}`).join(" · ")}
+                  </Text>
+                ) : null}
+                {plates ? (
+                  <Text style={styles.barbellHintText} numberOfLines={1}>
+                    Bar: {plates}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })()}
+
           <View style={styles.stepperRow}>
             <Stepper
               label="kg"
@@ -409,6 +435,14 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
       fontSize: fontSizes.sm,
       color: colors.muted,
       fontStyle: "italic",
+    },
+    barbellHints: {
+      gap: 2,
+    },
+    barbellHintText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
     },
     stepperRow: {
       flexDirection: "row",

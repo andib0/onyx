@@ -13,6 +13,11 @@ export type Suggestion = {
 
 const COMPOUND = /squat|deadlift|bench|row|press|pull|lunge|hip thrust|clean/i;
 
+// Barbell-style lift heuristic — used to gate plate math and warm-up ramps.
+export function isCompound(exerciseName: string): boolean {
+  return COMPOUND.test(exerciseName);
+}
+
 export function parseRepRange(reps: string): { low: number; high: number } {
   const matches = String(reps || "").match(/\d+/g);
   if (!matches || matches.length === 0) return { low: 8, high: 8 };
