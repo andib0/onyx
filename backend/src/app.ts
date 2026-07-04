@@ -8,6 +8,10 @@ import { generalRateLimiter } from './middleware/rateLimit.js';
 
 const app = express();
 
+// Behind Render's proxy — needed so rate limiting keys on the client IP,
+// not the proxy's, and secure cookies work over the forwarded proto.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 

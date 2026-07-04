@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { registerSchema, loginSchema } from '../validators/auth.schema.js';
 import { sendSuccess, sendCreated, sendError, sendUnauthorized } from '../utils/response.js';
+import { AppError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
@@ -32,6 +33,9 @@ export async function register(req: Request, res: Response) {
       refreshToken: result.refreshToken,
     }, 'Account created successfully');
   } catch (error) {
+    if (error instanceof AppError) {
+      return sendError(res, error.message, error.statusCode);
+    }
     const message = error instanceof Error ? error.message : 'Registration failed';
     return sendError(res, message);
   }

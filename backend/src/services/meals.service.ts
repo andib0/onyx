@@ -1,3 +1,4 @@
+import { AppError } from '../utils/errors.js';
 import { prisma } from '../config/database.js';
 
 export class MealsService {
@@ -43,7 +44,7 @@ export class MealsService {
 
   async updateGrams(userId: string, templateId: string, grams: number, foodId: string) {
     const food = await prisma.food.findUnique({ where: { id: foodId } });
-    if (!food) throw new Error('Food not found');
+    if (!food) throw new AppError('Food not found', 404, 'NOT_FOUND');
 
     const factor = grams / 100;
     const protein = food.proteinPer100g ? Number(food.proteinPer100g) * factor : null;
