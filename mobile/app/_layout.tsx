@@ -13,6 +13,8 @@ import {
   JetBrainsMono_700Bold,
 } from "@expo-google-fonts/jetbrains-mono";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { AppStateProvider } from "../contexts/AppStateContext";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
@@ -56,6 +58,15 @@ function RootStack() {
   );
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Archivo_700Bold,
@@ -75,16 +86,18 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppStateProvider>
-              <ErrorBoundary>
-                <ThemedStatusBar />
-                <RootStack />
-              </ErrorBoundary>
-            </AppStateProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppStateProvider>
+                <ErrorBoundary>
+                  <ThemedStatusBar />
+                  <RootStack />
+                </ErrorBoundary>
+              </AppStateProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

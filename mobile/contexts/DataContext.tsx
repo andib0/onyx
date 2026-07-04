@@ -9,6 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { AppState as RNAppState } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { useToastContext } from "./ToastContext";
 import useLog from "../hooks/useLog";
@@ -18,8 +19,8 @@ import { getScores, type DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
-import { flushMutationQueue } from "../utils/mutationQueue";
 import { buildNutritionTargets } from "../utils/nutrition";
+import { flushMutationQueue } from "../utils/mutationQueue";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
 
 interface DataContextType {
@@ -47,6 +48,10 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | null>(null);
 
+const APP_STATE_KEY = ["appState"];
+const SCORES_KEY = ["scores"];
+const EMPTY_STATE = normalizeState({});
+
 export function DataProvider({
   children,
   resetProgram,
@@ -58,11 +63,7 @@ export function DataProvider({
 }) {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { showToast } = useToastContext();
-
-  const [appState, setAppState] = useState<AppState>(() => normalizeState({}));
-  const [stateLoading, setStateLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [scoreHistory, setScoreHistory] = useState<DailyScore[]>([]);
+  const queryClient = useQueryClient();
 
   // Poll the date so a session left open past midnight rolls over to the new
   // day instead of writing completions/meals against yesterday's key.
@@ -99,57 +100,61 @@ export function DataProvider({
     };
   }, [isAuthenticated]);
 
-  const refreshScores = useCallback(async () => {
-    const result = await getScores(30);
-    if (result.success && result.data) setScoreHistory(result.data);
-  }, []);
+  const enabled = isAuthenticated && !authLoading;
 
-  // Load app state from backend
+  const stateQuery = useQuery({
+    queryKey: APP_STATE_KEY,
+    enabled,
+    queryFn: async (): Promise<AppState> => {
+      const result = await exportUserData();
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Failed to load state");
+      }
+      return normalizeState(result.data);
+    },
+  });
+
+  const scoresQuery = useQuery({
+    queryKey: SCORES_KEY,
+    enabled,
+    queryFn: async (): Promise<DailyScore[]> => {
+      const result = await getScores(30);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Failed to load scores");
+      }
+      return result.data;
+    },
+  });
+
+  // Drop cached account data on logout so the next sign-in starts clean.
   useEffect(() => {
-    if (authLoading) return undefined;
-    if (!isAuthenticated) {
-      setAppState(normalizeState({}));
-      resetProgram();
-      setStateLoading(false);
-      setLoadError(false);
-      setScoreHistory([]);
-      return undefined;
-    }
-    refreshScores().catch(() => {});
-    let cancelled = false;
-    setStateLoading(true);
-    exportUserData()
-      .then((result) => {
-        if (cancelled) return;
-        if (result.success && result.data) {
-          setAppState(normalizeState(result.data));
-          setLoadError(false);
-        } else {
-          setAppState(normalizeState({}));
-          setLoadError(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setStateLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated, resetProgram, refreshScores]);
+    if (authLoading || isAuthenticated) return;
+    queryClient.removeQueries({ queryKey: APP_STATE_KEY });
+    queryClient.removeQueries({ queryKey: SCORES_KEY });
+    resetProgram();
+  }, [authLoading, isAuthenticated, queryClient, resetProgram]);
 
-  // Manual refresh (pull-to-refresh, error retry)
+  const appState = stateQuery.data ?? EMPTY_STATE;
+
+  // Same contract as the old useState setter — domain hooks mutate the cached
+  // state directly after their API call resolves.
+  const setAppState = useCallback<Dispatch<SetStateAction<AppState>>>(
+    (action) => {
+      queryClient.setQueryData<AppState>(APP_STATE_KEY, (prev) => {
+        const base = prev ?? EMPTY_STATE;
+        return typeof action === "function" ? action(base) : action;
+      });
+    },
+    [queryClient]
+  );
+
   const reloadState = useCallback(async () => {
-    const result = await exportUserData();
-    if (result.success && result.data) {
-      setAppState(normalizeState(result.data));
-      setLoadError(false);
-    } else {
-      setLoadError(true);
-    }
-  }, []);
+    await Promise.allSettled([stateQuery.refetch(), scoresQuery.refetch()]);
+  }, [stateQuery, scoresQuery]);
+
+  const refreshScores = useCallback(async () => {
+    await scoresQuery.refetch();
+  }, [scoresQuery]);
 
   // Log
   const { logEntries, addLogEntry, clearLogEntries, deleteLogEntry } = useLog(
@@ -176,7 +181,7 @@ export function DataProvider({
   return (
     <DataContext.Provider
       value={{
-        stateLoading,
+        stateLoading: stateQuery.isLoading,
         appState,
         setAppState,
         todayKeyValue,
@@ -192,9 +197,9 @@ export function DataProvider({
         cancelImport: importExport.cancelImport,
         confirmImport: importExport.confirmImport,
         resetProgram,
-        loadError,
+        loadError: stateQuery.isError,
         reloadState,
-        scoreHistory,
+        scoreHistory: scoresQuery.data ?? [],
         refreshScores,
       }}
     >
