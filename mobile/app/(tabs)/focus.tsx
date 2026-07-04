@@ -14,13 +14,9 @@ import { useSupplements } from "../../contexts/SupplementsContext";
 import { useProgram } from "../../contexts/ProgramContext";
 import { useTimeline } from "../../contexts/TimelineContext";
 import useActiveContext from "../../hooks/useActiveContext";
-import type {
-  FocusPanelBlock,
-  MealTemplate,
-  NutritionTarget,
-} from "../../types/appTypes";
+import type { FocusPanelBlock } from "../../types/appTypes";
 import { toMinutes } from "../../utils/time";
-import { computeConsumedMacros, computeMacroTargets } from "../../utils/nutrition";
+import { computeConsumedMacros } from "../../utils/nutrition";
 import Card from "../../components/ui/Card";
 import Ring from "../../components/ui/Ring";
 import Glow from "../../components/ui/Glow";
@@ -28,6 +24,13 @@ import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import ChecklistSection from "../../components/shared/ChecklistSection";
 import FocusBlockPanel from "../../components/focus/FocusBlockPanel";
+import ProteinCard from "../../components/focus/ProteinCard";
+import {
+  getGreeting,
+  getGreetingIcon,
+  getHeaderTint,
+  formatToday,
+} from "../../components/focus/greeting";
 import WorkoutSection from "../../components/focus/WorkoutSection";
 import RecapCard from "../../components/focus/RecapCard";
 import InsightsTeaserCard from "../../components/focus/InsightsTeaserCard";
@@ -55,87 +58,9 @@ import {
   fontSizes,
   fonts,
   spacing,
-  radii,
   type Palette,
   type TintSet,
 } from "../../theme";
-
-const getGreeting = (minutes: number): string => {
-  const hour = Math.floor(minutes / 60);
-  if (hour >= 5 && hour < 12) return "Good morning";
-  if (hour >= 12 && hour < 14) return "Good day";
-  if (hour >= 14 && hour < 17) return "Good afternoon";
-  if (hour >= 17 && hour < 21) return "Good evening";
-  return "Good night";
-};
-
-const getGreetingIcon = (
-  minutes: number
-): { name: keyof typeof Ionicons.glyphMap; color: string } => {
-  const hour = Math.floor(minutes / 60);
-  if (hour >= 5 && hour < 8) return { name: "partly-sunny", color: "#fbbf24" };
-  if (hour >= 8 && hour < 17) return { name: "sunny", color: "#fbbf24" };
-  if (hour >= 17 && hour < 21) return { name: "cloudy-night", color: "#a78bfa" };
-  return { name: "moon", color: "#a78bfa" };
-};
-
-// Time-of-day wash behind the header (Gentler Streak-style atmosphere)
-const getHeaderTint = (minutes: number): string => {
-  const hour = Math.floor(minutes / 60);
-  if (hour >= 5 && hour < 8) return "rgba(251, 146, 60, 0.10)"; // dawn peach
-  if (hour >= 8 && hour < 17) return "rgba(122, 162, 255, 0.08)"; // day blue
-  if (hour >= 17 && hour < 21) return "rgba(167, 139, 250, 0.10)"; // dusk violet
-  return "rgba(99, 102, 241, 0.08)"; // night indigo
-};
-
-const formatToday = (): string => {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-// Slim protein-only glance for Focus; full macros live on the Nutrition tab
-function ProteinCard({
-  mealTemplates,
-  mealCheckMap,
-  nutritionTargets,
-  mealsLabel,
-  onPress,
-}: {
-  mealTemplates: MealTemplate[];
-  mealCheckMap: Record<string, boolean>;
-  nutritionTargets: NutritionTarget[];
-  mealsLabel: string;
-  onPress: () => void;
-}) {
-  const { colors, tints } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
-  const consumed = computeConsumedMacros(mealTemplates, mealCheckMap);
-  const targets = computeMacroTargets(nutritionTargets);
-  if (!targets.protein) return null;
-  const pct = Math.min((consumed.protein / targets.protein) * 100, 100);
-  return (
-    <Pressable onPress={onPress}>
-      <Card>
-        <View style={styles.proteinHeader}>
-          <Text style={styles.proteinLabel}>PROTEIN</Text>
-          <Text style={styles.proteinMeta}>{mealsLabel}</Text>
-        </View>
-        <View style={styles.proteinValueRow}>
-          <Text style={styles.proteinValue}>
-            {Math.round(consumed.protein)}
-            <Text style={styles.proteinTarget}> / {targets.protein} g</Text>
-          </Text>
-        </View>
-        <View style={styles.proteinTrack}>
-          <View style={[styles.proteinFill, { width: `${pct}%` }]} />
-        </View>
-      </Card>
-    </Pressable>
-  );
-}
 
 export default function FocusScreen() {
   const { colors, tints } = useTheme();
@@ -707,47 +632,5 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
     fontSize: fontSizes.sm,
     color: colors.good,
     fontWeight: "600",
-  },
-  proteinHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-  },
-  proteinLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-  },
-  proteinMeta: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  proteinValueRow: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  proteinValue: {
-    fontSize: 26,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-    fontVariant: ["tabular-nums"],
-  },
-  proteinTarget: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    fontWeight: "400",
-  },
-  proteinTrack: {
-    height: 6,
-    borderRadius: radii.full,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-  proteinFill: {
-    height: "100%",
-    borderRadius: radii.full,
-    backgroundColor: colors.accent,
   },
 });
