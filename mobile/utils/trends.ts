@@ -21,6 +21,9 @@ const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
 // Consecutive days (ending today, or yesterday if today not there yet) with
 // score >= threshold, from snapshotted DailyScore rows merged with today's live.
+// One sub-threshold day per rolling week is forgiven (a "grace day") — it
+// doesn't add to the streak but doesn't break it; recovery days shouldn't
+// zero a habit chain.
 export function scoreStreak(
   history: Array<{ date: string; score: number }>,
   todayKeyValue: string,
@@ -32,12 +35,24 @@ export function scoreStreak(
   map[todayKeyValue] = todayScore; // live value wins for today
 
   let streak = 0;
+  let lastGraceDaysAgo: number | null = null;
   // If today already qualifies, count from today; else start from yesterday
   const startOffset = (map[todayKeyValue] ?? 0) >= threshold ? 0 : 1;
   for (let daysAgo = startOffset; daysAgo <= 365; daysAgo++) {
     const score = map[dateKeyDaysAgo(daysAgo)];
-    if (score === undefined || score < threshold) break;
-    streak++;
+    if (score !== undefined && score >= threshold) {
+      streak++;
+      continue;
+    }
+    // Missed day: forgive if the streak has started and no grace was used in
+    // the past 7 scanned days.
+    const graceAvailable =
+      streak > 0 && (lastGraceDaysAgo === null || daysAgo - lastGraceDaysAgo > 7);
+    if (graceAvailable) {
+      lastGraceDaysAgo = daysAgo;
+      continue;
+    }
+    break;
   }
   return streak;
 }

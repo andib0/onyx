@@ -16,10 +16,11 @@ describe("scoreStreak", () => {
     const history = [
       { date: dateKeyDaysAgo(1), score: 90 },
       { date: dateKeyDaysAgo(2), score: 85 },
-      { date: dateKeyDaysAgo(3), score: 40 }, // breaks streak
+      { date: dateKeyDaysAgo(3), score: 40 }, // forgiven as the weekly grace day
       { date: dateKeyDaysAgo(4), score: 95 },
     ];
-    expect(scoreStreak(history, today, 88)).toBe(3);
+    // today + d1 + d2 + (grace d3) + d4
+    expect(scoreStreak(history, today, 88)).toBe(4);
   });
 
   it("starts from yesterday when today does not qualify yet", () => {
@@ -32,6 +33,28 @@ describe("scoreStreak", () => {
 
   it("returns 0 with no qualifying days", () => {
     expect(scoreStreak([], today, 0)).toBe(0);
+  });
+
+  it("bridges a single missed day with a grace day", () => {
+    const history = [
+      { date: dateKeyDaysAgo(1), score: 90 },
+      // day 2 missed entirely
+      { date: dateKeyDaysAgo(3), score: 90 },
+      { date: dateKeyDaysAgo(4), score: 90 },
+    ];
+    // today 90: today + d1 + (grace d2) + d3 + d4 = 4 counted days
+    expect(scoreStreak(history, today, 90)).toBe(4);
+  });
+
+  it("does not allow two grace days within a week", () => {
+    const history = [
+      { date: dateKeyDaysAgo(1), score: 90 },
+      // days 2 and 4 missed
+      { date: dateKeyDaysAgo(3), score: 90 },
+      { date: dateKeyDaysAgo(5), score: 90 },
+    ];
+    // grace covers d2; d4 breaks (second miss within 7 days)
+    expect(scoreStreak(history, today, 90)).toBe(3);
   });
 
   it("live today score overrides a snapshotted one", () => {
