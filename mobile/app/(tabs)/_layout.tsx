@@ -4,10 +4,18 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import NotificationResponder from "../../components/NotificationResponder";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useMeals } from "../../contexts/MealsContext";
+import { useSupplements } from "../../contexts/SupplementsContext";
 import { fontSizes } from "../../theme";
 
 export default function TabLayout() {
   const { colors, isLight } = useTheme();
+  const { mealTemplatesForToday, mealCheckMap } = useMeals();
+  const { supplementsList, supplementChecksForToday } = useSupplements();
+  // Items still to take/eat today — surfaced as the Nutrition tab badge
+  const nutritionDue =
+    mealTemplatesForToday.filter((m) => !mealCheckMap[m.id || ""]).length +
+    supplementsList.filter((s) => !supplementChecksForToday[s.id || ""]).length;
   const tabBarBg =
     Platform.OS === "ios"
       ? isLight
@@ -50,6 +58,12 @@ export default function TabLayout() {
         name="nutrition"
         options={{
           title: "Nutrition",
+          tabBarBadge: nutritionDue > 0 ? nutritionDue : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent,
+            color: colors.onAccent,
+            fontSize: fontSizes.xs,
+          },
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "restaurant" : "restaurant-outline"}

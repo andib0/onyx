@@ -21,6 +21,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { spacing, radii, fontSizes, fonts, type Palette } from "../theme";
 
 const DAY_OPTIONS = ["Push", "Pull", "Legs+Shoulders", "Rest"];
+const HISTORY_PAGE_SIZE = 30;
 
 const DEFAULT_FORM: LogEntry = {
   date: todayKey(),
@@ -93,10 +94,17 @@ export default function LogScreen() {
 
   const [form, setForm] = useState<LogEntry>(Object.assign({}, DEFAULT_FORM));
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  // Render history in pages — the screen lives in a ScrollView, so unbounded
+  // .map() would mount every entry ever logged.
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
 
   const sorted = useMemo(() => {
     return logEntries.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [logEntries]);
+  const visibleEntries = useMemo(
+    () => sorted.slice(0, historyLimit),
+    [sorted, historyLimit]
+  );
 
   const weightTrend = useMemo(() => buildWeightTrend(logEntries), [logEntries]);
 
@@ -283,7 +291,7 @@ export default function LogScreen() {
         {sorted.length === 0 ? (
           <Text style={styles.emptyText}>No entries yet.</Text>
         ) : (
-          sorted.map((entry, index) => (
+          visibleEntries.map((entry, index) => (
             <LogEntryCard
               key={entry.id || `${entry.date}-${index}`}
               entry={entry}
@@ -291,6 +299,17 @@ export default function LogScreen() {
             />
           ))
         )}
+        {sorted.length > historyLimit ? (
+          <Pressable
+            style={({ pressed }) => [styles.showMoreBtn, pressed && styles.pressed]}
+            onPress={() => setHistoryLimit((prev) => prev + HISTORY_PAGE_SIZE)}
+            accessibilityLabel="Show more log entries"
+          >
+            <Text style={styles.showMoreText}>
+              Show more ({sorted.length - historyLimit} older)
+            </Text>
+          </Pressable>
+        ) : null}
       </Card>
 
       <ConfirmModal
@@ -410,6 +429,17 @@ const makeStyles = (colors: Palette) =>
   clearBtnText: {
     color: colors.danger,
     fontSize: fontSizes.md,
+    fontWeight: "600",
+  },
+  showMoreBtn: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  showMoreText: {
+    fontSize: fontSizes.sm,
+    color: colors.accent,
     fontWeight: "600",
   },
   pressed: {
