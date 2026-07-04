@@ -21,6 +21,8 @@ interface DayCheckInCardProps {
   onSave: (entry: LogEntry) => Promise<void>;
   showToast: (message: string) => void;
   onDismiss?: () => void;
+  // e.g. "2 tasks · 1 supplement still open" — day-review nudge
+  openSummary?: string;
 }
 
 export default function DayCheckInCard({
@@ -31,6 +33,7 @@ export default function DayCheckInCard({
   onSave,
   showToast,
   onDismiss,
+  openSummary,
 }: DayCheckInCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -95,6 +98,7 @@ export default function DayCheckInCard({
         <View style={styles.headerText}>
           <Text style={styles.title}>Evening check-in</Text>
           <Text style={styles.subtitle}>Quick numbers for your trends</Text>
+          {openSummary ? <Text style={styles.openLine}>{openSummary}</Text> : null}
         </View>
         <IconButton icon="close" onPress={handleDismiss} label="Skip check-in" />
       </View>
@@ -167,6 +171,12 @@ const makeStyles = (colors: Palette) =>
     fontSize: fontSizes.sm,
     color: colors.muted,
     marginTop: 1,
+  },
+  openLine: {
+    fontSize: fontSizes.xs,
+    color: colors.warning,
+    fontWeight: "600",
+    marginTop: spacing.xs,
   },
   fieldsRow: {
     flexDirection: "row",

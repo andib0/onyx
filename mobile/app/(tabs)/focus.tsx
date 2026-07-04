@@ -63,6 +63,15 @@ import {
   type TintSet,
 } from "../../theme";
 
+// "2 tasks · 1 supplement still open" — empty string when the day is closed out
+function buildOpenSummary(tasks: number, supps: number, meals: number): string {
+  const parts: string[] = [];
+  if (tasks > 0) parts.push(`${tasks} task${tasks === 1 ? "" : "s"}`);
+  if (supps > 0) parts.push(`${supps} supplement${supps === 1 ? "" : "s"}`);
+  if (meals > 0) parts.push(`${meals} meal${meals === 1 ? "" : "s"}`);
+  return parts.length ? `${parts.join(" · ")} still open` : "";
+}
+
 export default function FocusScreen() {
   const { colors, tints } = useTheme();
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
@@ -381,6 +390,11 @@ export default function FocusScreen() {
           onSave={addLogEntry}
           showToast={showToast}
           onDismiss={bumpSlot}
+          openSummary={buildOpenSummary(
+            tasksTotal - tasksDone,
+            supplementsList.length - suppDoneCount,
+            mealTemplatesForToday.length - mealDoneCount
+          )}
         />
       ) : null}
       {slot === "weekly" ? (
