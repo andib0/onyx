@@ -201,6 +201,26 @@ export default function NutritionScreen() {
     (s) => supplementChecksForToday[s.id || ""]
   ).length;
 
+  // Yesterday's plan → today, for "same as yesterday" eaters. Only offered
+  // when the selected day has no meals yet.
+  const yesterdayDay =
+    mealDayOptions[
+      (mealDayOptions.indexOf(selectedMealDay) - 1 + mealDayOptions.length) %
+        mealDayOptions.length
+    ];
+  const yesterdayMeals = appState.mealTemplatesByDay[yesterdayDay] || [];
+  const handleCopyFromYesterday = async () => {
+    for (const meal of yesterdayMeals) {
+      await addMealTemplateForDay(
+        selectedMealDay,
+        Object.assign({}, meal, {
+          id: `copy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        })
+      );
+    }
+    showToast(`Copied ${yesterdayMeals.length} meal${yesterdayMeals.length === 1 ? "" : "s"} from ${yesterdayDay}`);
+  };
+
   // Fill empty weekdays with the current day's meals (non-destructive)
   const handleCopyToEmptyDays = async () => {
     if (!mealTemplatesForDay.length) return;
@@ -350,11 +370,22 @@ export default function NutritionScreen() {
             );
           })
         ) : (
-          <EmptyState
-            icon="restaurant-outline"
-            title={`No meals for ${selectedMealDay}`}
-            subtitle="Use Add below — macros track automatically."
-          />
+          <>
+            <EmptyState
+              icon="restaurant-outline"
+              title={`No meals for ${selectedMealDay}`}
+              subtitle="Use Add below — macros track automatically."
+            />
+            {yesterdayMeals.length > 0 ? (
+              <Button
+                label={`Copy ${yesterdayDay}'s meals`}
+                variant="secondary"
+                size="sm"
+                icon="copy-outline"
+                onPress={handleCopyFromYesterday}
+              />
+            ) : null}
+          </>
         )}
       </Card>
 
