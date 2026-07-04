@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs';
 import { AppError } from '../utils/errors.js';
 
 export class AuthService {
-  async register(email: string, password: string, profile?: { username?: string; age?: number; weight?: number }) {
+  async register(email: string, password: string, profile?: { username?: string; age?: number; weight?: number; timezone?: string }) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('Email already registered', 409, 'DUPLICATE');
@@ -26,7 +26,9 @@ export class AuthService {
         age: profile?.age || null,
         weight: profile?.weight || null,
         preferences: {
-          create: {}, // Create with defaults
+          // Use the device timezone when the client sends one; otherwise the
+          // schema default applies.
+          create: profile?.timezone ? { timezone: profile.timezone } : {},
         },
       },
       select: {

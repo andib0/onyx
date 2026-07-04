@@ -8,6 +8,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { AppState as RNAppState } from "react-native";
 import { useAuth } from "./AuthContext";
 import { useToastContext } from "./ToastContext";
 import useLog from "../hooks/useLog";
@@ -61,7 +62,25 @@ export function DataProvider({
   const [stateLoading, setStateLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [scoreHistory, setScoreHistory] = useState<DailyScore[]>([]);
-  const todayKeyValue = todayKey();
+
+  // Poll the date so a session left open past midnight rolls over to the new
+  // day instead of writing completions/meals against yesterday's key.
+  const [todayKeyValue, setTodayKeyValue] = useState(() => todayKey());
+  useEffect(() => {
+    const syncKey = () => {
+      const key = todayKey();
+      setTodayKeyValue((prev) => (prev === key ? prev : key));
+    };
+    const intervalId = setInterval(syncKey, 60_000);
+    // Timers don't fire while backgrounded — re-check on foreground.
+    const sub = RNAppState.addEventListener("change", (status) => {
+      if (status === "active") syncKey();
+    });
+    return () => {
+      clearInterval(intervalId);
+      sub.remove();
+    };
+  }, []);
 
   const refreshScores = useCallback(async () => {
     const result = await getScores(30);

@@ -10,6 +10,7 @@ export const registerSchema = z.object({
   username: z.string().min(1, 'Username is required').max(50).optional(),
   age: z.number().int().min(13).max(120).optional(),
   weight: z.number().min(20).max(300).optional(),
+  timezone: z.string().min(1).max(64).optional(),
 });
 
 export const loginSchema = z.object({

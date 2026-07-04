@@ -22,8 +22,8 @@ export async function register(req: Request, res: Response) {
       return sendError(res, parsed.error.errors[0].message);
     }
 
-    const { email, password, username, age, weight } = parsed.data;
-    const result = await authService.register(email, password, { username, age, weight });
+    const { email, password, username, age, weight, timezone } = parsed.data;
+    const result = await authService.register(email, password, { username, age, weight, timezone });
 
     res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
 

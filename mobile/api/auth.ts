@@ -33,6 +33,14 @@ type RegisterProfile = {
   weight?: number;
 };
 
+function deviceTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function register(
   email: string,
   password: string,
@@ -40,7 +48,7 @@ export async function register(
 ) {
   const response = await api.post<AuthResponse>(
     "/auth/register",
-    Object.assign({ email, password }, profile || {})
+    Object.assign({ email, password, timezone: deviceTimezone() }, profile || {})
   );
 
   if (response.success && response.data) {

@@ -15,9 +15,12 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+// Native app requests carry no Origin header, so they always pass; this list
+// only matters for browser clients (e.g. Expo web during development).
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
-  .map((o) => o.trim());
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
