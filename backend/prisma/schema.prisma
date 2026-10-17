@@ -40,6 +40,7 @@ model User {
   workoutSessions WorkoutSession[]
   workoutSetLogs  WorkoutSetLog[]
   dailyScores     DailyScore[]
+  gymPrograms     GymProgram[]
 }
 
 model UserPreferences {
@@ -373,6 +374,7 @@ model GymProgram {
   goal        String // bulk, cut, strength, general, recomp
   isSystem    Boolean @default(true)
   userId      String? // null for system programs
+  user        User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   days ProgramDay[]
 

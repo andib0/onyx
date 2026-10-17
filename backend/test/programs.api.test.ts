@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { prisma } from '../src/config/database.js';
 import { auth, http, registerUser } from './helpers.js';
 
 let H: Record<string, string>;
@@ -68,5 +69,16 @@ describe('/api/programs', () => {
   it('DELETE /:id removes; a second delete is 404', async () => {
     expect((await http().delete(`/api/programs/${id}`).set(H)).status).toBe(200);
     expect((await http().delete(`/api/programs/${id}`).set(H)).status).toBe(404);
+  });
+
+  it('deleting the account cascades to its custom programs (GymProgram.userId FK)', async () => {
+    const owner = await registerUser();
+    const created = await http().post('/api/programs').set(auth(owner)).send(program);
+    expect(created.status).toBe(201);
+    const pid = created.body.data.id;
+    const me = await http().get('/api/auth/me').set(auth(owner));
+    await prisma.user.delete({ where: { id: me.body.data.user.id } });
+    expect(await prisma.gymProgram.findUnique({ where: { id: pid } })).toBeNull();
+    expect(await prisma.programDay.count({ where: { programId: pid } })).toBe(0);
   });
 });

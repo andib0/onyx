@@ -62,21 +62,25 @@ export class MealsService {
     const food = await prisma.food.findUnique({ where: { id: foodId } });
     if (!food) throw new AppError('Food not found', 404, 'NOT_FOUND');
 
-    const factor = grams / 100;
-    const protein = food.proteinPer100g ? Number(food.proteinPer100g) * factor : null;
-    const carbs = food.carbsPer100g ? Number(food.carbsPer100g) * factor : null;
-    const calories = food.caloriesPer100g ? Number(food.caloriesPer100g) * factor : null;
+    // Tags hold per-100 g values; `grams` is the portion. The app and the server
+    // score both compute macros as tag × grams / 100, so writing absolute
+    // (already scaled) values here double-scaled every portion != 100 g.
+    const per100 = (v: { toString(): string } | null) =>
+      v === null ? null : Math.round(Number(v) * 10) / 10;
+    const protein = per100(food.proteinPer100g);
+    const carbs = per100(food.carbsPer100g);
+    const fat = per100(food.fatPer100g);
+    const calories = per100(food.caloriesPer100g);
 
     await prisma.mealTemplateTag.deleteMany({
       where: { mealTemplateId: templateId, mealTemplate: { userId } },
     });
 
     const newTags: Tag[] = [];
-    if (protein !== null)
-      newTags.push({ label: 'Protein', value: `${Math.round(protein)}` });
-    if (carbs !== null) newTags.push({ label: 'Carbs', value: `${Math.round(carbs)}` });
-    if (calories !== null)
-      newTags.push({ label: 'Calories', value: `${Math.round(calories)}` });
+    if (protein !== null) newTags.push({ label: 'Protein', value: `${protein}` });
+    if (carbs !== null) newTags.push({ label: 'Carbs', value: `${carbs}` });
+    if (fat !== null) newTags.push({ label: 'Fat', value: `${fat}` });
+    if (calories !== null) newTags.push({ label: 'Calories', value: `${calories}` });
 
     const updated = await prisma.mealTemplate.update({
       where: { id: templateId, userId },
