@@ -94,7 +94,8 @@ for (const j of judges.slice(results.length)) {
 }
 
 console.log(`\n${bar}\ncheck summary: ${pkg}`);
-for (const r of results) console.log(`  ${r.status.padEnd(8)} ${r.id.padEnd(9)} ${r.note}`);
+for (const r of results)
+  console.log(`  ${r.status.padEnd(8)} ${r.id.padEnd(9)} ${r.note}`);
 if (failed) {
   console.log(`\nCHECK FAILED: judge "${failed.id}" (${failed.cmd}) in ${pkg}/`);
   console.log(bar);

@@ -5,11 +5,14 @@
   "scripts": {
     "test": "playwright test",
     "install-browsers": "playwright install chromium",
-    "smoke": "playwright test tests/smoke.spec.ts",
-    "flows": "playwright test tests/flows",
-    "offline": "playwright test tests/offline.spec.ts"
+    "smoke": "tsc --noEmit && playwright test tests/smoke.spec.ts",
+    "flows": "tsc --noEmit && playwright test tests/flows tests/offline.spec.ts",
+    "offline": "playwright test tests/offline.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "1.55.1"
+    "@playwright/test": "1.55.1",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.2"
   }
 }
