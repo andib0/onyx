@@ -11,7 +11,9 @@ import { seedDay } from "../lib/seed";
 // page.on("request"); this test only counts API calls, so run without it.
 test.use({ serviceWorkers: "block" });
 
-test("logged-in launch: Focus from cache, one day request, no auth round trip", async ({ page }) => {
+test("logged-in launch: Focus from cache, one day request, no auth round trip", async ({
+  page,
+}) => {
   await openFocus(page, { tag: "startup", seed: seedDay, ready: "Breakfast oats" });
   // First sign-in downloads the history and writes the cache (the e2e clock
   // runs slower than real time, so give the 1 s write throttle room).

@@ -8,19 +8,20 @@ import { seedDay } from "../lib/seed";
 import { api, localDateKey, type Session } from "../lib/api";
 import { e2eNow } from "../lib/clock";
 
-const cb = (page: Page, name: string) =>
-  page.getByRole("checkbox", { name, exact: true }).first();
+/** A row of Today's timeline ("07:30 Deep work"), itself a checkbox. */
+const row = (page: Page, title: string) =>
+  page.getByRole("checkbox", { name: new RegExp(`\\d\\d:\\d\\d ${title}$`) }).first();
 const tab = (page: Page, name: string) =>
   page.getByRole("tab", { name: new RegExp(name) });
 
 async function logMetric(page: Page, placeholder: string, value: string) {
-  await tab(page, "Settings").click();
+  await tab(page, "Progress").click();
   await page.getByRole("button", { name: "Full history & trends" }).click();
   await page.getByPlaceholder(placeholder).fill(value);
   await page.getByText("Add Entry", { exact: true }).click();
   await expect(page.getByText("Entry saved.").first()).toBeVisible();
   await page.goBack();
-  await tab(page, "Focus").click();
+  await tab(page, "Today").click();
 }
 
 type Outbox = {
@@ -40,9 +41,15 @@ async function readOutbox(page: Page): Promise<Outbox> {
   });
 }
 
-/** The device's persisted day cache (what Focus renders from), for today. */
-async function deviceDay(page: Page) {
-  const date = localDateKey();
+type Day = {
+  done: Record<string, boolean>;
+  mealsEaten: number;
+  bw: string;
+  sleep: string;
+};
+
+/** The device's persisted day cache (what Today renders from), for today. */
+async function deviceDay(page: Page): Promise<Day | null> {
   return page.evaluate((d) => {
     const raw = localStorage.getItem("blob:onyx-query-cache");
     if (!raw) return null;
@@ -52,18 +59,16 @@ async function deviceDay(page: Page) {
     );
     if (!q) return null;
     const st = q.state.data;
-    const names: Record<string, string> = {};
-    for (const sp of st.supplementsList) names[sp.id] = sp.item;
-    const taken: Record<string, boolean> = {};
-    for (const id of Object.keys(names)) taken[names[id]] = !!(st.suppLog[d] || {})[id];
+    const done: Record<string, boolean> = {};
+    for (const b of st.schedule) done[b.title] = !!(st.completion[d] || {})[b.id];
     const log = st.log.find((e: { date: string }) => e.date === d) || {};
     return {
-      taken,
+      done,
       mealsEaten: Object.values(st.mealLog[d] || {}).filter(Boolean).length,
       bw: log.bw || "",
       sleep: log.sleep || "",
     };
-  }, date);
+  }, localDateKey());
 }
 
 async function waitOutboxEmpty(page: Page) {
@@ -72,24 +77,21 @@ async function waitOutboxEmpty(page: Page) {
     .toBe(0);
 }
 
-async function serverDay(s: Session) {
+async function serverDay(s: Session): Promise<Day> {
   const date = localDateKey();
-  const supps = await api.get<{ id: string; item: string }[]>(s, "/supplements");
-  const logs = await api.get<{ supplementId: string; date: string; isTaken: boolean }[]>(
+  const blocks = await api.get<{ id: string; title: string }[]>(s, "/schedule");
+  const comps = await api.get<{ blockId: string; isComplete: boolean }[]>(
     s,
-    `/supplements/logs?startDate=${date}&endDate=${date}`
+    `/schedule/completions?date=${date}`
   );
-  const taken: Record<string, boolean> = {};
-  for (const sp of supps)
-    taken[sp.item] = logs.some((l) => l.supplementId === sp.id && l.isTaken);
-  const meals = await api.get<{ mealTemplateId: string; isEaten: boolean }[]>(
-    s,
-    `/meals/logs?date=${date}`
-  );
+  const done: Record<string, boolean> = {};
+  for (const b of blocks)
+    done[b.title] = comps.some((c) => c.blockId === b.id && c.isComplete);
+  const meals = await api.get<{ isEaten: boolean }[]>(s, `/meals/logs?date=${date}`);
   const daily = await api.get<{ date: string; bw: string; sleep: string }[]>(s, "/logs");
   const today = daily.find((l) => l.date === date);
   return {
-    taken,
+    done,
     mealsEaten: meals.filter((m) => m.isEaten).length,
     bw: today?.bw ?? "",
     sleep: today?.sleep ?? "",
@@ -110,10 +112,10 @@ async function signIn(page: Page, s: Session) {
   await page.getByPlaceholder("Your password").fill(s.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByLabel(/^Day score/).first()).toBeVisible();
-  await expect(page.getByText("Breakfast oats").first()).toBeVisible();
+  await expect(row(page, "Deep work")).toBeVisible();
 }
 
-test("(b) offline: tick a supplement, eat a meal, log bodyweight → reload offline → online → server matches", async ({
+test("(b) offline: tick a block, eat a meal, log bodyweight → reload offline → online → server matches", async ({
   page,
   context,
 }) => {
@@ -124,11 +126,11 @@ test("(b) offline: tick a supplement, eat a meal, log bodyweight → reload offl
   });
   await context.setOffline(true);
 
-  await cb(page, "Creatine").click();
-  await cb(page, "Breakfast oats").click();
+  await row(page, "Deep work").click();
+  await row(page, "Breakfast oats").click();
   await logMetric(page, "72.0", "81.3");
-  const offlineState = {
-    taken: { Creatine: true, "Vitamin D": false, "Omega-3": false },
+  const offlineState: Day = {
+    done: { "Deep work": true, "Lunch walk": false },
     mealsEaten: 1,
     bw: "81.3",
     sleep: "",
@@ -140,21 +142,18 @@ test("(b) offline: tick a supplement, eat a meal, log bodyweight → reload offl
   // Still offline: reload (app shell from the service worker, data from the cache).
   await page.reload();
   await expect(page.getByLabel(/^Day score/).first()).toBeVisible({ timeout: 15_000 });
-  // Taken supplements leave the "Take now" list; the unticked ones are still offered.
-  await expect(cb(page, "Vitamin D")).toBeVisible();
-  await expect(cb(page, "Creatine")).toHaveCount(0);
+  await expect(row(page, "Deep work")).toBeChecked();
+  await expect(row(page, "Breakfast oats")).toBeChecked();
   expect(await deviceDay(page)).toEqual(offlineState);
   expect((await readOutbox(page)).pending.length).toBe(queued);
   const before = await serverDay(s); // the server has seen none of it
-  expect(before.taken.Creatine).toBe(false);
+  expect(before.done["Deep work"]).toBe(false);
   expect(before.bw).toBe("");
 
   await context.setOffline(false);
   await waitOutboxEmpty(page);
   const after = await serverDay(s);
-  expect(after.taken).toEqual({ Creatine: true, "Vitamin D": false, "Omega-3": false });
-  expect(after.mealsEaten).toBe(1);
-  expect(after.bw).toBe("81.3");
+  expect(after).toEqual(offlineState);
   fs.mkdirSync("results", { recursive: true });
   fs.writeFileSync(
     "results/offline-writes.json",
@@ -187,13 +186,14 @@ test("(c) two devices edit the same day offline, then both converge to the max-H
   await ctxB.setOffline(true);
 
   // Conflicting edits of the same keys, interleaved in time.
-  await cb(a, "Creatine").click(); // A: Creatine on
-  await cb(b, "Vitamin D").click(); // B: Vitamin D on
+  await row(a, "Deep work").click(); // A: Deep work done
+  await row(b, "Lunch walk").click(); // B: Lunch walk done
   await logMetric(a, "72.0", "80.1"); // A: bw
-  await cb(b, "Creatine").click(); // B: Creatine on (later than A)
+  await row(b, "Deep work").click(); // B: Deep work done (later than A)
+  await row(b, "Deep work").click(); // B: … and undone again (latest)
   await logMetric(b, "72.0", "79.9"); // B: bw (later than A)
   await logMetric(a, "8.0", "7.0"); // A: sleep (only A touches it)
-  await cb(a, "Vitamin D").click(); // A: Vitamin D on (later than B)
+  await row(a, "Lunch walk").click(); // A: Lunch walk done (later than B)
 
   // Expected = for each key, the queued write with the greatest HLC.
   const winners = new Map<string, { v: unknown; h: string }>();
@@ -210,15 +210,17 @@ test("(c) two devices edit the same day offline, then both converge to the max-H
           put(`log:${f}`, v, op.fieldHlc?.[f] ?? op.hlc);
     }
   }
-  const supps = await api.get<{ id: string; item: string }[]>(s, "/supplements");
-  const expectedTaken: Record<string, boolean> = {};
-  for (const sp of supps)
-    expectedTaken[sp.item] = winners.get(`toggle:${sp.id}`)?.v === true;
-  const expected = {
-    taken: expectedTaken,
+  const blocks = await api.get<{ id: string; title: string }[]>(s, "/schedule");
+  const done: Record<string, boolean> = {};
+  for (const bl of blocks) done[bl.title] = winners.get(`toggle:${bl.id}`)?.v === true;
+  const expected: Day = {
+    done,
+    mealsEaten: 0,
     bw: String(winners.get("log:bw")?.v ?? ""),
     sleep: String(winners.get("log:sleep")?.v ?? ""),
   };
+  // The scenario really conflicts: B's later "undone" beats A's "done".
+  expect(expected.done).toEqual({ "Deep work": false, "Lunch walk": true });
 
   await ctxB.setOffline(false); // B first, then A — arrival order != HLC order
   await waitOutboxEmpty(b);
@@ -226,16 +228,13 @@ test("(c) two devices edit the same day offline, then both converge to the max-H
   await waitOutboxEmpty(a);
 
   const server = await serverDay(s);
-  expect({ taken: server.taken, bw: server.bw, sleep: server.sleep }).toEqual(expected);
+  expect(server).toEqual(expected);
 
-  // Both devices re-read (background refetch after their flush) and hold the same state.
+  // Both devices re-read (a relaunch revalidates the day) and hold the same state.
   for (const p of [a, b]) {
     await p.bringToFront(); // background pages run throttled timers
-    // A relaunch revalidates the day (like reopening the app on the phone).
     await p.reload({ waitUntil: "domcontentloaded" });
-    await expect
-      .poll(() => deviceDay(p), { timeout: 45_000 })
-      .toEqual(Object.assign({ mealsEaten: 0 }, expected));
+    await expect.poll(() => deviceDay(p), { timeout: 45_000 }).toEqual(expected);
   }
   fs.mkdirSync("results", { recursive: true });
   fs.writeFileSync(

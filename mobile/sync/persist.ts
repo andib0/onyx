@@ -11,7 +11,7 @@ import { PERSISTED_ROOTS } from "./queryKeys";
 export const CACHE_BUSTER = "onyx-cache-v1";
 export const CACHE_MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
 const BLOB = "onyx-query-cache";
-const THROTTLE_MS = 1_000;
+const THROTTLE_MS = 500;
 
 export function createPersister(): Persister {
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -30,7 +30,10 @@ export function createPersister(): Persister {
     if (s !== "active") write();
   });
   const g = globalThis as { addEventListener?: (e: string, cb: () => void) => void };
-  if (g.addEventListener) g.addEventListener("pagehide", write);
+  if (g.addEventListener) {
+    g.addEventListener("pagehide", write);
+    g.addEventListener("beforeunload", write);
+  }
   return {
     persistClient: (client) => {
       latest = client;
