@@ -1,7 +1,10 @@
 import request from 'supertest';
 import app from '../src/app.js';
+import { wrapWithRecorder } from './apiCoverage.js';
 
-export const http = () => request(app);
+// Every request is recorded for the route-coverage report (see apiCoverage.ts).
+const recorded = wrapWithRecorder(app);
+export const http = () => request(recorded);
 
 let counter = 0;
 

@@ -34,6 +34,36 @@ describe('auth', () => {
     expect(bad.status).toBe(401);
   });
 
+  it('register rejects weak passwords and duplicate emails', async () => {
+    const weak = await http()
+      .post('/api/auth/register')
+      .send({ email: `weak${Date.now()}@onyx.test`, password: 'short' });
+    expect(weak.status).toBe(400);
+    expect(weak.body.error).toMatch(/at least 8 characters/);
+    const u = await registerUser();
+    const dup = await http()
+      .post('/api/auth/register')
+      .send({ email: u.email, password: u.password });
+    expect(dup.status).toBe(409);
+  });
+
+  it('login succeeds with the right password', async () => {
+    const u = await registerUser();
+    const res = await http()
+      .post('/api/auth/login')
+      .send({ email: u.email, password: u.password });
+    expect(res.status).toBe(200);
+    expect(res.body.data.refreshToken).toBeTruthy();
+  });
+
+  it('logout needs a valid access token', async () => {
+    expect((await http().post('/api/auth/logout')).status).toBe(401);
+  });
+
+  it('/me needs a valid access token', async () => {
+    expect((await http().get('/api/auth/me')).status).toBe(401);
+  });
+
   it('rejects requests without a token', async () => {
     const res = await http().get('/api/schedule');
     expect(res.status).toBe(401);
