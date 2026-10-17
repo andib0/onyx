@@ -23,9 +23,15 @@ describe('registerSchema', () => {
   });
 
   it('rejects weak passwords', () => {
-    expect(registerSchema.safeParse({ ...valid, password: 'short1!' }).success).toBe(false);
-    expect(registerSchema.safeParse({ ...valid, password: 'nodigits!!' }).success).toBe(false);
-    expect(registerSchema.safeParse({ ...valid, password: 'nospecial1' }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, password: 'short1!' }).success).toBe(
+      false
+    );
+    expect(registerSchema.safeParse({ ...valid, password: 'nodigits!!' }).success).toBe(
+      false
+    );
+    expect(registerSchema.safeParse({ ...valid, password: 'nospecial1' }).success).toBe(
+      false
+    );
   });
 
   it('rejects invalid email', () => {

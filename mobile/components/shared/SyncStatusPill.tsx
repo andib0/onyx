@@ -23,9 +23,7 @@ export default function SyncStatusPill() {
       accessibilityLabel={`${pending} change${pending === 1 ? "" : "s"} waiting to sync`}
     >
       <Ionicons name="cloud-upload-outline" size={13} color={colors.warning} />
-      <Text style={styles.text}>
-        {pending} to sync
-      </Text>
+      <Text style={styles.text}>{pending} to sync</Text>
     </View>
   );
 }

@@ -26,7 +26,11 @@ export async function createSupplement(req: AuthenticatedRequest, res: Response)
 
 export async function updateSupplement(req: AuthenticatedRequest, res: Response) {
   try {
-    const supplement = await supplementsService.updateSupplement(req.userId!, req.params.id, req.body);
+    const supplement = await supplementsService.updateSupplement(
+      req.userId!,
+      req.params.id,
+      req.body
+    );
     return sendSuccess(res, supplement);
   } catch (error) {
     const appError = handleServiceError(error);
@@ -63,7 +67,12 @@ export async function toggleLog(req: AuthenticatedRequest, res: Response) {
   try {
     const { date, isTaken } = req.body;
     const supplementId = req.params.id;
-    const log = await supplementsService.toggleLog(req.userId!, supplementId, date, isTaken);
+    const log = await supplementsService.toggleLog(
+      req.userId!,
+      supplementId,
+      date,
+      isTaken
+    );
     return sendSuccess(res, log);
   } catch (error) {
     const appError = handleServiceError(error);

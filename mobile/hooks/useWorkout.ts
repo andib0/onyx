@@ -80,10 +80,7 @@ function isPersonalRecord(
   if (!history || values.weightKg === null) return false;
   const prevSets = history.sets.filter((s) => s.weightKg !== null);
   if (!prevSets.length) return false;
-  const bestWeight = prevSets.reduce(
-    (max, s) => Math.max(max, s.weightKg as number),
-    0
-  );
+  const bestWeight = prevSets.reduce((max, s) => Math.max(max, s.weightKg as number), 0);
   if (values.weightKg > bestWeight) return true;
   if (values.weightKg === bestWeight && values.reps !== null) {
     const bestRepsAtWeight = prevSets
@@ -199,9 +196,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     if (!isActive || isPaused || isFinished || mode !== "rest") return;
     const endsAt = restEndsAtRef.current;
     if (endsAt !== null && now >= endsAt) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-        () => {}
-      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       applyPendingNext();
     }
   }, [now, isActive, isPaused, isFinished, mode, applyPendingNext]);
@@ -507,10 +502,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       if (next) {
         pauseStartedAtRef.current = nowMs;
         if (mode === "rest" && restEndsAtRef.current !== null) {
-          pausedRestRemainingMsRef.current = Math.max(
-            restEndsAtRef.current - nowMs,
-            0
-          );
+          pausedRestRemainingMsRef.current = Math.max(restEndsAtRef.current - nowMs, 0);
         }
         cancelNotification(restNotificationRef.current);
         restNotificationRef.current = null;

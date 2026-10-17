@@ -120,20 +120,20 @@ export default function BarChart({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  labels: {
-    flexDirection: "row",
-    marginTop: spacing.xs,
-  },
-  label: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 10,
-    color: colors.faint,
-    fontFamily: fonts.mono,
-  },
-  unit: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
-});
+    labels: {
+      flexDirection: "row",
+      marginTop: spacing.xs,
+    },
+    label: {
+      flex: 1,
+      textAlign: "center",
+      fontSize: 10,
+      color: colors.faint,
+      fontFamily: fonts.mono,
+    },
+    unit: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: spacing.xs,
+    },
+  });

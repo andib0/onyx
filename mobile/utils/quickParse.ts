@@ -42,6 +42,9 @@ export function parseSupplementQuickAdd(text: string): ParsedSupplement {
     rest = rest.replace(doseMatch[0], " ");
   }
 
-  const item = rest.replace(/\s+/g, " ").replace(/\bat\b\s*$/i, "").trim();
+  const item = rest
+    .replace(/\s+/g, " ")
+    .replace(/\bat\b\s*$/i, "")
+    .trim();
   return { item, dose, timeAt };
 }

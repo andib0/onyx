@@ -10,7 +10,9 @@ if (!bundlePath || !mapPath) {
   process.exit(2);
 }
 const TOP = Number(topArg) || 25;
-const jsonOut = process.argv.includes("--json") ? process.argv[process.argv.indexOf("--json") + 1] : null;
+const jsonOut = process.argv.includes("--json")
+  ? process.argv[process.argv.indexOf("--json") + 1]
+  : null;
 const code = fs.readFileSync(bundlePath, "utf8");
 const map = JSON.parse(fs.readFileSync(mapPath, "utf8"));
 const lines = code.split("\n");
@@ -19,29 +21,44 @@ const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const val = new Int16Array(128).fill(-1);
 for (let i = 0; i < B64.length; i++) val[B64.charCodeAt(i)] = i;
 function decode(seg) {
-  const out = []; let shift = 0, value = 0;
+  const out = [];
+  let shift = 0,
+    value = 0;
   for (let i = 0; i < seg.length; i++) {
     const d = val[seg.charCodeAt(i)];
     value += (d & 31) << shift;
     if (d & 32) shift += 5;
-    else { out.push(value & 1 ? -(value >>> 1) : value >>> 1); value = 0; shift = 0; }
+    else {
+      out.push(value & 1 ? -(value >>> 1) : value >>> 1);
+      value = 0;
+      shift = 0;
+    }
   }
   return out;
 }
 
 const bytesBySource = new Map();
-let unmapped = 0, srcIdx = 0;
+let unmapped = 0,
+  srcIdx = 0;
 const mLines = map.mappings.split(";");
 for (let li = 0; li < mLines.length && li < lines.length; li++) {
   const line = lines[li];
-  let col = 0; const segs = [];
-  if (mLines[li]) for (const s of mLines[li].split(",")) {
-    const v = decode(s); col += v[0];
-    if (v.length >= 4) { srcIdx += v[1]; segs.push([col, srcIdx]); /* skip line/col deltas */ }
-    else segs.push([col, -1]);
-    // original line/col deltas must still be consumed for correctness of srcIdx only
+  let col = 0;
+  const segs = [];
+  if (mLines[li])
+    for (const s of mLines[li].split(",")) {
+      const v = decode(s);
+      col += v[0];
+      if (v.length >= 4) {
+        srcIdx += v[1];
+        segs.push([col, srcIdx]); /* skip line/col deltas */
+      } else segs.push([col, -1]);
+      // original line/col deltas must still be consumed for correctness of srcIdx only
+    }
+  if (!segs.length) {
+    unmapped += Buffer.byteLength(line) + 1;
+    continue;
   }
-  if (!segs.length) { unmapped += Buffer.byteLength(line) + 1; continue; }
   if (segs[0][0] > 0) unmapped += Buffer.byteLength(line.slice(0, segs[0][0]));
   for (let i = 0; i < segs.length; i++) {
     const end = i + 1 < segs.length ? segs[i + 1][0] : line.length;
@@ -58,7 +75,8 @@ const norm = (s) => s.replace(/\\/g, "/");
 const pkgOf = (s) => {
   const p = norm(s);
   const i = p.lastIndexOf("node_modules/");
-  if (i < 0) return p.includes("/mobile/") || !p.includes("/") ? "(app source)" : "(app source)";
+  if (i < 0)
+    return p.includes("/mobile/") || !p.includes("/") ? "(app source)" : "(app source)";
   const rest = p.slice(i + 13).split("/");
   return rest[0].startsWith("@") ? `${rest[0]}/${rest[1]}` : rest[0];
 };
@@ -68,12 +86,39 @@ const pkgs = new Map();
 for (const [s, n] of files) pkgs.set(pkgOf(s), (pkgs.get(pkgOf(s)) || 0) + n);
 const kb = (n) => (n / 1024).toFixed(1).padStart(8) + " KB";
 const pct = (n) => ((n / total) * 100).toFixed(1).padStart(5) + "%";
-const short = (s) => { const p = norm(s); const i = p.lastIndexOf("node_modules/"); return i >= 0 ? p.slice(i + 13) : p.replace(/^.*\/mobile\//, "mobile/"); };
+const short = (s) => {
+  const p = norm(s);
+  const i = p.lastIndexOf("node_modules/");
+  return i >= 0 ? p.slice(i + 13) : p.replace(/^.*\/mobile\//, "mobile/");
+};
 
-console.log(`bundle: ${kb(total)}  sources: ${map.sources.length}  unmapped: ${kb(unmapped)}`);
+console.log(
+  `bundle: ${kb(total)}  sources: ${map.sources.length}  unmapped: ${kb(unmapped)}`
+);
 console.log(`\nTop ${TOP} modules (files):`);
-files.slice(0, TOP).forEach(([s, n], i) => console.log(`${String(i + 1).padStart(3)}. ${kb(n)} ${pct(n)}  ${short(s)}`));
+files
+  .slice(0, TOP)
+  .forEach(([s, n], i) =>
+    console.log(`${String(i + 1).padStart(3)}. ${kb(n)} ${pct(n)}  ${short(s)}`)
+  );
 console.log(`\nTop ${TOP} packages:`);
-[...pkgs.entries()].sort((a, b) => b[1] - a[1]).slice(0, TOP)
-  .forEach(([p, n], i) => console.log(`${String(i + 1).padStart(3)}. ${kb(n)} ${pct(n)}  ${p}`));
-if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify({ total, unmapped, files: Object.fromEntries(files.map(([s, n]) => [short(s), n])), packages: Object.fromEntries(pkgs) }, null, 1));
+[...pkgs.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, TOP)
+  .forEach(([p, n], i) =>
+    console.log(`${String(i + 1).padStart(3)}. ${kb(n)} ${pct(n)}  ${p}`)
+  );
+if (jsonOut)
+  fs.writeFileSync(
+    jsonOut,
+    JSON.stringify(
+      {
+        total,
+        unmapped,
+        files: Object.fromEntries(files.map(([s, n]) => [short(s), n])),
+        packages: Object.fromEntries(pkgs),
+      },
+      null,
+      1
+    )
+  );

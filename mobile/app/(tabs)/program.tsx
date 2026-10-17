@@ -367,9 +367,7 @@ export default function ProgramScreen() {
                         ) : null}
                       </View>
                     ) : null}
-                    {row.notes ? (
-                      <Text style={styles.exNotes}>{row.notes}</Text>
-                    ) : null}
+                    {row.notes ? <Text style={styles.exNotes}>{row.notes}</Text> : null}
                   </Card>
                 </Pressable>
               );
@@ -402,255 +400,255 @@ export default function ProgramScreen() {
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-  manageRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  manageBtn: {
-    flex: 1,
-  },
-  /* collapsed selected program */
-  selectedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  selectedInfo: {
-    flex: 1,
-  },
-  selectedName: {
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  selectedMeta: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  changeLink: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  /* program cards */
-  programCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  programCardSelected: {
-    borderColor: colors.accent,
-    backgroundColor: tints.accent,
-  },
-  programCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  programCardName: {
-    flex: 1,
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioSelected: {
-    borderColor: colors.accent,
-  },
-  radioInner: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: colors.accent,
-  },
-  programCardMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  goalChip: {
-    backgroundColor: tints.good,
-    borderRadius: radii.full,
-    paddingVertical: 3,
-    paddingHorizontal: spacing.sm,
-  },
-  goalChipText: {
-    fontSize: fontSizes.xs,
-    color: colors.good,
-    fontWeight: "600",
-  },
-  programCardDays: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  programCardDesc: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  /* day pills */
-  dayPills: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingRight: spacing.lg,
-  },
-  dayPill: {
-    paddingHorizontal: spacing.lg,
-    minHeight: 40,
-    justifyContent: "center",
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  dayPillActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  dayPillText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontWeight: "600",
-  },
-  dayPillTextActive: {
-    color: colors.onAccent,
-  },
-  /* session */
-  sessionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
-  sessionTitle: {
-    flex: 1,
-    fontSize: fontSizes.xl,
-    fontFamily: fonts.display,
-    color: colors.text,
-  },
-  /* exercise card */
-  exHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  exIndexBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  exIndexText: {
-    fontSize: fontSizes.sm,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.muted,
-  },
-  exName: {
-    flex: 1,
-    fontSize: fontSizes.lg,
-    fontFamily: fonts.display,
-    color: colors.text,
-  },
-  exStats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  statChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  statChipText: {
-    fontSize: fontSizes.sm,
-    fontFamily: fonts.mono,
-    fontWeight: "600",
-    color: colors.text,
-    fontVariant: ["tabular-nums"],
-  },
-  statChipLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontWeight: "600",
-  },
-  histRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  histText: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
-  progChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: colors.surface2,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  progChipUp: {
-    backgroundColor: tints.good,
-  },
-  progText: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontWeight: "600",
-  },
-  progTextUp: {
-    color: colors.good,
-  },
-  exNotes: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontStyle: "italic",
-    marginTop: spacing.sm,
-  },
-  restDay: {
-    alignItems: "center",
-    paddingVertical: spacing.xxl,
-    gap: spacing.sm,
-  },
-  restDayText: {
-    fontSize: fontSizes.xl,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  restDaySubtext: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-});
+    manageRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    manageBtn: {
+      flex: 1,
+    },
+    /* collapsed selected program */
+    selectedRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    selectedInfo: {
+      flex: 1,
+    },
+    selectedName: {
+      fontSize: fontSizes.lg,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    selectedMeta: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    changeLink: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    /* program cards */
+    programCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    programCardSelected: {
+      borderColor: colors.accent,
+      backgroundColor: tints.accent,
+    },
+    programCardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    programCardName: {
+      flex: 1,
+      fontSize: fontSizes.lg,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    radio: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: colors.borderLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioSelected: {
+      borderColor: colors.accent,
+    },
+    radioInner: {
+      width: 11,
+      height: 11,
+      borderRadius: 6,
+      backgroundColor: colors.accent,
+    },
+    programCardMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    goalChip: {
+      backgroundColor: tints.good,
+      borderRadius: radii.full,
+      paddingVertical: 3,
+      paddingHorizontal: spacing.sm,
+    },
+    goalChipText: {
+      fontSize: fontSizes.xs,
+      color: colors.good,
+      fontWeight: "600",
+    },
+    programCardDays: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    programCardDesc: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      lineHeight: 18,
+    },
+    /* day pills */
+    dayPills: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+      paddingRight: spacing.lg,
+    },
+    dayPill: {
+      paddingHorizontal: spacing.lg,
+      minHeight: 40,
+      justifyContent: "center",
+      borderRadius: radii.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    dayPillActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    dayPillText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      fontWeight: "600",
+    },
+    dayPillTextActive: {
+      color: colors.onAccent,
+    },
+    /* session */
+    sessionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: spacing.md,
+      marginTop: spacing.sm,
+    },
+    sessionTitle: {
+      flex: 1,
+      fontSize: fontSizes.xl,
+      fontFamily: fonts.display,
+      color: colors.text,
+    },
+    /* exercise card */
+    exHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    exIndexBadge: {
+      width: 26,
+      height: 26,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    exIndexText: {
+      fontSize: fontSizes.sm,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      color: colors.muted,
+    },
+    exName: {
+      flex: 1,
+      fontSize: fontSizes.lg,
+      fontFamily: fonts.display,
+      color: colors.text,
+    },
+    exStats: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    statChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+    },
+    statChipText: {
+      fontSize: fontSizes.sm,
+      fontFamily: fonts.mono,
+      fontWeight: "600",
+      color: colors.text,
+      fontVariant: ["tabular-nums"],
+    },
+    statChipLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontWeight: "600",
+    },
+    histRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    histText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
+    },
+    progChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      backgroundColor: colors.surface2,
+      borderRadius: radii.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+    },
+    progChipUp: {
+      backgroundColor: tints.good,
+    },
+    progText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontWeight: "600",
+    },
+    progTextUp: {
+      color: colors.good,
+    },
+    exNotes: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      fontStyle: "italic",
+      marginTop: spacing.sm,
+    },
+    restDay: {
+      alignItems: "center",
+      paddingVertical: spacing.xxl,
+      gap: spacing.sm,
+    },
+    restDayText: {
+      fontSize: fontSizes.xl,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    restDaySubtext: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+  });

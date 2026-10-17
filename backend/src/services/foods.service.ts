@@ -9,10 +9,7 @@ export class FoodsService {
           mode: 'insensitive',
         },
       },
-      orderBy: [
-        { isVerified: 'desc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ isVerified: 'desc' }, { name: 'asc' }],
       take: limit,
     });
   }

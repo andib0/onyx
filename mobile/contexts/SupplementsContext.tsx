@@ -59,9 +59,7 @@ export function SupplementsProvider({
     const baseSetChecked = supplements.setSupplementChecked;
     const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
       if (isChecked && caffeineCutoff) {
-        const supplement = supplements.supplementsList.find(
-          (s) => s.id === supplementId
-        );
+        const supplement = supplements.supplementsList.find((s) => s.id === supplementId);
         const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
         if (
           supplement &&
@@ -77,9 +75,7 @@ export function SupplementsProvider({
   }, [supplements, caffeineCutoff, showToast]);
 
   return (
-    <SupplementsContext.Provider value={value}>
-      {children}
-    </SupplementsContext.Provider>
+    <SupplementsContext.Provider value={value}>{children}</SupplementsContext.Provider>
   );
 }
 

@@ -94,8 +94,7 @@ export default function BlockForm({
 }: BlockFormProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const initialIsPreset =
-    !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
+  const initialIsPreset = !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
   const [draft, setDraft] = useState<ScheduleBlock>(
     Object.assign({}, initialBlock || EMPTY_BLOCK)
   );
@@ -136,85 +135,83 @@ export default function BlockForm({
 
   const body = (
     <View style={sharedStyles.formGrid}>
-        <View style={sharedStyles.formRow}>
-          <TimeField
-            label="Start"
-            value={draft.start}
-            onChange={(t) => updateField("start", t)}
-          />
-          <TimeField
-            label="End"
-            value={draft.end}
-            onChange={(t) => updateField("end", t)}
-          />
-        </View>
-        <View style={sharedStyles.formField}>
-          <Text style={sharedStyles.formLabel}>Title</Text>
-          <TextInput
-            style={sharedStyles.formInput}
-            placeholder="Task title"
-            placeholderTextColor={colors.muted}
-            value={draft.title}
-            onChangeText={(t) => updateField("title", t)}
-          />
-        </View>
-        <View style={sharedStyles.formField}>
-          <Text style={sharedStyles.formLabel}>Purpose</Text>
-          <TextInput
-            style={sharedStyles.formInput}
-            placeholder="Why this block matters"
-            placeholderTextColor={colors.muted}
-            value={draft.purpose}
-            onChangeText={(t) => updateField("purpose", t)}
-          />
-        </View>
-        <View style={sharedStyles.formField}>
-          <Text style={sharedStyles.formLabel}>Done when</Text>
-          <TextInput
-            style={sharedStyles.formInput}
-            placeholder="Definition of done"
-            placeholderTextColor={colors.muted}
-            value={draft.good}
-            onChangeText={(t) => updateField("good", t)}
-          />
-        </View>
-        <View style={sharedStyles.formField}>
-          <Text style={sharedStyles.formLabel}>Tag</Text>
-          <ChipSelector
-            options={TAG_OPTIONS.concat([CUSTOM_TAG_OPTION])}
-            selected={selectedTag}
-            onSelect={setSelectedTag}
-            getColor={getTagColor}
-          />
-          {usingCustom ? (
-            <TextInput
-              style={[sharedStyles.formInput, styles.customTagInput]}
-              placeholder="Your tag name"
-              placeholderTextColor={colors.muted}
-              value={customTag}
-              onChangeText={setCustomTag}
-              maxLength={20}
-              autoFocus
-            />
-          ) : null}
-        </View>
-        <View style={sharedStyles.formButtons}>
-          <Pressable
-            style={({ pressed }) => [styles.submitBtn, pressed && sharedStyles.pressed]}
-            onPress={handleSubmit}
-          >
-            <Text style={styles.submitBtnText}>
-              {mode === "add" ? "Add task" : "Save"}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.cancelBtn, pressed && sharedStyles.pressed]}
-            onPress={onCancel}
-          >
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </Pressable>
-        </View>
+      <View style={sharedStyles.formRow}>
+        <TimeField
+          label="Start"
+          value={draft.start}
+          onChange={(t) => updateField("start", t)}
+        />
+        <TimeField
+          label="End"
+          value={draft.end}
+          onChange={(t) => updateField("end", t)}
+        />
       </View>
+      <View style={sharedStyles.formField}>
+        <Text style={sharedStyles.formLabel}>Title</Text>
+        <TextInput
+          style={sharedStyles.formInput}
+          placeholder="Task title"
+          placeholderTextColor={colors.muted}
+          value={draft.title}
+          onChangeText={(t) => updateField("title", t)}
+        />
+      </View>
+      <View style={sharedStyles.formField}>
+        <Text style={sharedStyles.formLabel}>Purpose</Text>
+        <TextInput
+          style={sharedStyles.formInput}
+          placeholder="Why this block matters"
+          placeholderTextColor={colors.muted}
+          value={draft.purpose}
+          onChangeText={(t) => updateField("purpose", t)}
+        />
+      </View>
+      <View style={sharedStyles.formField}>
+        <Text style={sharedStyles.formLabel}>Done when</Text>
+        <TextInput
+          style={sharedStyles.formInput}
+          placeholder="Definition of done"
+          placeholderTextColor={colors.muted}
+          value={draft.good}
+          onChangeText={(t) => updateField("good", t)}
+        />
+      </View>
+      <View style={sharedStyles.formField}>
+        <Text style={sharedStyles.formLabel}>Tag</Text>
+        <ChipSelector
+          options={TAG_OPTIONS.concat([CUSTOM_TAG_OPTION])}
+          selected={selectedTag}
+          onSelect={setSelectedTag}
+          getColor={getTagColor}
+        />
+        {usingCustom ? (
+          <TextInput
+            style={[sharedStyles.formInput, styles.customTagInput]}
+            placeholder="Your tag name"
+            placeholderTextColor={colors.muted}
+            value={customTag}
+            onChangeText={setCustomTag}
+            maxLength={20}
+            autoFocus
+          />
+        ) : null}
+      </View>
+      <View style={sharedStyles.formButtons}>
+        <Pressable
+          style={({ pressed }) => [styles.submitBtn, pressed && sharedStyles.pressed]}
+          onPress={handleSubmit}
+        >
+          <Text style={styles.submitBtnText}>{mode === "add" ? "Add task" : "Save"}</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.cancelBtn, pressed && sharedStyles.pressed]}
+          onPress={onCancel}
+        >
+          <Text style={styles.cancelBtnText}>Cancel</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 
   if (embedded) return body;
@@ -223,49 +220,49 @@ export default function BlockForm({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  timeField: {
-    justifyContent: "center",
-    minHeight: 44,
-  },
-  timeValue: {
-    color: colors.text,
-    fontSize: fontSizes.md,
-  },
-  timePlaceholder: {
-    color: colors.muted,
-    fontSize: fontSizes.md,
-  },
-  customTagInput: {
-    marginTop: spacing.sm,
-  },
-  submitBtn: {
-    flex: 1,
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  submitBtnText: {
-    color: colors.onFill,
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-  },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  cancelBtnText: {
-    color: colors.text,
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-  },
-});
+    timeField: {
+      justifyContent: "center",
+      minHeight: 44,
+    },
+    timeValue: {
+      color: colors.text,
+      fontSize: fontSizes.md,
+    },
+    timePlaceholder: {
+      color: colors.muted,
+      fontSize: fontSizes.md,
+    },
+    customTagInput: {
+      marginTop: spacing.sm,
+    },
+    submitBtn: {
+      flex: 1,
+      backgroundColor: colors.accent,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      minHeight: 44,
+      justifyContent: "center",
+    },
+    submitBtnText: {
+      color: colors.onFill,
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+    },
+    cancelBtn: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 44,
+      justifyContent: "center",
+    },
+    cancelBtnText: {
+      color: colors.text,
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+    },
+  });

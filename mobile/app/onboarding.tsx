@@ -38,12 +38,8 @@ export default function OnboardingScreen() {
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const reduceMotion = useReducedMotion();
   const { refreshUser } = useAuth();
-  const {
-    programs,
-    selectedProgramId,
-    handleSelectProgram,
-    setProgramSetupDismissed,
-  } = useProgram();
+  const { programs, selectedProgramId, handleSelectProgram, setProgramSetupDismissed } =
+    useProgram();
 
   const { reloadState } = useData();
   const [step, setStep] = useState(0);
@@ -125,11 +121,7 @@ export default function OnboardingScreen() {
                     </Text>
                   </View>
                   {selected ? (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={22}
-                      color={colors.accent}
-                    />
+                    <Ionicons name="checkmark-circle" size={22} color={colors.accent} />
                   ) : null}
                 </Pressable>
               );
@@ -172,7 +164,12 @@ export default function OnboardingScreen() {
               decimals={1}
             />
           </Card>
-          <Button label="Continue" icon="arrow-forward" size="lg" onPress={nextFromWeight} />
+          <Button
+            label="Continue"
+            icon="arrow-forward"
+            size="lg"
+            onPress={nextFromWeight}
+          />
           <Button
             label="Skip for now"
             variant="ghost"
@@ -186,8 +183,8 @@ export default function OnboardingScreen() {
         <Animated.View key="s2" entering={enter} style={styles.step}>
           <Text style={styles.title}>Reminders</Text>
           <Text style={styles.subtitle}>
-            Evening check-in nudge and rest-timer alerts. You stay in control —
-            every category can be toggled in Settings.
+            Evening check-in nudge and rest-timer alerts. You stay in control — every
+            category can be toggled in Settings.
           </Text>
           <Button
             label="Enable reminders"

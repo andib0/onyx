@@ -93,61 +93,61 @@ export default function InsightsTeaserCard({
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-  head: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: tints.accent,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radii.full,
-  },
-  badgeText: {
-    fontSize: fontSizes.xs,
-    color: colors.accent,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    fontWeight: "700",
-  },
-  badgeMuted: {
-    color: colors.muted,
-  },
-  viewAll: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  viewAllText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  countdown: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-  },
-  title: {
-    fontSize: fontSizes.lg,
-    fontFamily: fonts.display,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  body: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    lineHeight: 19,
-  },
-  lockedText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    lineHeight: 19,
-    marginBottom: spacing.sm,
-  },
-});
+    head: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+    },
+    badge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: tints.accent,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+      borderRadius: radii.full,
+    },
+    badgeText: {
+      fontSize: fontSizes.xs,
+      color: colors.accent,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      fontWeight: "700",
+    },
+    badgeMuted: {
+      color: colors.muted,
+    },
+    viewAll: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    viewAllText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    countdown: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+    },
+    title: {
+      fontSize: fontSizes.lg,
+      fontFamily: fonts.display,
+      color: colors.text,
+      marginBottom: 2,
+    },
+    body: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      lineHeight: 19,
+    },
+    lockedText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      lineHeight: 19,
+      marginBottom: spacing.sm,
+    },
+  });

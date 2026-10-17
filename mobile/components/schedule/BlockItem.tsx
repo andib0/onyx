@@ -68,11 +68,7 @@ export default function BlockItem({
           {!isReadonly ? (
             <View style={styles.actions}>
               <IconButton icon="pencil-outline" onPress={onEdit} label="Edit task" />
-              <IconButton
-                icon="trash-outline"
-                onPress={onDelete}
-                label="Delete task"
-              />
+              <IconButton icon="trash-outline" onPress={onDelete} label="Delete task" />
             </View>
           ) : null}
         </View>
@@ -83,58 +79,58 @@ export default function BlockItem({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  blockItem: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  pressed: {
-    backgroundColor: colors.surfaceHover,
-  },
-  blockBorder: {
-    width: 4,
-  },
-  blockContent: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    minHeight: 56,
-    justifyContent: "center",
-  },
-  mainRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  readonlyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-    marginHorizontal: 7,
-  },
-  textWrap: {
-    flex: 1,
-  },
-  blockTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  blockTitleDone: {
-    color: colors.muted,
-    textDecorationLine: "line-through",
-  },
-  blockTime: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-    marginTop: 1,
-  },
-  actions: {
-    flexDirection: "row",
-  },
-});
+    blockItem: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: "row",
+      overflow: "hidden",
+    },
+    pressed: {
+      backgroundColor: colors.surfaceHover,
+    },
+    blockBorder: {
+      width: 4,
+    },
+    blockContent: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      minHeight: 56,
+      justifyContent: "center",
+    },
+    mainRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    readonlyDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.border,
+      marginHorizontal: 7,
+    },
+    textWrap: {
+      flex: 1,
+    },
+    blockTitle: {
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    blockTitleDone: {
+      color: colors.muted,
+      textDecorationLine: "line-through",
+    },
+    blockTime: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
+      marginTop: 1,
+    },
+    actions: {
+      flexDirection: "row",
+    },
+  });

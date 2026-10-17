@@ -1,13 +1,6 @@
 import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, type LayoutChangeEvent } from "react-native";
-import Svg, {
-  Path,
-  Circle,
-  Line,
-  Defs,
-  LinearGradient,
-  Stop,
-} from "react-native-svg";
+import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from "react-native-svg";
 import Card from "../ui/Card";
 import type { WeightTrend as WeightTrendData } from "../../utils/trends";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -133,53 +126,53 @@ export default function WeightTrend({ trend, goalNote }: WeightTrendProps) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.sm,
-  },
-  title: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-  },
-  currentValue: {
-    fontSize: 32,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-    fontVariant: ["tabular-nums"],
-    marginTop: 2,
-  },
-  unit: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    fontWeight: "400",
-  },
-  rateValue: {
-    fontSize: fontSizes.sm,
-    fontFamily: fonts.mono,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  chartWrap: {
-    height: CHART_HEIGHT,
-  },
-  rangeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.xs,
-  },
-  rangeText: {
-    fontSize: fontSizes.xs,
-    color: colors.faint,
-    fontFamily: fonts.mono,
-  },
-  goalNote: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
-});
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+    },
+    currentValue: {
+      fontSize: 32,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      color: colors.text,
+      fontVariant: ["tabular-nums"],
+      marginTop: 2,
+    },
+    unit: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      fontWeight: "400",
+    },
+    rateValue: {
+      fontSize: fontSizes.sm,
+      fontFamily: fonts.mono,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    chartWrap: {
+      height: CHART_HEIGHT,
+    },
+    rangeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: spacing.xs,
+    },
+    rangeText: {
+      fontSize: fontSizes.xs,
+      color: colors.faint,
+      fontFamily: fonts.mono,
+    },
+    goalNote: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: spacing.xs,
+    },
+  });

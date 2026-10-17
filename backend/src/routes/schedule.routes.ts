@@ -9,7 +9,11 @@ import {
 } from '../controllers/schedule.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createBlockSchema, updateBlockSchema, toggleCompletionSchema } from '../validators/schedule.schema.js';
+import {
+  createBlockSchema,
+  updateBlockSchema,
+  toggleCompletionSchema,
+} from '../validators/schedule.schema.js';
 
 const router = Router();
 

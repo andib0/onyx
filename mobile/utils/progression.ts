@@ -39,15 +39,11 @@ export function suggestProgression(
   const weighted = lastSets.filter((s) => s.weightKg !== null && s.weightKg > 0);
   if (weighted.length === 0) return null;
 
-  const topWeight = weighted.reduce(
-    (max, s) => Math.max(max, s.weightKg as number),
-    0
-  );
+  const topWeight = weighted.reduce((max, s) => Math.max(max, s.weightKg as number), 0);
   const topSets = weighted.filter((s) => s.weightKg === topWeight);
   const { low, high } = parseRepRange(reps);
 
-  const allHitTop =
-    topSets.length > 0 && topSets.every((s) => (s.reps ?? 0) >= high);
+  const allHitTop = topSets.length > 0 && topSets.every((s) => (s.reps ?? 0) >= high);
 
   if (allHitTop) {
     const next = Math.round((topWeight + increment(exerciseName)) * 100) / 100;

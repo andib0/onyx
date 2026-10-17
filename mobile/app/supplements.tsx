@@ -1,11 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useAppState } from "../contexts/AppStateContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Input from "../components/ui/Input";
@@ -88,7 +82,9 @@ export default function SupplementsScreen() {
       });
       showToast(`Added ${dbItem.name}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
+      showToast(
+        err instanceof Error ? err.message : "Couldn't add supplement — try again"
+      );
     }
   };
 
@@ -114,7 +110,9 @@ export default function SupplementsScreen() {
       await addSupplementItem(Object.assign({}, item, { id: `supp_${Date.now()}` }));
       setShowAddForm(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
+      showToast(
+        err instanceof Error ? err.message : "Couldn't add supplement — try again"
+      );
     }
   };
 
@@ -124,7 +122,9 @@ export default function SupplementsScreen() {
       await updateSupplementItem(editingId, item);
       setEditingId(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
+      showToast(
+        err instanceof Error ? err.message : "Couldn't update supplement — try again"
+      );
     }
   };
 
@@ -134,7 +134,9 @@ export default function SupplementsScreen() {
         await removeSupplementItem(deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Couldn't delete supplement — try again");
+        showToast(
+          err instanceof Error ? err.message : "Couldn't delete supplement — try again"
+        );
       }
     }
   };
@@ -164,7 +166,6 @@ export default function SupplementsScreen() {
 
   return (
     <ScreenContainer hasNativeHeader>
-
       {/* Stats */}
       <View style={styles.statsRow}>
         <Pill
@@ -306,96 +307,96 @@ export default function SupplementsScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: spacing.xxl,
-  },
-  backText: {
-    fontSize: fontSizes.md,
-    color: colors.accent,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  clearBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  clearBtnText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: spacing.xxl,
+    },
+    backText: {
+      fontSize: fontSizes.md,
+      color: colors.accent,
+    },
+    statsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    clearBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    clearBtnText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    pressed: {
+      opacity: 0.85,
+    },
 
-  fab: {
-    backgroundColor: colors.supplement,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  fabText: {
-    color: colors.bg,
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-  },
+    fab: {
+      backgroundColor: colors.supplement,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      minHeight: 48,
+      justifyContent: "center",
+    },
+    fabText: {
+      color: colors.bg,
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+    },
 
-  // Library search
-  searchInput: {
-    marginBottom: spacing.sm,
-  },
-  searchSpinner: {
-    marginVertical: spacing.sm,
-  },
-  libResult: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.sm,
-    minHeight: 48,
-  },
-  libInfo: {
-    flex: 1,
-  },
-  libName: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  libMeta: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  libAddBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    minWidth: 44,
-    alignItems: "center",
-  },
-  libAddText: {
-    fontSize: fontSizes.sm,
-    color: colors.supplement,
-    fontWeight: "600",
-  },
+    // Library search
+    searchInput: {
+      marginBottom: spacing.sm,
+    },
+    searchSpinner: {
+      marginVertical: spacing.sm,
+    },
+    libResult: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.sm,
+      minHeight: 48,
+    },
+    libInfo: {
+      flex: 1,
+    },
+    libName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    libMeta: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    libAddBtn: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      minWidth: 44,
+      alignItems: "center",
+    },
+    libAddText: {
+      fontSize: fontSizes.sm,
+      color: colors.supplement,
+      fontWeight: "600",
+    },
 
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: "center",
-    paddingVertical: spacing.xl,
-  },
-});
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      textAlign: "center",
+      paddingVertical: spacing.xl,
+    },
+  });

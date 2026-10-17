@@ -71,10 +71,7 @@ export default function Segmented<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
-            <Text
-              style={[styles.label, active && styles.labelActive]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
               {getLabel ? getLabel(option) : option}
             </Text>
           </Pressable>

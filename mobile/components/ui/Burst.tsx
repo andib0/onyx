@@ -13,13 +13,7 @@ import { colors } from "../../theme";
 const PARTICLE_COUNT = 12;
 const PARTICLE_COLORS = [colors.warning, colors.good, colors.accent, colors.accent2];
 
-function Particle({
-  index,
-  progress,
-}: {
-  index: number;
-  progress: SharedValue<number>;
-}) {
+function Particle({ index, progress }: { index: number; progress: SharedValue<number> }) {
   const angle = (index / PARTICLE_COUNT) * Math.PI * 2;
   const distance = 46 + (index % 3) * 16;
   const size = 5 + (index % 3) * 2;

@@ -16,8 +16,11 @@ export async function registerUser(): Promise<TestUser> {
   counter += 1;
   const email = `user${Date.now()}_${counter}@onyx.test`;
   const password = 'test-Passw0rd-123!';
-  const res = await http().post('/api/auth/register').send({ email, password, timezone: 'UTC' });
-  if (res.status !== 201) throw new Error(`register failed ${res.status} ${JSON.stringify(res.body)}`);
+  const res = await http()
+    .post('/api/auth/register')
+    .send({ email, password, timezone: 'UTC' });
+  if (res.status !== 201)
+    throw new Error(`register failed ${res.status} ${JSON.stringify(res.body)}`);
   return {
     email,
     password,

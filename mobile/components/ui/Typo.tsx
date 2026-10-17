@@ -1,10 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import {
-  Text,
-  StyleSheet,
-  type StyleProp,
-  type TextStyle,
-} from "react-native";
+import { Text, StyleSheet, type StyleProp, type TextStyle } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
 import { fontSizes, fonts, type Palette } from "../../theme";
 

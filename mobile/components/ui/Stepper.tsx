@@ -70,53 +70,53 @@ export default function Stepper({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  label: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    textAlign: "center",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  bumpBtn: {
-    width: 44,
-    height: 52,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pressed: {
-    backgroundColor: colors.surfaceHover,
-    borderColor: colors.accentDim,
-    transform: [{ scale: 0.94 }],
-  },
-  bumpText: {
-    fontSize: 22,
-    color: colors.text,
-    fontWeight: "600",
-    lineHeight: 26,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: radii.sm,
-    color: colors.text,
-    fontSize: fontSizes.xl,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-  },
-});
+    container: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    label: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      textAlign: "center",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    bumpBtn: {
+      width: 44,
+      height: 52,
+      borderRadius: radii.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pressed: {
+      backgroundColor: colors.surfaceHover,
+      borderColor: colors.accentDim,
+      transform: [{ scale: 0.94 }],
+    },
+    bumpText: {
+      fontSize: 22,
+      color: colors.text,
+      fontWeight: "600",
+      lineHeight: 26,
+    },
+    input: {
+      flex: 1,
+      height: 52,
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      borderRadius: radii.sm,
+      color: colors.text,
+      fontSize: fontSizes.xl,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+    },
+  });

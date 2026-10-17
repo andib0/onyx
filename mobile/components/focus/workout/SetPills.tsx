@@ -1,7 +1,14 @@
 import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, type Palette, type TintSet } from "../../../theme";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  fonts,
+  type Palette,
+  type TintSet,
+} from "../../../theme";
 
 // Set pills: logged weight×reps at a glance (Hevy-style table, compressed)
 export default function SetPills({

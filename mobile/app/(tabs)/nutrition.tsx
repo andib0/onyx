@@ -126,7 +126,9 @@ export default function NutritionScreen() {
       setShowAdd(false);
       showToast(`Added ${name}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Couldn't add supplement — try again");
+      showToast(
+        err instanceof Error ? err.message : "Couldn't add supplement — try again"
+      );
     }
   };
 
@@ -145,7 +147,9 @@ export default function NutritionScreen() {
     await handleAddFoodToDay(food);
   };
   useEffect(() => {
-    getRecentFoods().then(setRecentFoods).catch(() => {});
+    getRecentFoods()
+      .then(setRecentFoods)
+      .catch(() => {});
   }, []);
   const [foodResults, setFoodResults] = useState<Food[]>([]);
   const [foodSearching, setFoodSearching] = useState(false);
@@ -189,7 +193,9 @@ export default function NutritionScreen() {
     try {
       await addMealTemplateForDay(selectedMealDay, foodToMealTemplate(food));
       showToast(`Added ${food.name}`);
-      pushRecentFood(food).then(setRecentFoods).catch(() => {});
+      pushRecentFood(food)
+        .then(setRecentFoods)
+        .catch(() => {});
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't add food — try again");
     }
@@ -264,7 +270,9 @@ export default function NutritionScreen() {
         })
       );
     }
-    showToast(`Copied ${yesterdayMeals.length} meal${yesterdayMeals.length === 1 ? "" : "s"} from ${yesterdayDay}`);
+    showToast(
+      `Copied ${yesterdayMeals.length} meal${yesterdayMeals.length === 1 ? "" : "s"} from ${yesterdayDay}`
+    );
   };
 
   // Fill empty weekdays with the current day's meals (non-destructive)
@@ -286,7 +294,9 @@ export default function NutritionScreen() {
       copied++;
     }
     showToast(
-      copied ? `Copied to ${copied} day${copied === 1 ? "" : "s"}` : "Other days already have meals"
+      copied
+        ? `Copied to ${copied} day${copied === 1 ? "" : "s"}`
+        : "Other days already have meals"
     );
   };
 
@@ -332,7 +342,9 @@ export default function NutritionScreen() {
         await removeMealTemplateForDay(selectedMealDay, deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Couldn't delete meal — try again");
+        showToast(
+          err instanceof Error ? err.message : "Couldn't delete meal — try again"
+        );
       }
     }
   };
@@ -459,100 +471,99 @@ export default function NutritionScreen() {
         </View>
 
         {addMode === "food" ? (
-            <>
-              <View style={styles.quickRow}>
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickName]}
-                  placeholder="Meal name"
-                  placeholderTextColor={colors.muted}
-                  value={quickName}
-                  onChangeText={setQuickName}
-                  maxLength={60}
-                />
-              </View>
-              <View style={styles.quickRow}>
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickField]}
-                  placeholder="Protein g"
-                  placeholderTextColor={colors.muted}
-                  value={quickProtein}
-                  onChangeText={setQuickProtein}
-                  keyboardType="decimal-pad"
-                />
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickField]}
-                  placeholder="kcal"
-                  placeholderTextColor={colors.muted}
-                  value={quickKcal}
-                  onChangeText={setQuickKcal}
-                  keyboardType="number-pad"
-                />
-                <Button label="Add" size="sm" onPress={handleQuickAdd} />
-              </View>
-              <View style={styles.addDivider} />
-              <Button
-                label="Scan barcode"
-                variant="secondary"
-                size="sm"
-                icon="barcode-outline"
-                onPress={() => setShowScanner(true)}
+          <>
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickName]}
+                placeholder="Meal name"
+                placeholderTextColor={colors.muted}
+                value={quickName}
+                onChangeText={setQuickName}
+                maxLength={60}
               />
-              <FoodSearchSection
-                query={foodQuery}
-                onQueryChange={setFoodQuery}
-                results={foodResults}
-                searching={foodSearching}
-                debouncedQuery={debouncedFoodQuery}
-                onAddFood={handleAddFoodToDay}
-                onSaveFood={handleSaveFood}
-                recentFoods={recentFoods}
+            </View>
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="Protein g"
+                placeholderTextColor={colors.muted}
+                value={quickProtein}
+                onChangeText={setQuickProtein}
+                keyboardType="decimal-pad"
               />
-              <MyFoodsSection
-                myFoods={myFoods}
-                onAddFood={handleAddFoodToDay}
-                onRemoveFood={handleRemoveUserFood}
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="kcal"
+                placeholderTextColor={colors.muted}
+                value={quickKcal}
+                onChangeText={setQuickKcal}
+                keyboardType="number-pad"
               />
-            </>
-          ) : (
-            <>
-              <View style={styles.quickRow}>
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickName]}
-                  placeholder="Creatine 5g 8am — dose & time parse automatically"
-                  placeholderTextColor={colors.muted}
-                  value={suppName}
-                  onChangeText={handleSuppNameChange}
-                  maxLength={60}
-                />
-              </View>
-              <View style={styles.quickRow}>
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickField]}
-                  placeholder="Dose (5 g)"
-                  placeholderTextColor={colors.muted}
-                  value={suppDose}
-                  onChangeText={setSuppDose}
-                  maxLength={20}
-                />
-                <TextInput
-                  style={[sharedStyles.formInput, styles.quickField]}
-                  placeholder="Time 08:00"
-                  placeholderTextColor={colors.muted}
-                  value={suppTime}
-                  onChangeText={setSuppTime}
-                  maxLength={5}
-                />
-                <Button label="Add" size="sm" onPress={handleAddSupplement} />
-              </View>
-              <Button
-                label="Open full supplement manager"
-                variant="ghost"
-                size="sm"
-                onPress={() => router.push("/supplements")}
+              <Button label="Add" size="sm" onPress={handleQuickAdd} />
+            </View>
+            <View style={styles.addDivider} />
+            <Button
+              label="Scan barcode"
+              variant="secondary"
+              size="sm"
+              icon="barcode-outline"
+              onPress={() => setShowScanner(true)}
+            />
+            <FoodSearchSection
+              query={foodQuery}
+              onQueryChange={setFoodQuery}
+              results={foodResults}
+              searching={foodSearching}
+              debouncedQuery={debouncedFoodQuery}
+              onAddFood={handleAddFoodToDay}
+              onSaveFood={handleSaveFood}
+              recentFoods={recentFoods}
+            />
+            <MyFoodsSection
+              myFoods={myFoods}
+              onAddFood={handleAddFoodToDay}
+              onRemoveFood={handleRemoveUserFood}
+            />
+          </>
+        ) : (
+          <>
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickName]}
+                placeholder="Creatine 5g 8am — dose & time parse automatically"
+                placeholderTextColor={colors.muted}
+                value={suppName}
+                onChangeText={handleSuppNameChange}
+                maxLength={60}
               />
-            </>
-          )}
-
+            </View>
+            <View style={styles.quickRow}>
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="Dose (5 g)"
+                placeholderTextColor={colors.muted}
+                value={suppDose}
+                onChangeText={setSuppDose}
+                maxLength={20}
+              />
+              <TextInput
+                style={[sharedStyles.formInput, styles.quickField]}
+                placeholder="Time 08:00"
+                placeholderTextColor={colors.muted}
+                value={suppTime}
+                onChangeText={setSuppTime}
+                maxLength={5}
+              />
+              <Button label="Add" size="sm" onPress={handleAddSupplement} />
+            </View>
+            <Button
+              label="Open full supplement manager"
+              variant="ghost"
+              size="sm"
+              onPress={() => router.push("/supplements")}
+            />
+          </>
+        )}
       </Sheet>
 
       <SettingsGroup>
@@ -602,52 +613,52 @@ export default function NutritionScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  addHeader: {
-    marginBottom: spacing.md,
-  },
-  addDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
-  },
-  quickRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  quickName: {
-    flex: 1,
-  },
-  quickField: {
-    flex: 1,
-  },
-  trendHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: spacing.md,
-  },
-  trendTitle: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-  },
-  trendTarget: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  suggestRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  suggestText: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-});
+    addHeader: {
+      marginBottom: spacing.md,
+    },
+    addDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: spacing.sm,
+    },
+    quickRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    quickName: {
+      flex: 1,
+    },
+    quickField: {
+      flex: 1,
+    },
+    trendHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      marginBottom: spacing.md,
+    },
+    trendTitle: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+    },
+    trendTarget: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    suggestRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.xs,
+      marginTop: spacing.md,
+    },
+    suggestText: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      lineHeight: 18,
+    },
+  });

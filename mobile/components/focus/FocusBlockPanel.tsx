@@ -63,65 +63,65 @@ export default function FocusBlockPanel({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  focusPanel: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  focusPanelActive: {
-    borderColor: colors.accent + "44",
-  },
-  focusPanelBorder: {
-    width: 4,
-  },
-  focusPanelContent: {
-    flex: 1,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  focusPanelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  focusPanelLeft: {
-    flex: 1,
-  },
-  focusPanelMeta: {
-    alignItems: "flex-end",
-  },
-  focusLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  focusPanelTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-    marginTop: 2,
-  },
-  focusMetaText: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  focusPurpose: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  focusGood: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  focusGoodLabel: {
-    fontWeight: "600",
-    color: colors.text,
-  },
-  action: {
-    marginTop: spacing.xs,
-  },
-});
+    focusPanel: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: "row",
+      overflow: "hidden",
+    },
+    focusPanelActive: {
+      borderColor: colors.accent + "44",
+    },
+    focusPanelBorder: {
+      width: 4,
+    },
+    focusPanelContent: {
+      flex: 1,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    focusPanelHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    focusPanelLeft: {
+      flex: 1,
+    },
+    focusPanelMeta: {
+      alignItems: "flex-end",
+    },
+    focusLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    focusPanelTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 2,
+    },
+    focusMetaText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    focusPurpose: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    focusGood: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    focusGoodLabel: {
+      fontWeight: "600",
+      color: colors.text,
+    },
+    action: {
+      marginTop: spacing.xs,
+    },
+  });

@@ -21,7 +21,9 @@ export async function getRecentFoods(): Promise<Food[]> {
 
 export async function pushRecentFood(food: Food): Promise<Food[]> {
   const current = await getRecentFoods();
-  const next = [food].concat(current.filter((f) => f.id !== food.id)).slice(0, MAX_RECENTS);
+  const next = [food]
+    .concat(current.filter((f) => f.id !== food.id))
+    .slice(0, MAX_RECENTS);
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(next));
   } catch {

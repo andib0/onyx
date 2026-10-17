@@ -65,10 +65,7 @@ export default function Ring({
         <Defs>
           <LinearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={over ? colors.warning : color} />
-            <Stop
-              offset="100%"
-              stopColor={over ? colors.warning : colors.accent2}
-            />
+            <Stop offset="100%" stopColor={over ? colors.warning : colors.accent2} />
           </LinearGradient>
         </Defs>
         <Circle
@@ -102,24 +99,24 @@ export default function Ring({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  wrap: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    position: "absolute",
-    alignItems: "center",
-  },
-  value: {
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  label: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 1,
-  },
-});
+    wrap: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    center: {
+      position: "absolute",
+      alignItems: "center",
+    },
+    value: {
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    label: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginTop: 1,
+    },
+  });

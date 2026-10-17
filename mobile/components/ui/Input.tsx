@@ -10,7 +10,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, hitSlopDefault, type Palette } from "../../theme";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  fonts,
+  hitSlopDefault,
+  type Palette,
+} from "../../theme";
 
 interface InputProps {
   label?: string;
@@ -58,11 +65,7 @@ export default function Input({
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(true);
 
-  const borderColor = error
-    ? colors.danger
-    : focused
-      ? colors.accent
-      : colors.border;
+  const borderColor = error ? colors.danger : focused ? colors.accent : colors.border;
 
   return (
     <View style={styles.wrap}>

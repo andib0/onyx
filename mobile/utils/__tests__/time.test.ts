@@ -3,7 +3,17 @@ import { toMinutes, getCurrentNextBlocks } from "../time";
 import type { ScheduleBlock } from "../../types/appTypes";
 
 const block = (id: string, start: string, end: string): ScheduleBlock =>
-  ({ id, start, end, title: id, purpose: "", good: "", tag: "", readonly: false, source: "schedule" }) as ScheduleBlock;
+  ({
+    id,
+    start,
+    end,
+    title: id,
+    purpose: "",
+    good: "",
+    tag: "",
+    readonly: false,
+    source: "schedule",
+  }) as ScheduleBlock;
 
 describe("toMinutes", () => {
   it("converts HH:MM", () => {

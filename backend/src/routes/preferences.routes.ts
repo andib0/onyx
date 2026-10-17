@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { getPreferences, updatePreferences } from '../controllers/preferences.controller.js';
+import {
+  getPreferences,
+  updatePreferences,
+} from '../controllers/preferences.controller.js';
 
 const router = Router();
 

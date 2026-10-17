@@ -214,7 +214,6 @@ export default function ProgramEditorScreen() {
 
   return (
     <ScreenContainer hasNativeHeader>
-
       <Card>
         <Text style={sharedStyles.formLabel}>Name</Text>
         <TextInput
@@ -379,89 +378,89 @@ export default function ProgramEditorScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  cancelLink: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-  goalLabel: {
-    marginTop: spacing.md,
-  },
-  dayHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  dayNameInput: {
-    flex: 1,
-  },
-  exerciseBox: {
-    backgroundColor: colors.bg,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  exerciseHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  exerciseNameInput: {
-    flex: 1,
-  },
-  suggestList: {
-    marginTop: spacing.xs,
-    backgroundColor: colors.surface2,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
-  suggestItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  suggestPressed: {
-    backgroundColor: colors.surfaceHover,
-  },
-  suggestName: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  suggestMuscle: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  exerciseFields: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  smallField: {
-    flex: 1,
-    gap: 2,
-  },
-  smallLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  smallInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    color: colors.text,
-    fontSize: fontSizes.sm,
-    textAlign: "center",
-    minHeight: 40,
-  },
-});
+    cancelLink: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+    goalLabel: {
+      marginTop: spacing.md,
+    },
+    dayHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    dayNameInput: {
+      flex: 1,
+    },
+    exerciseBox: {
+      backgroundColor: colors.bg,
+      borderRadius: radii.sm,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    exerciseHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    exerciseNameInput: {
+      flex: 1,
+    },
+    suggestList: {
+      marginTop: spacing.xs,
+      backgroundColor: colors.surface2,
+      borderRadius: radii.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    suggestItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    suggestPressed: {
+      backgroundColor: colors.surfaceHover,
+    },
+    suggestName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    suggestMuscle: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    exerciseFields: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    smallField: {
+      flex: 1,
+      gap: 2,
+    },
+    smallLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    smallInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      color: colors.text,
+      fontSize: fontSizes.sm,
+      textAlign: "center",
+      minHeight: 40,
+    },
+  });

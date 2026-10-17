@@ -2,7 +2,9 @@ import { execSync } from 'node:child_process';
 
 export function assertSafeTestUrl(raw: string | undefined): string {
   if (!raw) {
-    throw new Error('TEST_DATABASE_URL is not set (e.g. postgresql://user:pw@localhost:5432/onyx_test)');
+    throw new Error(
+      'TEST_DATABASE_URL is not set (e.g. postgresql://user:pw@localhost:5432/onyx_test)'
+    );
   }
   const url = new URL(raw);
   const host = url.hostname;

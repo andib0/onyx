@@ -9,7 +9,11 @@ import {
 } from '../controllers/supplements.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createSupplementSchema, updateSupplementSchema, toggleSupplementLogSchema } from '../validators/supplements.schema.js';
+import {
+  createSupplementSchema,
+  updateSupplementSchema,
+  toggleSupplementLogSchema,
+} from '../validators/supplements.schema.js';
 
 const router = Router();
 

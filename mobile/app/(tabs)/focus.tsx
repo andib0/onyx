@@ -55,13 +55,7 @@ import {
 } from "../../utils/achievements";
 import { success } from "../../utils/haptics";
 import { useTheme } from "../../contexts/ThemeContext";
-import {
-  fontSizes,
-  fonts,
-  spacing,
-  type Palette,
-  type TintSet,
-} from "../../theme";
+import { fontSizes, fonts, spacing, type Palette, type TintSet } from "../../theme";
 
 // "2 tasks · 1 supplement still open" — empty string when the day is closed out
 function buildOpenSummary(tasks: number, supps: number, meals: number): string {
@@ -171,8 +165,7 @@ export default function FocusScreen() {
       supplementsList
         .filter(
           (s) =>
-            !windowPendingIds.has(s.id || "") &&
-            !supplementChecksForToday[s.id || ""]
+            !windowPendingIds.has(s.id || "") && !supplementChecksForToday[s.id || ""]
         )
         .map((s) => ({
           id: s.id || "",
@@ -202,7 +195,9 @@ export default function FocusScreen() {
 
   const handleSuppToggle = (id: string) => {
     setSupplementChecked(id, !supplementChecksForToday[id]).catch((err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Couldn't update supplement — try again");
+      showToast(
+        err instanceof Error ? err.message : "Couldn't update supplement — try again"
+      );
     });
   };
 
@@ -213,9 +208,7 @@ export default function FocusScreen() {
     (s) => supplementChecksForToday[s.id || ""]
   ).length;
   const tasksTotal = scheduleBlocks.length;
-  const tasksDone = scheduleBlocks.filter(
-    (b) => completionByBlockId[b.id || ""]
-  ).length;
+  const tasksDone = scheduleBlocks.filter((b) => completionByBlockId[b.id || ""]).length;
 
   const recap = buildYesterdayRecap(appState, supplementsList);
   const streak = scoreStreak(scoreHistory, todayKeyValue, timelineProgressPercent);
@@ -237,15 +230,12 @@ export default function FocusScreen() {
   const isEvening = nowMinutes >= CHECK_IN_HOUR * 60;
   const isMorning = nowMinutes < 12 * 60;
   const isMonday = new Date().getDay() === 1;
-  const gymActive = blocksToShow.some(
-    (fb) => !fb.isUpcoming && fb.context === "gym"
-  );
+  const gymActive = blocksToShow.some((fb) => !fb.isUpcoming && fb.context === "gym");
 
   // Celebrate newly-unlocked achievements (after score history is known)
   useEffect(() => {
     if (stateLoading || scoreHistory.length === 0) return;
-    const todayScore =
-      scoreHistory.find((s) => s.date === todayKeyValue)?.score ?? 0;
+    const todayScore = scoreHistory.find((s) => s.date === todayKeyValue)?.score ?? 0;
     const streakNow = scoreStreak(scoreHistory, todayKeyValue, todayScore);
     const ctx = buildAchievementCtx(scoreHistory, logEntries, streakNow);
     const unlockedIds = evaluateAchievements(ctx)
@@ -255,7 +245,9 @@ export default function FocusScreen() {
       if (fresh.length) {
         success();
         showToast(
-          fresh.length === 1 ? "Achievement unlocked!" : `${fresh.length} achievements unlocked!`
+          fresh.length === 1
+            ? "Achievement unlocked!"
+            : `${fresh.length} achievements unlocked!`
         );
       }
     });
@@ -578,75 +570,75 @@ export default function FocusScreen() {
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-  headerWash: {
-    position: "absolute",
-    top: -spacing.xl,
-    left: -spacing.lg,
-    right: -spacing.lg,
-    height: 240,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: fontSizes.title,
-    fontFamily: fonts.display,
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  dateLine: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  dayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.lg,
-  },
-  dayRowInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  dayRowTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  dayRowPerfect: {
-    color: colors.good,
-  },
-  errorBanner: {
-    backgroundColor: tints.danger,
-    borderWidth: 1,
-    borderColor: colors.danger + "55",
-    borderRadius: 10,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  errorBannerText: {
-    fontSize: fontSizes.sm,
-    color: colors.danger,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  dayRowText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  dayRowStrong: {
-    color: colors.text,
-    fontWeight: "700",
-  },
-  dayRowStreak: {
-    fontSize: fontSizes.sm,
-    color: colors.good,
-    fontWeight: "600",
-  },
-});
+    headerWash: {
+      position: "absolute",
+      top: -spacing.xl,
+      left: -spacing.lg,
+      right: -spacing.lg,
+      height: 240,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    headerText: {
+      flex: 1,
+    },
+    greeting: {
+      fontSize: fontSizes.title,
+      fontFamily: fonts.display,
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    dateLine: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      marginTop: 2,
+    },
+    dayRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.lg,
+    },
+    dayRowInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    dayRowTitle: {
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    dayRowPerfect: {
+      color: colors.good,
+    },
+    errorBanner: {
+      backgroundColor: tints.danger,
+      borderWidth: 1,
+      borderColor: colors.danger + "55",
+      borderRadius: 10,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    errorBannerText: {
+      fontSize: fontSizes.sm,
+      color: colors.danger,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+    dayRowText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    dayRowStrong: {
+      color: colors.text,
+      fontWeight: "700",
+    },
+    dayRowStreak: {
+      fontSize: fontSizes.sm,
+      color: colors.good,
+      fontWeight: "600",
+    },
+  });

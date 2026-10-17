@@ -13,14 +13,7 @@ import {
   type Achievement,
 } from "../utils/achievements";
 import { useTheme } from "../contexts/ThemeContext";
-import {
-  spacing,
-  fontSizes,
-  fonts,
-  radii,
-  type Palette,
-  type TintSet,
-} from "../theme";
+import { spacing, fontSizes, fonts, radii, type Palette, type TintSet } from "../theme";
 
 function nudge(pct: number): string {
   if (pct >= 80) return "So close — almost yours.";
@@ -115,8 +108,7 @@ export default function AchievementsScreen() {
     .filter((a) => !a.unlocked)
     .sort(
       (a, b) =>
-        (b.target ? b.progress / b.target : 0) -
-        (a.target ? a.progress / a.target : 0)
+        (b.target ? b.progress / b.target : 0) - (a.target ? a.progress / a.target : 0)
     );
   const nextUp = locked.find((a) => a.progress > 0) ?? locked[0] ?? null;
   const rest = nextUp ? locked.filter((a) => a.id !== nextUp.id) : locked;
@@ -143,107 +135,107 @@ export default function AchievementsScreen() {
 
 const makeStyles = (colors: Palette, tints: TintSet) =>
   StyleSheet.create({
-  heading: {
-    fontSize: fontSizes.xl,
-    fontFamily: fonts.display,
-    color: colors.text,
-  },
-  nextCard: {
-    borderColor: colors.accentDim,
-    borderWidth: 1,
-    backgroundColor: tints.accent,
-  },
-  nextEyebrow: {
-    fontSize: fontSizes.xs,
-    color: colors.accent,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    fontWeight: "700",
-    marginBottom: spacing.sm,
-  },
-  nextBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.accentDim,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nextTitle: {
-    fontSize: fontSizes.lg,
-    fontFamily: fonts.display,
-    color: colors.text,
-  },
-  nextRemaining: {
-    fontSize: fontSizes.title,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    color: colors.accent,
-    fontVariant: ["tabular-nums"],
-  },
-  nudge: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    marginTop: spacing.sm,
-    fontWeight: "600",
-  },
-  sectionLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-    marginTop: spacing.sm,
-    marginBottom: -spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  locked: {
-    opacity: 0.7,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  badge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeUnlocked: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  progressText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    fontVariant: ["tabular-nums"],
-  },
-  desc: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  barWrap: {
-    marginTop: spacing.xs,
-  },
-});
+    heading: {
+      fontSize: fontSizes.xl,
+      fontFamily: fonts.display,
+      color: colors.text,
+    },
+    nextCard: {
+      borderColor: colors.accentDim,
+      borderWidth: 1,
+      backgroundColor: tints.accent,
+    },
+    nextEyebrow: {
+      fontSize: fontSizes.xs,
+      color: colors.accent,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      fontWeight: "700",
+      marginBottom: spacing.sm,
+    },
+    nextBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: radii.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.accentDim,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    nextTitle: {
+      fontSize: fontSizes.lg,
+      fontFamily: fonts.display,
+      color: colors.text,
+    },
+    nextRemaining: {
+      fontSize: fontSizes.title,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      color: colors.accent,
+      fontVariant: ["tabular-nums"],
+    },
+    nudge: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      marginTop: spacing.sm,
+      fontWeight: "600",
+    },
+    sectionLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+      marginTop: spacing.sm,
+      marginBottom: -spacing.sm,
+      marginLeft: spacing.xs,
+    },
+    locked: {
+      opacity: 0.7,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    badge: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badgeUnlocked: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    info: {
+      flex: 1,
+      gap: 2,
+    },
+    titleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    title: {
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    progressText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      fontVariant: ["tabular-nums"],
+    },
+    desc: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    barWrap: {
+      marginTop: spacing.xs,
+    },
+  });

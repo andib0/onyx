@@ -151,7 +151,6 @@ export default function LogScreen() {
 
   return (
     <ScreenContainer hasNativeHeader>
-
       {/* Bodyweight trend */}
       <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
 
@@ -327,198 +326,198 @@ export default function LogScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: spacing.xxl,
-  },
-  backText: {
-    fontSize: fontSizes.md,
-    color: colors.accent,
-  },
-  formHint: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginBottom: spacing.md,
-  },
-  formGrid: {
-    gap: spacing.md,
-  },
-  formRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  formField: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  formLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontWeight: "500",
-  },
-  formInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    backgroundColor: colors.bg,
-    minHeight: 40,
-  },
-  notesInput: {
-    minHeight: 72,
-    paddingTop: spacing.sm,
-  },
-  dayRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  dayChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 36,
-    justifyContent: "center",
-  },
-  dayChipSelected: {
-    backgroundColor: colors.accent + "22",
-    borderColor: colors.accent,
-  },
-  dayChipText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  dayChipTextSelected: {
-    color: colors.accent,
-  },
-  formButtons: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  addBtn: {
-    flex: 1,
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  addBtnText: {
-    color: colors.onFill,
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-  },
-  clearBtn: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.danger + "44",
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: "center",
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  clearBtnText: {
-    color: colors.danger,
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-  },
-  showMoreBtn: {
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  showMoreText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  pressed: {
-    opacity: 0.85,
-  },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: spacing.xxl,
+    },
+    backText: {
+      fontSize: fontSizes.md,
+      color: colors.accent,
+    },
+    formHint: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginBottom: spacing.md,
+    },
+    formGrid: {
+      gap: spacing.md,
+    },
+    formRow: {
+      flexDirection: "row",
+      gap: spacing.md,
+    },
+    formField: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    formLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontWeight: "500",
+    },
+    formInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.sm,
+      padding: spacing.sm,
+      fontSize: fontSizes.md,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      minHeight: 40,
+    },
+    notesInput: {
+      minHeight: 72,
+      paddingTop: spacing.sm,
+    },
+    dayRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    dayChip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 36,
+      justifyContent: "center",
+    },
+    dayChipSelected: {
+      backgroundColor: colors.accent + "22",
+      borderColor: colors.accent,
+    },
+    dayChipText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    dayChipTextSelected: {
+      color: colors.accent,
+    },
+    formButtons: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    addBtn: {
+      flex: 1,
+      backgroundColor: colors.accent,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      minHeight: 48,
+      justifyContent: "center",
+    },
+    addBtnText: {
+      color: colors.onFill,
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+    },
+    clearBtn: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: colors.danger + "44",
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: "center",
+      minHeight: 48,
+      justifyContent: "center",
+    },
+    clearBtnText: {
+      color: colors.danger,
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+    },
+    showMoreBtn: {
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      minHeight: 44,
+      justifyContent: "center",
+    },
+    showMoreText: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    pressed: {
+      opacity: 0.85,
+    },
 
-  // History
-  historyHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  historyTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: "center",
-    paddingVertical: spacing.xl,
-  },
+    // History
+    historyHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    historyTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      textAlign: "center",
+      paddingVertical: spacing.xl,
+    },
 
-  // Entry card
-  entryCard: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.xs,
-  },
-  entryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  entryDate: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontWeight: "500",
-  },
-  entryDay: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    flex: 1,
-  },
-  deleteText: {
-    fontSize: fontSizes.lg,
-    color: colors.danger,
-    fontWeight: "600",
-    paddingHorizontal: spacing.xs,
-  },
-  entryStats: {
-    flexDirection: "row",
-    gap: spacing.lg,
-  },
-  statItem: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  statValue: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontFamily: fonts.mono,
-  },
-  entryTop: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  entryNotes: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontStyle: "italic",
-  },
-});
+    // Entry card
+    entryCard: {
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.xs,
+    },
+    entryHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    entryDate: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontWeight: "500",
+    },
+    entryDay: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      flex: 1,
+    },
+    deleteText: {
+      fontSize: fontSizes.lg,
+      color: colors.danger,
+      fontWeight: "600",
+      paddingHorizontal: spacing.xs,
+    },
+    entryStats: {
+      flexDirection: "row",
+      gap: spacing.lg,
+    },
+    statItem: {
+      flexDirection: "row",
+      gap: spacing.xs,
+      alignItems: "center",
+    },
+    statLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    statValue: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontFamily: fonts.mono,
+    },
+    entryTop: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    entryNotes: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontStyle: "italic",
+    },
+  });

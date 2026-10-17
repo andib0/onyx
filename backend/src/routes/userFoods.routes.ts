@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { addUserFood, listUserFoods, removeUserFood } from '../controllers/userFoods.controller.js';
+import {
+  addUserFood,
+  listUserFoods,
+  removeUserFood,
+} from '../controllers/userFoods.controller.js';
 
 const router = Router();
 

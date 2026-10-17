@@ -13,7 +13,8 @@ const toggleCompletion = vi.fn();
 const toggleMealLog = vi.fn();
 const toggleSupplementLog = vi.fn();
 vi.mock("../../api/schedule", () => ({
-  toggleCompletion: (id: string, date: string, v: boolean) => toggleCompletion(id, date, v),
+  toggleCompletion: (id: string, date: string, v: boolean) =>
+    toggleCompletion(id, date, v),
 }));
 vi.mock("../../api/meals", () => ({
   toggleMealLog: (id: string, date: string, v: boolean) => toggleMealLog(id, date, v),
@@ -64,7 +65,11 @@ describe("mutationQueue", () => {
     const { flushed } = await flushMutationQueue();
     expect(flushed).toBe(2);
     expect(toggleMealLog).toHaveBeenCalledExactlyOnceWith("m1", "2026-07-04", true);
-    expect(toggleSupplementLog).toHaveBeenCalledExactlyOnceWith("s1", "2026-07-04", false);
+    expect(toggleSupplementLog).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      "2026-07-04",
+      false
+    );
   });
 
   it("keeps entries when still offline", async () => {

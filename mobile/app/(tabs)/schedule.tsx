@@ -82,7 +82,9 @@ export default function ScheduleScreen() {
         await removeScheduleBlock(deleteTarget);
         setDeleteTarget(null);
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "Couldn't delete block — try again");
+        showToast(
+          err instanceof Error ? err.message : "Couldn't delete block — try again"
+        );
       }
     }
   };
@@ -151,11 +153,7 @@ export default function ScheduleScreen() {
         </Card>
       ) : null}
 
-      <Sheet
-        visible={showAddForm}
-        title="Add task"
-        onClose={() => setShowAddForm(false)}
-      >
+      <Sheet visible={showAddForm} title="Add task" onClose={() => setShowAddForm(false)}>
         <BlockForm
           mode="add"
           embedded
@@ -195,25 +193,25 @@ export default function ScheduleScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  progressText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  progressStrong: {
-    color: colors.text,
-    fontWeight: "700",
-    fontFamily: fonts.mono,
-  },
-  progressPercent: {
-    fontSize: fontSizes.sm,
-    color: colors.good,
-    fontWeight: "700",
-    fontFamily: fonts.mono,
-  },
-});
+    progressRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    progressText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    progressStrong: {
+      color: colors.text,
+      fontWeight: "700",
+      fontFamily: fonts.mono,
+    },
+    progressPercent: {
+      fontSize: fontSizes.sm,
+      color: colors.good,
+      fontWeight: "700",
+      fontFamily: fonts.mono,
+    },
+  });

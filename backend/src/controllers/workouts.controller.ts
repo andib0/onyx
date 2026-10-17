@@ -29,7 +29,11 @@ export async function logSet(req: AuthenticatedRequest, res: Response) {
 
 export async function finishSession(req: AuthenticatedRequest, res: Response) {
   try {
-    const session = await workoutsService.finishSession(req.userId!, req.params.id, req.body);
+    const session = await workoutsService.finishSession(
+      req.userId!,
+      req.params.id,
+      req.body
+    );
     if (!session) {
       return sendNotFound(res, 'Workout session not found');
     }
@@ -58,7 +62,11 @@ export async function getSessions(req: AuthenticatedRequest, res: Response) {
     const { limit, offset } = req.query;
     const parsedLimit = Math.min(Math.max(parseInt(limit as string) || 30, 1), 100);
     const parsedOffset = Math.max(parseInt(offset as string) || 0, 0);
-    const sessions = await workoutsService.getSessions(req.userId!, parsedLimit, parsedOffset);
+    const sessions = await workoutsService.getSessions(
+      req.userId!,
+      parsedLimit,
+      parsedOffset
+    );
     return sendSuccess(res, sessions);
   } catch (error) {
     const appError = handleServiceError(error);
@@ -68,7 +76,7 @@ export async function getSessions(req: AuthenticatedRequest, res: Response) {
 
 export async function getExerciseSessions(req: AuthenticatedRequest, res: Response) {
   try {
-    const name = ((req.query.name as string) || "").trim();
+    const name = ((req.query.name as string) || '').trim();
     if (!name) return sendSuccess(res, []);
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 30, 1), 100);
     const sessions = await workoutsService.getExerciseSessions(req.userId!, name, limit);
@@ -88,7 +96,11 @@ export async function getExerciseHistory(req: AuthenticatedRequest, res: Respons
       .filter(Boolean)
       .slice(0, 50);
     const excludeSessionId = (req.query.excludeSessionId as string) || undefined;
-    const history = await workoutsService.getExerciseHistory(req.userId!, names, excludeSessionId);
+    const history = await workoutsService.getExerciseHistory(
+      req.userId!,
+      names,
+      excludeSessionId
+    );
     return sendSuccess(res, history);
   } catch (error) {
     const appError = handleServiceError(error);

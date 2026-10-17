@@ -1,7 +1,12 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { registerSchema, loginSchema } from '../validators/auth.schema.js';
-import { sendSuccess, sendCreated, sendError, sendUnauthorized } from '../utils/response.js';
+import {
+  sendSuccess,
+  sendCreated,
+  sendError,
+  sendUnauthorized,
+} from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -23,15 +28,24 @@ export async function register(req: Request, res: Response) {
     }
 
     const { email, password, username, age, weight, timezone } = parsed.data;
-    const result = await authService.register(email, password, { username, age, weight, timezone });
+    const result = await authService.register(email, password, {
+      username,
+      age,
+      weight,
+      timezone,
+    });
 
     res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
 
-    return sendCreated(res, {
-      user: result.user,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-    }, 'Account created successfully');
+    return sendCreated(
+      res,
+      {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      },
+      'Account created successfully'
+    );
   } catch (error) {
     if (error instanceof AppError) {
       return sendError(res, error.message, error.statusCode);
@@ -53,11 +67,15 @@ export async function login(req: Request, res: Response) {
 
     res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
 
-    return sendSuccess(res, {
-      user: result.user,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-    }, 'Login successful');
+    return sendSuccess(
+      res,
+      {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      },
+      'Login successful'
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Login failed';
     return sendUnauthorized(res, message);
@@ -117,7 +135,8 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       weight?: number;
     };
     const data: { username?: string; age?: number; weight?: number } = {};
-    if (typeof username === 'string' && username.trim()) data.username = username.trim().slice(0, 50);
+    if (typeof username === 'string' && username.trim())
+      data.username = username.trim().slice(0, 50);
     if (typeof age === 'number' && age > 0 && age < 120) data.age = Math.round(age);
     if (typeof weight === 'number' && weight > 20 && weight < 400) data.weight = weight;
 

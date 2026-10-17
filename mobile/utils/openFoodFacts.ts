@@ -14,9 +14,12 @@ function num(value: unknown): number | null {
 
 export async function lookupBarcode(barcode: string): Promise<Food | null> {
   try {
-    const response = await fetch(`${OFF_URL}/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`, {
-      headers: { "User-Agent": "Onyx-Daily/1.0 (personal nutrition app)" },
-    });
+    const response = await fetch(
+      `${OFF_URL}/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`,
+      {
+        headers: { "User-Agent": "Onyx-Daily/1.0 (personal nutrition app)" },
+      }
+    );
     if (!response.ok) return null;
     const data = await response.json();
     const product = data?.product;

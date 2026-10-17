@@ -183,112 +183,112 @@ export default function MacroDashboard({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.lg,
-  },
-  bars: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  barBlock: {
-    gap: 3,
-  },
-  barHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-  },
-  barLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  barValue: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  barValueOver: {
-    color: colors.warning,
-  },
-  barTarget: {
-    color: colors.muted,
-    fontWeight: "400",
-  },
-  barTrack: {
-    height: 5,
-    borderRadius: radii.full,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: radii.full,
-  },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "baseline",
-    marginTop: spacing.sm,
-  },
-  footerNumber: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  footer: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textAlign: "center",
-  },
-  waterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  waterText: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-  },
-  waterValue: {
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    fontSize: fontSizes.md,
-  },
-  waterChips: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  waterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.full,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 32,
-    justifyContent: "center",
-  },
-  waterChipPressed: {
-    opacity: 0.7,
-  },
-  waterChipText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-  },
-});
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.lg,
+    },
+    bars: {
+      flex: 1,
+      gap: spacing.sm,
+    },
+    barBlock: {
+      gap: 3,
+    },
+    barHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+    },
+    barLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    barValue: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      fontVariant: ["tabular-nums"],
+    },
+    barValueOver: {
+      color: colors.warning,
+    },
+    barTarget: {
+      color: colors.muted,
+      fontWeight: "400",
+    },
+    barTrack: {
+      height: 5,
+      borderRadius: radii.full,
+      backgroundColor: colors.border,
+      overflow: "hidden",
+    },
+    barFill: {
+      height: "100%",
+      borderRadius: radii.full,
+    },
+    footerRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "baseline",
+      marginTop: spacing.sm,
+    },
+    footerNumber: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      fontVariant: ["tabular-nums"],
+    },
+    footer: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textAlign: "center",
+    },
+    waterRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    waterText: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
+    waterValue: {
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      fontSize: fontSizes.md,
+    },
+    waterChips: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    waterChip: {
+      paddingVertical: 6,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.full,
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 32,
+      justifyContent: "center",
+    },
+    waterChipPressed: {
+      opacity: 0.7,
+    },
+    waterChipText: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+    },
+  });

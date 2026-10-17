@@ -31,17 +31,94 @@ type Def = {
 };
 
 const DEFS: Def[] = [
-  { id: "first_day", title: "First steps", description: "Track your first day", icon: "footsteps", target: 1, value: (c) => c.daysTracked },
-  { id: "week_tracked", title: "Warming up", description: "Track 7 days", icon: "calendar", target: 7, value: (c) => c.daysTracked },
-  { id: "month_tracked", title: "Committed", description: "Track 30 days", icon: "ribbon", target: 30, value: (c) => c.daysTracked },
-  { id: "streak_3", title: "Rolling", description: "3-day streak at 80%+", icon: "flame", target: 3, value: (c) => c.bestStreak },
-  { id: "streak_7", title: "On fire", description: "7-day streak at 80%+", icon: "flame", target: 7, value: (c) => c.bestStreak },
-  { id: "streak_30", title: "Unbreakable", description: "30-day streak at 80%+", icon: "flame", target: 30, value: (c) => c.bestStreak },
-  { id: "perfect_day", title: "Perfect day", description: "Hit 100% in a day", icon: "sparkles", target: 1, value: (c) => c.perfectDays },
-  { id: "perfect_5", title: "Flawless five", description: "5 perfect days", icon: "sparkles", target: 5, value: (c) => c.perfectDays },
-  { id: "gym_10", title: "Gym rat", description: "Train 10 days", icon: "barbell", target: 10, value: (c) => c.daysTrained },
-  { id: "gym_30", title: "Iron habit", description: "Train 30 days", icon: "barbell", target: 30, value: (c) => c.daysTrained },
-  { id: "weight_10", title: "Scale watcher", description: "Log bodyweight 10 times", icon: "trending-up", target: 10, value: (c) => c.weightLogs },
+  {
+    id: "first_day",
+    title: "First steps",
+    description: "Track your first day",
+    icon: "footsteps",
+    target: 1,
+    value: (c) => c.daysTracked,
+  },
+  {
+    id: "week_tracked",
+    title: "Warming up",
+    description: "Track 7 days",
+    icon: "calendar",
+    target: 7,
+    value: (c) => c.daysTracked,
+  },
+  {
+    id: "month_tracked",
+    title: "Committed",
+    description: "Track 30 days",
+    icon: "ribbon",
+    target: 30,
+    value: (c) => c.daysTracked,
+  },
+  {
+    id: "streak_3",
+    title: "Rolling",
+    description: "3-day streak at 80%+",
+    icon: "flame",
+    target: 3,
+    value: (c) => c.bestStreak,
+  },
+  {
+    id: "streak_7",
+    title: "On fire",
+    description: "7-day streak at 80%+",
+    icon: "flame",
+    target: 7,
+    value: (c) => c.bestStreak,
+  },
+  {
+    id: "streak_30",
+    title: "Unbreakable",
+    description: "30-day streak at 80%+",
+    icon: "flame",
+    target: 30,
+    value: (c) => c.bestStreak,
+  },
+  {
+    id: "perfect_day",
+    title: "Perfect day",
+    description: "Hit 100% in a day",
+    icon: "sparkles",
+    target: 1,
+    value: (c) => c.perfectDays,
+  },
+  {
+    id: "perfect_5",
+    title: "Flawless five",
+    description: "5 perfect days",
+    icon: "sparkles",
+    target: 5,
+    value: (c) => c.perfectDays,
+  },
+  {
+    id: "gym_10",
+    title: "Gym rat",
+    description: "Train 10 days",
+    icon: "barbell",
+    target: 10,
+    value: (c) => c.daysTrained,
+  },
+  {
+    id: "gym_30",
+    title: "Iron habit",
+    description: "Train 30 days",
+    icon: "barbell",
+    target: 30,
+    value: (c) => c.daysTrained,
+  },
+  {
+    id: "weight_10",
+    title: "Scale watcher",
+    description: "Log bodyweight 10 times",
+    icon: "trending-up",
+    target: 10,
+    value: (c) => c.weightLogs,
+  },
 ];
 
 function longestRun(scores: DailyScore[], threshold = 80): number {
@@ -110,10 +187,7 @@ export async function detectNewUnlocks(unlockedIds: string[]): Promise<string[]>
     const seenSet = new Set(seen);
     const fresh = unlockedIds.filter((id) => !seenSet.has(id));
     if (fresh.length) {
-      await AsyncStorage.setItem(
-        SEEN_KEY,
-        JSON.stringify(seen.concat(fresh))
-      );
+      await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(seen.concat(fresh)));
     }
     return fresh;
   } catch {

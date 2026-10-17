@@ -13,23 +13,28 @@ export class MealsService {
     });
   }
 
-  async createTemplate(userId: string, data: {
-    dayOfWeek: string;
-    name: string;
-    examples?: string;
-    grams?: number;
-    foodId?: string;
-    sortOrder?: number;
-    tags?: Array<{ label: string; value: string }>;
-  }) {
+  async createTemplate(
+    userId: string,
+    data: {
+      dayOfWeek: string;
+      name: string;
+      examples?: string;
+      grams?: number;
+      foodId?: string;
+      sortOrder?: number;
+      tags?: Array<{ label: string; value: string }>;
+    }
+  ) {
     const { tags, ...templateData } = data;
     return prisma.mealTemplate.create({
       data: {
         userId,
         ...templateData,
-        tags: tags ? {
-          create: tags,
-        } : undefined,
+        tags: tags
+          ? {
+              create: tags,
+            }
+          : undefined,
       },
       include: { tags: true },
     });
@@ -54,9 +59,11 @@ export class MealsService {
     await prisma.mealTemplateTag.deleteMany({ where: { mealTemplateId: templateId } });
 
     const newTags: Array<{ label: string; value: string }> = [];
-    if (protein !== null) newTags.push({ label: 'Protein', value: `${Math.round(protein)}` });
+    if (protein !== null)
+      newTags.push({ label: 'Protein', value: `${Math.round(protein)}` });
     if (carbs !== null) newTags.push({ label: 'Carbs', value: `${Math.round(carbs)}` });
-    if (calories !== null) newTags.push({ label: 'Calories', value: `${Math.round(calories)}` });
+    if (calories !== null)
+      newTags.push({ label: 'Calories', value: `${Math.round(calories)}` });
 
     return prisma.mealTemplate.update({
       where: { id: templateId, userId },
@@ -68,14 +75,18 @@ export class MealsService {
     });
   }
 
-  async updateTemplate(userId: string, templateId: string, data: {
-    dayOfWeek?: string;
-    name?: string;
-    examples?: string;
-    grams?: number;
-    sortOrder?: number;
-    tags?: Array<{ label: string; value: string }>;
-  }) {
+  async updateTemplate(
+    userId: string,
+    templateId: string,
+    data: {
+      dayOfWeek?: string;
+      name?: string;
+      examples?: string;
+      grams?: number;
+      sortOrder?: number;
+      tags?: Array<{ label: string; value: string }>;
+    }
+  ) {
     const { tags, ...templateData } = data;
 
     // If tags are provided, replace them
@@ -89,9 +100,11 @@ export class MealsService {
       where: { id: templateId, userId },
       data: {
         ...templateData,
-        tags: tags ? {
-          create: tags,
-        } : undefined,
+        tags: tags
+          ? {
+              create: tags,
+            }
+          : undefined,
       },
       include: { tags: true },
     });
@@ -115,7 +128,12 @@ export class MealsService {
     });
   }
 
-  async toggleLog(userId: string, mealTemplateId: string, date: string, isEaten: boolean) {
+  async toggleLog(
+    userId: string,
+    mealTemplateId: string,
+    date: string,
+    isEaten: boolean
+  ) {
     return prisma.mealLog.upsert({
       where: {
         userId_mealTemplateId_date: { userId, mealTemplateId, date },

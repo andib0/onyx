@@ -62,7 +62,9 @@ export default function MealCard({
             </Text>
           ) : null}
         </View>
-        {hasGrams ? <Text style={styles.gramsValue}>{Math.round(localGrams)}g</Text> : null}
+        {hasGrams ? (
+          <Text style={styles.gramsValue}>{Math.round(localGrams)}g</Text>
+        ) : null}
         <IconButton icon="trash-outline" onPress={onDelete} label="Delete meal" />
       </View>
 
@@ -127,108 +129,108 @@ export default function MealCard({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  mealCard: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.xs,
-  },
-  mealTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  mealInfo: {
-    flex: 1,
-  },
-  mealName: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  mealNameDone: {
-    color: colors.muted,
-    textDecorationLine: "line-through",
-  },
-  mealExamples: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  gramsValue: {
-    fontSize: fontSizes.md,
-    color: colors.accent,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-    minWidth: 48,
-    textAlign: "right",
-  },
-  deleteText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    paddingHorizontal: spacing.xs,
-  },
-  sliderRow: {
-    paddingLeft: 32,
-  },
-  slider: {
-    width: "100%",
-    height: 32,
-  },
-  presetRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: 2,
-  },
-  presetChip: {
-    paddingVertical: 4,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.full,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 28,
-    justifyContent: "center",
-  },
-  presetChipActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent + "22",
-  },
-  presetPressed: {
-    opacity: 0.7,
-  },
-  presetText: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
-  presetTextActive: {
-    color: colors.accent,
-    fontWeight: "700",
-  },
-  tagPills: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    paddingLeft: 36,
-  },
-  macroPill: {
-    flexDirection: "row",
-    gap: 3,
-    backgroundColor: colors.surface2,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  macroPillLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  macroPillValue: {
-    fontSize: fontSizes.xs,
-    color: colors.text,
-    fontWeight: "500",
-  },
-});
+    mealCard: {
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.xs,
+    },
+    mealTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    mealInfo: {
+      flex: 1,
+    },
+    mealName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    mealNameDone: {
+      color: colors.muted,
+      textDecorationLine: "line-through",
+    },
+    mealExamples: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    gramsValue: {
+      fontSize: fontSizes.md,
+      color: colors.accent,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+      minWidth: 48,
+      textAlign: "right",
+    },
+    deleteText: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      paddingHorizontal: spacing.xs,
+    },
+    sliderRow: {
+      paddingLeft: 32,
+    },
+    slider: {
+      width: "100%",
+      height: 32,
+    },
+    presetRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: 2,
+    },
+    presetChip: {
+      paddingVertical: 4,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.full,
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 28,
+      justifyContent: "center",
+    },
+    presetChipActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accent + "22",
+    },
+    presetPressed: {
+      opacity: 0.7,
+    },
+    presetText: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
+    },
+    presetTextActive: {
+      color: colors.accent,
+      fontWeight: "700",
+    },
+    tagPills: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+      paddingLeft: 36,
+    },
+    macroPill: {
+      flexDirection: "row",
+      gap: 3,
+      backgroundColor: colors.surface2,
+      borderRadius: radii.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+    },
+    macroPillLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    macroPillValue: {
+      fontSize: fontSizes.xs,
+      color: colors.text,
+      fontWeight: "500",
+    },
+  });

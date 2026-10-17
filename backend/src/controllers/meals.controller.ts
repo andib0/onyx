@@ -27,7 +27,11 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
 
 export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
   try {
-    const template = await mealsService.updateTemplate(req.userId!, req.params.id, req.body);
+    const template = await mealsService.updateTemplate(
+      req.userId!,
+      req.params.id,
+      req.body
+    );
     return sendSuccess(res, template);
   } catch (error) {
     const appError = handleServiceError(error);
@@ -56,7 +60,12 @@ export async function updateGrams(req: AuthenticatedRequest, res: Response) {
     if (!template.foodId) {
       return sendError(res, 'Template has no linked food for recalculation');
     }
-    const updated = await mealsService.updateGrams(req.userId!, templateId, grams, template.foodId);
+    const updated = await mealsService.updateGrams(
+      req.userId!,
+      templateId,
+      grams,
+      template.foodId
+    );
     return sendSuccess(res, updated);
   } catch (error) {
     const appError = handleServiceError(error);

@@ -8,17 +8,20 @@ export class ScheduleService {
     });
   }
 
-  async createBlock(userId: string, data: {
-    start: string;
-    end: string;
-    title: string;
-    purpose?: string;
-    good?: string;
-    tag?: string;
-    readonly?: boolean;
-    source?: string;
-    sortOrder?: number;
-  }) {
+  async createBlock(
+    userId: string,
+    data: {
+      start: string;
+      end: string;
+      title: string;
+      purpose?: string;
+      good?: string;
+      tag?: string;
+      readonly?: boolean;
+      source?: string;
+      sortOrder?: number;
+    }
+  ) {
     return prisma.scheduleBlock.create({
       data: {
         userId,
@@ -27,17 +30,21 @@ export class ScheduleService {
     });
   }
 
-  async updateBlock(userId: string, blockId: string, data: {
-    start?: string;
-    end?: string;
-    title?: string;
-    purpose?: string;
-    good?: string;
-    tag?: string;
-    readonly?: boolean;
-    source?: string;
-    sortOrder?: number;
-  }) {
+  async updateBlock(
+    userId: string,
+    blockId: string,
+    data: {
+      start?: string;
+      end?: string;
+      title?: string;
+      purpose?: string;
+      good?: string;
+      tag?: string;
+      readonly?: boolean;
+      source?: string;
+      sortOrder?: number;
+    }
+  ) {
     return prisma.scheduleBlock.update({
       where: { id: blockId, userId },
       data,
@@ -57,7 +64,12 @@ export class ScheduleService {
     });
   }
 
-  async toggleCompletion(userId: string, blockId: string, date: string, isComplete: boolean) {
+  async toggleCompletion(
+    userId: string,
+    blockId: string,
+    date: string,
+    isComplete: boolean
+  ) {
     return prisma.completion.upsert({
       where: {
         userId_blockId_date: { userId, blockId, date },

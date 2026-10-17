@@ -5,15 +5,16 @@ import { useData } from "../contexts/DataContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Card from "../components/ui/Card";
 import EmptyState from "../components/ui/EmptyState";
-import {
-  buildInsights,
-  daysUntilInsights,
-  type Insight,
-} from "../utils/insights";
+import { buildInsights, daysUntilInsights, type Insight } from "../utils/insights";
 import { useTheme } from "../contexts/ThemeContext";
 import { spacing, fontSizes, fonts, radii, type Palette } from "../theme";
 
-function CompareBar({ label, value, max, highlight }: {
+function CompareBar({
+  label,
+  value,
+  max,
+  highlight,
+}: {
   label: string;
   value: number;
   max: number;
@@ -29,7 +30,10 @@ function CompareBar({ label, value, max, highlight }: {
         <View
           style={[
             styles.cmpFill,
-            { width: `${pct}%`, backgroundColor: highlight ? colors.good : colors.border },
+            {
+              width: `${pct}%`,
+              backgroundColor: highlight ? colors.good : colors.border,
+            },
           ]}
         />
       </View>
@@ -115,70 +119,70 @@ export default function InsightsScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  headerText: {
-    fontSize: fontSizes.lg,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  insightTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  insightText: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  bars: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  cmpRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  cmpLabel: {
-    width: 44,
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
-  cmpTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.bg,
-    overflow: "hidden",
-  },
-  cmpFill: {
-    height: "100%",
-    borderRadius: radii.full,
-  },
-  cmpValue: {
-    width: 40,
-    textAlign: "right",
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontWeight: "700",
-  },
-  caveat: {
-    fontSize: fontSizes.xs,
-    color: colors.faint,
-    marginTop: spacing.sm,
-  },
-  footer: {
-    fontSize: fontSizes.xs,
-    color: colors.faint,
-    textAlign: "center",
-    marginTop: spacing.sm,
-  },
-});
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    headerText: {
+      fontSize: fontSizes.lg,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    insightTitle: {
+      fontSize: fontSizes.md,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    insightText: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginTop: 2,
+      lineHeight: 18,
+    },
+    bars: {
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    cmpRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    cmpLabel: {
+      width: 44,
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
+    },
+    cmpTrack: {
+      flex: 1,
+      height: 8,
+      borderRadius: radii.full,
+      backgroundColor: colors.bg,
+      overflow: "hidden",
+    },
+    cmpFill: {
+      height: "100%",
+      borderRadius: radii.full,
+    },
+    cmpValue: {
+      width: 40,
+      textAlign: "right",
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontWeight: "700",
+    },
+    caveat: {
+      fontSize: fontSizes.xs,
+      color: colors.faint,
+      marginTop: spacing.sm,
+    },
+    footer: {
+      fontSize: fontSizes.xs,
+      color: colors.faint,
+      textAlign: "center",
+      marginTop: spacing.sm,
+    },
+  });

@@ -92,7 +92,9 @@ export default function WorkoutSection({
     } else {
       setWeightInput("");
     }
-    setRepsInput(fromHistory && fromHistory.reps !== null ? String(fromHistory.reps) : "");
+    setRepsInput(
+      fromHistory && fromHistory.reps !== null ? String(fromHistory.reps) : ""
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-prefill when position changes
   }, [workout.exerciseIndex, workout.currentSet, workout.isActive]);
 
@@ -333,9 +335,7 @@ export default function WorkoutSection({
             hitSlop={8}
           >
             <Text style={styles.listToggleText}>
-              {showFullList
-                ? "Show less"
-                : `Show all ${programRows.length} exercises`}
+              {showFullList ? "Show less" : `Show all ${programRows.length} exercises`}
             </Text>
           </Pressable>
         ) : null}

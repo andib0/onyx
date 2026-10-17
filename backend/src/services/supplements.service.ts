@@ -8,15 +8,18 @@ export class SupplementsService {
     });
   }
 
-  async createSupplement(userId: string, data: {
-    item: string;
-    goal: string;
-    dose: string;
-    tier?: string;
-    rule?: string;
-    timeAt?: string;
-    sortOrder?: number;
-  }) {
+  async createSupplement(
+    userId: string,
+    data: {
+      item: string;
+      goal: string;
+      dose: string;
+      tier?: string;
+      rule?: string;
+      timeAt?: string;
+      sortOrder?: number;
+    }
+  ) {
     return prisma.supplement.create({
       data: {
         userId,
@@ -25,15 +28,19 @@ export class SupplementsService {
     });
   }
 
-  async updateSupplement(userId: string, supplementId: string, data: {
-    item?: string;
-    goal?: string;
-    dose?: string;
-    tier?: string;
-    rule?: string;
-    timeAt?: string;
-    sortOrder?: number;
-  }) {
+  async updateSupplement(
+    userId: string,
+    supplementId: string,
+    data: {
+      item?: string;
+      goal?: string;
+      dose?: string;
+      tier?: string;
+      rule?: string;
+      timeAt?: string;
+      sortOrder?: number;
+    }
+  ) {
     return prisma.supplement.update({
       where: { id: supplementId, userId },
       data,

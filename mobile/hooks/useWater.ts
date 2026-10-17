@@ -23,9 +23,7 @@ export default function useWater(todayKeyValue: string) {
       Haptics.selectionAsync().catch(() => {});
       setWaterMl((prev) => {
         const next = Math.max(prev + amountMl, 0);
-        AsyncStorage.setItem(`onyx_water_${todayKeyValue}`, String(next)).catch(
-          () => {}
-        );
+        AsyncStorage.setItem(`onyx_water_${todayKeyValue}`, String(next)).catch(() => {});
         return next;
       });
     },

@@ -59,41 +59,41 @@ export default function MyFoodsSection({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  foodResult: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.sm,
-    minHeight: 48,
-  },
-  foodInfo: {
-    flex: 1,
-  },
-  foodName: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  foodBrand: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  foodActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "center",
-  },
-  foodActionBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minWidth: 36,
-    alignItems: "center",
-  },
-  foodActionText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-});
+    foodResult: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.sm,
+      minHeight: 48,
+    },
+    foodInfo: {
+      flex: 1,
+    },
+    foodName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    foodBrand: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    foodActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "center",
+    },
+    foodActionBtn: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      minWidth: 36,
+      alignItems: "center",
+    },
+    foodActionText: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  });

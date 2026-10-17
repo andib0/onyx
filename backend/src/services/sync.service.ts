@@ -1,38 +1,98 @@
 import { prisma } from '../config/database.js';
-import type { AppState, ScheduleBlock, SupplementItem, MealTemplate, LogEntry } from '../types/index.js';
+import type {
+  AppState,
+  ScheduleBlock,
+  SupplementItem,
+  MealTemplate,
+  LogEntry,
+} from '../types/index.js';
 
 const STARTER_SCHEDULE = [
-  { start: "07:00", end: "07:15", title: "Wake + water", purpose: "500 ml on rising", tag: "Recovery" },
-  { start: "08:00", end: "08:30", title: "Breakfast", purpose: "Protein-forward start", tag: "Nutrition" },
-  { start: "09:00", end: "12:00", title: "Deep work", purpose: "Hardest task first", tag: "Work" },
-  { start: "12:30", end: "13:00", title: "Lunch", purpose: "", tag: "Nutrition" },
-  { start: "17:30", end: "18:30", title: "Train", purpose: "Follow today's program", tag: "Training" },
-  { start: "19:00", end: "19:30", title: "Dinner", purpose: "", tag: "Nutrition" },
-  { start: "22:30", end: "23:00", title: "Wind down", purpose: "Screens off, stretch", tag: "Sleep" },
+  {
+    start: '07:00',
+    end: '07:15',
+    title: 'Wake + water',
+    purpose: '500 ml on rising',
+    tag: 'Recovery',
+  },
+  {
+    start: '08:00',
+    end: '08:30',
+    title: 'Breakfast',
+    purpose: 'Protein-forward start',
+    tag: 'Nutrition',
+  },
+  {
+    start: '09:00',
+    end: '12:00',
+    title: 'Deep work',
+    purpose: 'Hardest task first',
+    tag: 'Work',
+  },
+  { start: '12:30', end: '13:00', title: 'Lunch', purpose: '', tag: 'Nutrition' },
+  {
+    start: '17:30',
+    end: '18:30',
+    title: 'Train',
+    purpose: "Follow today's program",
+    tag: 'Training',
+  },
+  { start: '19:00', end: '19:30', title: 'Dinner', purpose: '', tag: 'Nutrition' },
+  {
+    start: '22:30',
+    end: '23:00',
+    title: 'Wind down',
+    purpose: 'Screens off, stretch',
+    tag: 'Sleep',
+  },
 ];
 
 const STARTER_SUPPLEMENTS = [
-  { item: "Creatine", dose: "5 g", goal: "Strength & recovery", timeAt: "08:00", tier: "Core" },
-  { item: "Vitamin D3", dose: "2000 IU", goal: "Immunity & hormones", timeAt: "08:00", tier: "Core" },
-  { item: "Omega-3", dose: "2 g", goal: "Recovery & joints", timeAt: "08:00", tier: "Core" },
-  { item: "Magnesium", dose: "300 mg", goal: "Sleep quality", timeAt: "22:00", tier: "Core" },
+  {
+    item: 'Creatine',
+    dose: '5 g',
+    goal: 'Strength & recovery',
+    timeAt: '08:00',
+    tier: 'Core',
+  },
+  {
+    item: 'Vitamin D3',
+    dose: '2000 IU',
+    goal: 'Immunity & hormones',
+    timeAt: '08:00',
+    tier: 'Core',
+  },
+  {
+    item: 'Omega-3',
+    dose: '2 g',
+    goal: 'Recovery & joints',
+    timeAt: '08:00',
+    tier: 'Core',
+  },
+  {
+    item: 'Magnesium',
+    dose: '300 mg',
+    goal: 'Sleep quality',
+    timeAt: '22:00',
+    tier: 'Core',
+  },
 ];
 
 const STARTER_MEALS = [
-  { name: "Breakfast", examples: "Eggs, oats, fruit" },
-  { name: "Lunch", examples: "Chicken, rice, veg" },
-  { name: "Dinner", examples: "Salmon, potatoes, salad" },
-  { name: "Snack", examples: "Greek yogurt, nuts" },
+  { name: 'Breakfast', examples: 'Eggs, oats, fruit' },
+  { name: 'Lunch', examples: 'Chicken, rice, veg' },
+  { name: 'Dinner', examples: 'Salmon, potatoes, salad' },
+  { name: 'Snack', examples: 'Greek yogurt, nuts' },
 ];
 
 const WEEKDAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ];
 
 export class SyncService {
@@ -56,9 +116,9 @@ export class SyncService {
           end: b.end,
           title: b.title,
           purpose: b.purpose,
-          good: "",
+          good: '',
           tag: b.tag,
-          source: "schedule",
+          source: 'schedule',
           sortOrder: i,
         })),
       });
@@ -125,7 +185,13 @@ export class SyncService {
       }
 
       if (state.completion) {
-        const completionRows: { userId: string; blockId: string; date: string; isComplete: boolean; completedAt: Date }[] = [];
+        const completionRows: {
+          userId: string;
+          blockId: string;
+          date: string;
+          isComplete: boolean;
+          completedAt: Date;
+        }[] = [];
         for (const [date, blocks] of Object.entries(state.completion)) {
           for (const [oldBlockId, isComplete] of Object.entries(blocks)) {
             const newBlockId = idMappings[oldBlockId];
@@ -165,7 +231,13 @@ export class SyncService {
       }
 
       if (state.suppLog) {
-        const suppLogRows: { userId: string; supplementId: string; date: string; isTaken: boolean; takenAt: Date }[] = [];
+        const suppLogRows: {
+          userId: string;
+          supplementId: string;
+          date: string;
+          isTaken: boolean;
+          takenAt: Date;
+        }[] = [];
         for (const [date, supplements] of Object.entries(state.suppLog)) {
           for (const [oldSuppId, isTaken] of Object.entries(supplements)) {
             const newSuppId = idMappings[oldSuppId];
@@ -198,10 +270,11 @@ export class SyncService {
                   examples: meal.examples || '',
                   sortOrder: i,
                   tags: {
-                    create: meal.tags?.map(tag => ({
-                      label: tag.label,
-                      value: tag.value,
-                    })) || [],
+                    create:
+                      meal.tags?.map((tag) => ({
+                        label: tag.label,
+                        value: tag.value,
+                      })) || [],
                   },
                 },
               });
@@ -214,7 +287,13 @@ export class SyncService {
       }
 
       if (state.mealLog) {
-        const mealLogRows: { userId: string; mealTemplateId: string; date: string; isEaten: boolean; eatenAt: Date }[] = [];
+        const mealLogRows: {
+          userId: string;
+          mealTemplateId: string;
+          date: string;
+          isEaten: boolean;
+          eatenAt: Date;
+        }[] = [];
         for (const [date, meals] of Object.entries(state.mealLog)) {
           for (const [oldMealId, isEaten] of Object.entries(meals)) {
             const newMealId = idMappings[oldMealId];
@@ -273,20 +352,27 @@ export class SyncService {
   }
 
   async exportState(userId: string): Promise<AppState> {
-    const [scheduleBlocks, supplements, mealTemplates, dailyLogs, completions, supplementLogs, mealLogs] =
-      await Promise.all([
-        prisma.scheduleBlock.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-        prisma.supplement.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-        prisma.mealTemplate.findMany({
-          where: { userId },
-          include: { tags: true },
-          orderBy: { sortOrder: 'asc' },
-        }),
-        prisma.dailyLog.findMany({ where: { userId }, orderBy: { date: 'desc' } }),
-        prisma.completion.findMany({ where: { userId } }),
-        prisma.supplementLog.findMany({ where: { userId } }),
-        prisma.mealLog.findMany({ where: { userId } }),
-      ]);
+    const [
+      scheduleBlocks,
+      supplements,
+      mealTemplates,
+      dailyLogs,
+      completions,
+      supplementLogs,
+      mealLogs,
+    ] = await Promise.all([
+      prisma.scheduleBlock.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
+      prisma.supplement.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
+      prisma.mealTemplate.findMany({
+        where: { userId },
+        include: { tags: true },
+        orderBy: { sortOrder: 'asc' },
+      }),
+      prisma.dailyLog.findMany({ where: { userId }, orderBy: { date: 'desc' } }),
+      prisma.completion.findMany({ where: { userId } }),
+      prisma.supplementLog.findMany({ where: { userId } }),
+      prisma.mealLog.findMany({ where: { userId } }),
+    ]);
 
     // Build completion map
     const completion: Record<string, Record<string, boolean>> = {};
@@ -319,7 +405,7 @@ export class SyncService {
         id: template.id,
         name: template.name,
         examples: template.examples || '',
-        tags: template.tags.map(t => ({ label: t.label, value: t.value })),
+        tags: template.tags.map((t) => ({ label: t.label, value: t.value })),
       });
     }
 
@@ -327,7 +413,7 @@ export class SyncService {
       completion,
       top3: {},
       mechanism: {},
-      schedule: scheduleBlocks.map(b => ({
+      schedule: scheduleBlocks.map((b) => ({
         id: b.id,
         start: b.start,
         end: b.end,
@@ -342,7 +428,7 @@ export class SyncService {
       suppLog,
       mealTemplatesByDay,
       mealLog,
-      supplementsList: supplements.map(s => ({
+      supplementsList: supplements.map((s) => ({
         id: s.id,
         item: s.item,
         goal: s.goal,
@@ -351,7 +437,7 @@ export class SyncService {
         rule: s.rule || undefined,
         timeAt: s.timeAt,
       })),
-      log: dailyLogs.map(l => ({
+      log: dailyLogs.map((l) => ({
         id: l.id,
         date: l.date,
         day: l.day || '',
@@ -365,25 +451,29 @@ export class SyncService {
   }
 
   async getFullState(userId: string) {
-    const [
-      user,
-      preferences,
-      scheduleBlocks,
-      supplements,
-      mealTemplates,
-      dailyLogs,
-    ] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } }),
-      prisma.userPreferences.findUnique({ where: { userId } }),
-      prisma.scheduleBlock.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-      prisma.supplement.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-      prisma.mealTemplate.findMany({
-        where: { userId },
-        include: { tags: true },
-        orderBy: { sortOrder: 'asc' },
-      }),
-      prisma.dailyLog.findMany({ where: { userId }, orderBy: { date: 'desc' }, take: 100 }),
-    ]);
+    const [user, preferences, scheduleBlocks, supplements, mealTemplates, dailyLogs] =
+      await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, email: true },
+        }),
+        prisma.userPreferences.findUnique({ where: { userId } }),
+        prisma.scheduleBlock.findMany({
+          where: { userId },
+          orderBy: { sortOrder: 'asc' },
+        }),
+        prisma.supplement.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
+        prisma.mealTemplate.findMany({
+          where: { userId },
+          include: { tags: true },
+          orderBy: { sortOrder: 'asc' },
+        }),
+        prisma.dailyLog.findMany({
+          where: { userId },
+          orderBy: { date: 'desc' },
+          take: 100,
+        }),
+      ]);
 
     // Get today's date for logs
     const today = new Date().toISOString().split('T')[0];

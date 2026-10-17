@@ -8,10 +8,7 @@ import { ScheduleProvider, useSchedule } from "./ScheduleContext";
 import { MealsProvider, useMeals } from "./MealsContext";
 import { SupplementsProvider, useSupplements } from "./SupplementsContext";
 import { TimelineProvider, useTimeline } from "./TimelineContext";
-import {
-  loadNotificationPrefs,
-  syncSupplementReminders,
-} from "../utils/notifications";
+import { loadNotificationPrefs, syncSupplementReminders } from "../utils/notifications";
 
 // ── Composed provider tree ──
 

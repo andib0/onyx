@@ -90,41 +90,41 @@ export default function GettingStartedCard({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  list: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  check: {
-    width: 18,
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-  checkDone: {
-    color: colors.good,
-    fontWeight: "700",
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-  },
-  labelDone: {
-    color: colors.muted,
-    textDecorationLine: "line-through",
-  },
-});
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.xs,
+    },
+    title: {
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    list: {
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    check: {
+      width: 18,
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+    checkDone: {
+      color: colors.good,
+      fontWeight: "700",
+    },
+    label: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+    },
+    labelDone: {
+      color: colors.muted,
+      textDecorationLine: "line-through",
+    },
+  });

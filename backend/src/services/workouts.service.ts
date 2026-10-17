@@ -1,5 +1,9 @@
 import { prisma } from '../config/database.js';
-import type { StartSessionInput, LogSetInput, FinishSessionInput } from '../validators/workouts.schema.js';
+import type {
+  StartSessionInput,
+  LogSetInput,
+  FinishSessionInput,
+} from '../validators/workouts.schema.js';
 
 export class WorkoutsService {
   async startSession(userId: string, data: StartSessionInput) {
@@ -84,7 +88,12 @@ export class WorkoutsService {
       {
         sessionId: string;
         date: string;
-        sets: Array<{ setNumber: number; weightKg: number | null; reps: number | null; rir: string | null }>;
+        sets: Array<{
+          setNumber: number;
+          weightKg: number | null;
+          reps: number | null;
+          rir: string | null;
+        }>;
       }
     >();
 
@@ -117,7 +126,11 @@ export class WorkoutsService {
    * session (excluding the given session id, so an in-progress workout never
    * compares against itself).
    */
-  async getExerciseHistory(userId: string, exerciseNames: string[], excludeSessionId?: string) {
+  async getExerciseHistory(
+    userId: string,
+    exerciseNames: string[],
+    excludeSessionId?: string
+  ) {
     if (exerciseNames.length === 0) return {};
 
     const logs = await prisma.workoutSetLog.findMany({
@@ -135,7 +148,16 @@ export class WorkoutsService {
 
     const history: Record<
       string,
-      { sessionId: string; date: string; sets: Array<{ setNumber: number; weightKg: number | null; reps: number | null; rir: string | null }> }
+      {
+        sessionId: string;
+        date: string;
+        sets: Array<{
+          setNumber: number;
+          weightKg: number | null;
+          reps: number | null;
+          rir: string | null;
+        }>;
+      }
     > = {};
 
     for (const log of logs) {

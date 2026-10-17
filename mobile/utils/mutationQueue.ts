@@ -26,7 +26,11 @@ function replay(mutation: QueuedToggle): Promise<ApiResponse<unknown>> {
   if (mutation.type === "supplement") {
     return toggleSupplementLog(mutation.targetId, mutation.date, mutation.isComplete);
   }
-  return scheduleApi.toggleCompletion(mutation.targetId, mutation.date, mutation.isComplete);
+  return scheduleApi.toggleCompletion(
+    mutation.targetId,
+    mutation.date,
+    mutation.isComplete
+  );
 }
 
 async function readQueue(): Promise<QueuedToggle[]> {
@@ -90,7 +94,10 @@ let flushing = false;
 // Replays queued mutations. Entries that fail with a network error stay
 // queued (unless stale); server rejections are dropped — retrying a deleted
 // target can never succeed and would wedge the queue.
-export async function flushMutationQueue(): Promise<{ flushed: number; remaining: number }> {
+export async function flushMutationQueue(): Promise<{
+  flushed: number;
+  remaining: number;
+}> {
   if (flushing) return { flushed: 0, remaining: 0 };
   flushing = true;
   try {

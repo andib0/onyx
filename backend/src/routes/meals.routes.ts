@@ -10,7 +10,12 @@ import {
 } from '../controllers/meals.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createMealTemplateSchema, updateMealTemplateSchema, updateGramsSchema, toggleMealLogSchema } from '../validators/meals.schema.js';
+import {
+  createMealTemplateSchema,
+  updateMealTemplateSchema,
+  updateGramsSchema,
+  toggleMealLogSchema,
+} from '../validators/meals.schema.js';
 
 const router = Router();
 

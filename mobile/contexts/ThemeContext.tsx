@@ -41,10 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     AsyncStorage.getItem(MODE_KEY)
       .then((value) => {
-        if (
-          !cancelled &&
-          (value === "system" || value === "light" || value === "dark")
-        ) {
+        if (!cancelled && (value === "system" || value === "light" || value === "dark")) {
           setModeState(value);
         }
       })

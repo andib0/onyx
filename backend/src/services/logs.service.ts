@@ -1,7 +1,13 @@
 import { prisma } from '../config/database.js';
 
 export class LogsService {
-  async getLogs(userId: string, startDate?: string, endDate?: string, limit = 50, offset = 0) {
+  async getLogs(
+    userId: string,
+    startDate?: string,
+    endDate?: string,
+    limit = 50,
+    offset = 0
+  ) {
     const where: { userId: string; date?: { gte?: string; lte?: string } } = { userId };
     if (startDate || endDate) {
       where.date = {};
@@ -25,15 +31,18 @@ export class LogsService {
     });
   }
 
-  async createOrUpdateLog(userId: string, data: {
-    date: string;
-    day?: string;
-    bw?: string;
-    sleep?: string;
-    steps?: string;
-    top?: string;
-    notes?: string;
-  }) {
+  async createOrUpdateLog(
+    userId: string,
+    data: {
+      date: string;
+      day?: string;
+      bw?: string;
+      sleep?: string;
+      steps?: string;
+      top?: string;
+      notes?: string;
+    }
+  ) {
     const { date, ...logData } = data;
     return prisma.dailyLog.upsert({
       where: {
@@ -68,25 +77,27 @@ export class LogsService {
     });
 
     const weights = logs
-      .filter(l => l.bw)
-      .map(l => parseFloat(l.bw!))
-      .filter(w => !isNaN(w));
+      .filter((l) => l.bw)
+      .map((l) => parseFloat(l.bw!))
+      .filter((w) => !isNaN(w));
 
     const sleeps = logs
-      .filter(l => l.sleep)
-      .map(l => parseFloat(l.sleep!))
-      .filter(s => !isNaN(s));
+      .filter((l) => l.sleep)
+      .map((l) => parseFloat(l.sleep!))
+      .filter((s) => !isNaN(s));
 
     const steps = logs
-      .filter(l => l.steps)
-      .map(l => parseInt(l.steps!, 10))
-      .filter(s => !isNaN(s));
+      .filter((l) => l.steps)
+      .map((l) => parseInt(l.steps!, 10))
+      .filter((s) => !isNaN(s));
 
     return {
       totalEntries: logs.length,
       weight: {
         current: weights[weights.length - 1] || null,
-        average: weights.length ? weights.reduce((a, b) => a + b, 0) / weights.length : null,
+        average: weights.length
+          ? weights.reduce((a, b) => a + b, 0) / weights.length
+          : null,
         min: weights.length ? Math.min(...weights) : null,
         max: weights.length ? Math.max(...weights) : null,
       },
@@ -94,7 +105,9 @@ export class LogsService {
         average: sleeps.length ? sleeps.reduce((a, b) => a + b, 0) / sleeps.length : null,
       },
       steps: {
-        average: steps.length ? Math.round(steps.reduce((a, b) => a + b, 0) / steps.length) : null,
+        average: steps.length
+          ? Math.round(steps.reduce((a, b) => a + b, 0) / steps.length)
+          : null,
         total: steps.reduce((a, b) => a + b, 0),
       },
     };

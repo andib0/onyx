@@ -15,13 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { confirm } from "../../utils/haptics";
 import { useTheme } from "../../contexts/ThemeContext";
-import {
-  spacing,
-  radii,
-  fontSizes,
-  type Palette,
-  type TintSet,
-} from "../../theme";
+import { spacing, radii, fontSizes, type Palette, type TintSet } from "../../theme";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

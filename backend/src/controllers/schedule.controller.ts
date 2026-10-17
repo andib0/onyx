@@ -61,7 +61,12 @@ export async function getCompletions(req: AuthenticatedRequest, res: Response) {
 export async function toggleCompletion(req: AuthenticatedRequest, res: Response) {
   try {
     const { blockId, date, isComplete } = req.body;
-    const completion = await scheduleService.toggleCompletion(req.userId!, blockId, date, isComplete);
+    const completion = await scheduleService.toggleCompletion(
+      req.userId!,
+      blockId,
+      date,
+      isComplete
+    );
     return sendSuccess(res, completion);
   } catch (error) {
     const appError = handleServiceError(error);

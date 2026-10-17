@@ -21,7 +21,10 @@ export function weekKey(): string {
 }
 
 // Average adherence over the past 7 days from locally known history
-function weeklyAdherence(appState: AppState, supplements: SupplementItem[]): number | null {
+function weeklyAdherence(
+  appState: AppState,
+  supplements: SupplementItem[]
+): number | null {
   const totalPerDay = appState.schedule.length + supplements.length;
   if (totalPerDay === 0) return null;
   let sum = 0;
@@ -33,8 +36,7 @@ function weeklyAdherence(appState: AppState, supplements: SupplementItem[]): num
     const done =
       Object.values(completion).filter(Boolean).length +
       Object.values(supps).filter(Boolean).length;
-    if (Object.keys(completion).length === 0 && Object.keys(supps).length === 0)
-      continue;
+    if (Object.keys(completion).length === 0 && Object.keys(supps).length === 0) continue;
     sum += Math.min(done / totalPerDay, 1);
     daysCounted++;
   }
@@ -130,21 +132,21 @@ export default function WeeklyRecapCard({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  title: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    fontWeight: "600",
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: spacing.xs,
-  },
-});
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    title: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      fontWeight: "600",
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      marginTop: spacing.xs,
+    },
+  });

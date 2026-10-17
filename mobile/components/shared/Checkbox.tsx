@@ -17,12 +17,7 @@ interface CheckboxProps {
   size?: number;
 }
 
-export default function Checkbox({
-  checked,
-  onToggle,
-  color,
-  size = 24,
-}: CheckboxProps) {
+export default function Checkbox({ checked, onToggle, color, size = 24 }: CheckboxProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const reduceMotion = useReducedMotion();

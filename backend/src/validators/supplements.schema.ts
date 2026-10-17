@@ -9,7 +9,11 @@ export const createSupplementSchema = z.object({
   dose: z.string().max(200).optional().default(''),
   tier: z.string().max(50).optional().default(''),
   rule: z.string().max(500).optional().default(''),
-  timeAt: z.string().regex(timePattern, 'Invalid time format (HH:MM)').optional().default('08:00'),
+  timeAt: z
+    .string()
+    .regex(timePattern, 'Invalid time format (HH:MM)')
+    .optional()
+    .default('08:00'),
   category: z.string().max(100).optional(),
   typicalDose: z.string().max(200).optional(),
   timingRecommendation: z.string().max(500).optional(),

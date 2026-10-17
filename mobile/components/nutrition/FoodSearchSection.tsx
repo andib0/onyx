@@ -102,66 +102,66 @@ export default function FoodSearchSection({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  searchInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 6,
-    padding: 10,
-    fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.bg,
-    marginBottom: 10,
-  },
-  searchSpinner: {
-    marginVertical: 10,
-  },
-  recentLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-    marginBottom: spacing.xs,
-  },
-  foodResult: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 10,
-    minHeight: 48,
-  },
-  foodInfo: {
-    flex: 1,
-  },
-  foodName: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  foodBrand: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-  foodMacros: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  foodActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "center",
-  },
-  foodActionBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minWidth: 36,
-    alignItems: "center",
-  },
-  foodActionText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-});
+    searchInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      padding: 10,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      marginBottom: 10,
+    },
+    searchSpinner: {
+      marginVertical: 10,
+    },
+    recentLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+      marginBottom: spacing.xs,
+    },
+    foodResult: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 10,
+      minHeight: 48,
+    },
+    foodInfo: {
+      flex: 1,
+    },
+    foodName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    foodBrand: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+    },
+    foodMacros: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: 2,
+    },
+    foodActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "center",
+    },
+    foodActionBtn: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      minWidth: 36,
+      alignItems: "center",
+    },
+    foodActionText: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  });

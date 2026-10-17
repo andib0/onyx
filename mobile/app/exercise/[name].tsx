@@ -15,10 +15,7 @@ function est1RM(weight: number, reps: number): number {
 }
 
 function sessionVolume(session: ExerciseSession): number {
-  return session.sets.reduce(
-    (sum, s) => sum + (s.weightKg || 0) * (s.reps || 0),
-    0
-  );
+  return session.sets.reduce((sum, s) => sum + (s.weightKg || 0) * (s.reps || 0), 0);
 }
 
 function topWeight(session: ExerciseSession): number {
@@ -139,56 +136,56 @@ export default function ExerciseDetailScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  title: {
-    fontSize: fontSizes.title,
-    fontWeight: "700",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  muted: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  chartTitle: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-    marginBottom: spacing.md,
-  },
-  sectionLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-    marginTop: spacing.sm,
-    marginBottom: -spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  histHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: spacing.xs,
-  },
-  histDate: {
-    fontSize: fontSizes.md,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  histMeta: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    fontFamily: fonts.mono,
-  },
-  histSets: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontFamily: fonts.mono,
-    fontVariant: ["tabular-nums"],
-  },
-});
+    title: {
+      fontSize: fontSizes.title,
+      fontWeight: "700",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    muted: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+    },
+    chartTitle: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+      marginBottom: spacing.md,
+    },
+    sectionLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+      marginTop: spacing.sm,
+      marginBottom: -spacing.sm,
+      marginLeft: spacing.xs,
+    },
+    histHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      marginBottom: spacing.xs,
+    },
+    histDate: {
+      fontSize: fontSizes.md,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    histMeta: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      fontFamily: fonts.mono,
+    },
+    histSets: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontFamily: fonts.mono,
+      fontVariant: ["tabular-nums"],
+    },
+  });

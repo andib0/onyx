@@ -153,37 +153,37 @@ export default function DayCheckInCard({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  openLine: {
-    fontSize: fontSizes.xs,
-    color: colors.warning,
-    fontWeight: "600",
-    marginTop: spacing.xs,
-  },
-  fieldsRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  fieldCol: {
-    flex: 1,
-  },
-});
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: spacing.md,
+    },
+    headerText: {
+      flex: 1,
+    },
+    title: {
+      fontSize: fontSizes.lg,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    openLine: {
+      fontSize: fontSizes.xs,
+      color: colors.warning,
+      fontWeight: "600",
+      marginTop: spacing.xs,
+    },
+    fieldsRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    fieldCol: {
+      flex: 1,
+    },
+  });

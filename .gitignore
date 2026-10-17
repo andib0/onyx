@@ -5,3 +5,5 @@ dist
 dist-ssr
 *.local
 .env
+# local agent settings
+.claude/settings.local.json

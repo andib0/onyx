@@ -47,17 +47,17 @@ export default function RecapCard({ recap, streak }: RecapCardProps) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  title: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    fontWeight: "600",
-    marginBottom: spacing.sm,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    gap: spacing.sm,
-  },
-});
+    title: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      fontWeight: "600",
+      marginBottom: spacing.sm,
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      gap: spacing.sm,
+    },
+  });

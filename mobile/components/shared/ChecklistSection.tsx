@@ -109,54 +109,54 @@ export default function ChecklistSection({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    minHeight: 52,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  rowPressed: {
-    opacity: 0.7,
-  },
-  moreRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingTop: spacing.md,
-  },
-  moreText: {
-    fontSize: fontSizes.sm,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-  textContainer: {
-    flex: 1,
-  },
-  label: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  labelChecked: {
-    color: colors.muted,
-    textDecorationLine: "line-through",
-  },
-  subline: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginTop: 1,
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: "center",
-    paddingVertical: spacing.xl,
-  },
-});
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      minHeight: 52,
+    },
+    rowLast: {
+      borderBottomWidth: 0,
+    },
+    rowPressed: {
+      opacity: 0.7,
+    },
+    moreRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingTop: spacing.md,
+    },
+    moreText: {
+      fontSize: fontSizes.sm,
+      color: colors.accent,
+      fontWeight: "600",
+    },
+    textContainer: {
+      flex: 1,
+    },
+    label: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    labelChecked: {
+      color: colors.muted,
+      textDecorationLine: "line-through",
+    },
+    subline: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginTop: 1,
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+      textAlign: "center",
+      paddingVertical: spacing.xl,
+    },
+  });

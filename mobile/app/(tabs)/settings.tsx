@@ -239,7 +239,11 @@ export default function SettingsScreen() {
           label="Achievements"
           onPress={() => router.push("/achievements")}
         />
-        <Row icon="time-outline" label="Full history & trends" onPress={() => router.push("/log")} />
+        <Row
+          icon="time-outline"
+          label="Full history & trends"
+          onPress={() => router.push("/log")}
+        />
       </SettingsGroup>
 
       {/* NOTIFICATIONS */}
@@ -270,9 +274,7 @@ export default function SettingsScreen() {
           options={["system", "light", "dark"]}
           selected={mode}
           onSelect={(m) => setMode(m as ThemeMode)}
-          getLabel={(m) =>
-            m === "system" ? "System" : m === "light" ? "Light" : "Dark"
-          }
+          getLabel={(m) => (m === "system" ? "System" : m === "light" ? "Light" : "Dark")}
         />
         <Text style={styles.appearanceHint}>
           {mode === "system"
@@ -284,7 +286,11 @@ export default function SettingsScreen() {
       <GroupTitle label="Data" />
       <SettingsGroup>
         <Row first icon="download-outline" label="Export backup" onPress={exportJson} />
-        <Row icon="cloud-upload-outline" label="Import backup" onPress={handleImportClick} />
+        <Row
+          icon="cloud-upload-outline"
+          label="Import backup"
+          onPress={handleImportClick}
+        />
       </SettingsGroup>
 
       {/* ACCOUNT */}
@@ -325,80 +331,80 @@ export default function SettingsScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  appearanceWrap: {
-    gap: spacing.sm,
-  },
-  appearanceHint: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginLeft: spacing.xs,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    fontSize: fontSizes.md,
-    fontWeight: "700",
-    color: colors.onAccent,
-  },
-  editRow: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 4,
-  },
-  editLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  editInput: {
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    color: colors.text,
-    fontSize: fontSizes.md,
-    minHeight: 48,
-  },
-  editActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.lg,
-  },
-  editBtn: {
-    flex: 1,
-  },
-  chartHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: spacing.md,
-  },
-  chartTitle: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: "600",
-  },
-  chartAvg: {
-    fontSize: fontSizes.sm,
-    color: colors.good,
-    fontWeight: "700",
-  },
-  aboutText: {
-    fontSize: fontSizes.xs,
-    color: colors.faint,
-    textAlign: "center",
-    marginTop: spacing.xs,
-  },
-});
+    appearanceWrap: {
+      gap: spacing.sm,
+    },
+    appearanceHint: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      marginLeft: spacing.xs,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarText: {
+      fontSize: fontSizes.md,
+      fontWeight: "700",
+      color: colors.onAccent,
+    },
+    editRow: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 4,
+    },
+    editLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    editInput: {
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      color: colors.text,
+      fontSize: fontSizes.md,
+      minHeight: 48,
+    },
+    editActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      padding: spacing.lg,
+    },
+    editBtn: {
+      flex: 1,
+    },
+    chartHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      marginBottom: spacing.md,
+    },
+    chartTitle: {
+      fontSize: fontSizes.xs,
+      color: colors.muted,
+      letterSpacing: 1.2,
+      fontWeight: "600",
+    },
+    chartAvg: {
+      fontSize: fontSizes.sm,
+      color: colors.good,
+      fontWeight: "700",
+    },
+    aboutText: {
+      fontSize: fontSizes.xs,
+      color: colors.faint,
+      textAlign: "center",
+      marginTop: spacing.xs,
+    },
+  });

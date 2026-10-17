@@ -78,18 +78,18 @@ export default function ScreenContainer({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    // Clears the floating blur tab bar
-    paddingBottom: 120,
-    gap: spacing.lg,
-  },
-});
+    safe: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    flex: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      // Clears the floating blur tab bar
+      paddingBottom: 120,
+      gap: spacing.lg,
+    },
+  });
