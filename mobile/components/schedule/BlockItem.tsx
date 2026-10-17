@@ -50,6 +50,8 @@ export default function BlockItem({
       ]}
       accessibilityRole={isReadonly ? "text" : "checkbox"}
       accessibilityState={isReadonly ? undefined : { checked: isCompleted }}
+      // react-native-web ignores accessibilityState; aria-checked reaches the DOM.
+      aria-checked={isReadonly ? undefined : isCompleted}
       accessibilityLabel={`${block.title}, ${block.start} to ${block.end}`}
     >
       <View style={[styles.blockBorder, { backgroundColor: tagColor }]} />

@@ -9,7 +9,6 @@ import { openFocus } from "../lib/session";
 import { seedDay } from "../lib/seed";
 
 test("offline reload still shows Focus with cached data", async ({ page, context }) => {
-  test.fail(true, "baseline: no persisted cache / offline session yet (Bet 1)");
   await openFocus(page, { tag: "offline", seed: seedDay, ready: "Breakfast oats" });
   await context.setOffline(true);
   const t0 = Date.now();
@@ -39,7 +38,6 @@ test("offline reload still shows Focus with cached data", async ({ page, context
 // Aborting /api/* (instead of taking the whole browser offline, which also removes the
 // Expo dev server) isolates the app's own offline behaviour.
 test("API unreachable on reload still shows Focus with cached data", async ({ page }) => {
-  test.fail(true, "baseline: no persisted cache / offline session yet (Bet 1)");
   await openFocus(page, { tag: "offline-api", seed: seedDay, ready: "Breakfast oats" });
   await page.route("**/api/**", (route) => route.abort("internetdisconnected"));
   const t0 = Date.now();

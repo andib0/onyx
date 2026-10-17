@@ -24,6 +24,7 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 import { SettingsGroup, GroupTitle, Row } from "../../components/ui/SettingsGroup";
 import WeightTrend from "../../components/log/WeightTrend";
 import BarChart from "../../components/ui/BarChart";
+import SyncStatusRows from "../../components/shared/SyncStatusRows";
 import {
   buildWeightTrend,
   buildWeeklyAdherence,
@@ -285,12 +286,13 @@ export default function SettingsScreen() {
 
       <GroupTitle label="Data" />
       <SettingsGroup>
-        <Row first icon="download-outline" label="Export backup" onPress={exportJson} />
+        <Row first icon="download-outline" label="Export my data" onPress={exportJson} />
         <Row
           icon="cloud-upload-outline"
           label="Import backup"
           onPress={handleImportClick}
         />
+        <SyncStatusRows />
       </SettingsGroup>
 
       {/* ACCOUNT */}

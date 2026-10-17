@@ -8,7 +8,11 @@ import type { TransportResult } from "../outbox";
 import type { AppState } from "../../types/appTypes";
 
 type Toggle = { value: boolean; hlc: string };
-type LogRow = { id: string; values: Record<string, string>; clock: Record<string, string> };
+type LogRow = {
+  id: string;
+  values: Record<string, string>;
+  clock: Record<string, string>;
+};
 type SetRow = {
   id: string;
   sessionId: string;
@@ -101,7 +105,11 @@ export class FakeServer {
       const id = String(body.id);
       const replay = this.supplements.has(id);
       if (!replay)
-        this.supplements.set(id, { id, item: String(body.item), dose: String(body.dose) });
+        this.supplements.set(id, {
+          id,
+          item: String(body.item),
+          dose: String(body.dose),
+        });
       return { ok: true, status: replay ? 200 : 201, data: this.supplements.get(id) };
     }
     if (req.method === "PUT" && (m = p.match(/^\/supplements\/([^/]+)$/))) {
@@ -151,7 +159,9 @@ export class FakeServer {
     const completion: AppState["completion"] = {};
     for (const [k, v] of this.completions) {
       const [blockId, date] = k.split("|");
-      completion[date] = Object.assign({}, completion[date] || {}, { [blockId]: v.value });
+      completion[date] = Object.assign({}, completion[date] || {}, {
+        [blockId]: v.value,
+      });
     }
     const suppLog: AppState["suppLog"] = {};
     for (const [k, v] of this.suppLogs) {

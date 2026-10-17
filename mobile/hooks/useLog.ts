@@ -1,63 +1,78 @@
-﻿import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
-import { ensureState } from "../utils/storage";
+import { enqueueWrite } from "../sync/runtime";
+import { uuidv4 } from "../sync/uuid";
+import { LOG_FIELDS, type Intent, type LogField } from "../sync/intents";
 import type { AppState, LogEntry } from "../types/appTypes";
-import * as logsApi from "../api/logs";
 
 const EMPTY_LOG: LogEntry[] = [];
 
+/**
+ * Only the fields this save actually changes (field-level PATCH with HLC), so a
+ * form that leaves a field blank never wipes what another device wrote there.
+ */
+export function changedLogFields(
+  existing: LogEntry | undefined,
+  entry: LogEntry
+): Partial<Record<LogField, string>> {
+  const out: Partial<Record<LogField, string>> = {};
+  for (const f of LOG_FIELDS) {
+    const next = entry[f] ?? "";
+    const prev = existing ? (existing[f] ?? "") : "";
+    if (next !== prev) out[f] = next;
+  }
+  return out;
+}
+
+// Writes go through the durable outbox (optimistic + offline-safe).
 function useLog(
   appState: AppState,
-  setAppState: Dispatch<SetStateAction<AppState>>,
+  _setAppState: Dispatch<SetStateAction<AppState>>,
   showToast: (message: string) => void
 ) {
   const logEntries = appState.log || EMPTY_LOG;
 
+  const write = async (intents: Intent | Intent[], failMessage: string) => {
+    try {
+      await enqueueWrite(intents);
+      return true;
+    } catch {
+      showToast(failMessage);
+      return false;
+    }
+  };
+
   const addLogEntry = async (entry: LogEntry) => {
-    const payload = Object.assign({}, entry);
-    delete (payload as Partial<LogEntry>).id;
-    const result = await logsApi.createOrUpdateLog(payload as Omit<LogEntry, "id">);
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't save entry — try again");
+    const existing = logEntries.find((item) => item.date === entry.date);
+    const fields = changedLogFields(existing, entry);
+    if (!Object.keys(fields).length) {
+      showToast("Entry saved.");
       return;
     }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const rest = next.log.filter((item) => item.date !== data.date);
-      next.log = (
-        [
-          {
-            id: data.id,
-            date: data.date,
-            day: data.day || "",
-            bw: data.bw || "",
-            sleep: data.sleep || "",
-            steps: data.steps || "",
-            top: data.top || "",
-            notes: data.notes || "",
-          },
-        ] as LogEntry[]
-      ).concat(rest);
-      return next;
-    });
-    showToast("Entry saved.");
+    const ok = await write(
+      {
+        t: "logFields",
+        date: entry.date,
+        logId: (existing && existing.id) || uuidv4(),
+        creates: !existing,
+        fields,
+      },
+      "Couldn't save entry — try again"
+    );
+    if (ok) showToast("Entry saved.");
   };
 
   const clearLogEntries = async () => {
-    const entries = appState.log || [];
-    if (!entries.length) return;
-    const deletions = entries
-      .map((entry) => entry.id)
-      .filter(Boolean)
-      .map((id) => logsApi.deleteLog(id as string));
-    const results = await Promise.all(deletions);
-    if (results.some((result) => !result.success)) {
-      showToast("Some entries failed to delete.");
-      return;
-    }
-    setAppState((prev) => Object.assign({}, prev, { log: [] }));
-    showToast("Log cleared.");
+    if (!logEntries.length) return;
+    const ok = await write(
+      logEntries.map((entry) => ({
+        t: "logDelete" as const,
+        date: entry.date,
+        logId: entry.id || "",
+      })),
+      "Some entries failed to delete."
+    );
+    if (ok) showToast("Log cleared.");
   };
 
   const deleteLogEntry = async (entry: LogEntry) => {
@@ -65,17 +80,11 @@ function useLog(
       showToast("Missing log id.");
       return;
     }
-    const result = await logsApi.deleteLog(entry.id);
-    if (!result.success) {
-      showToast(result.error || "Couldn't delete entry — try again");
-      return;
-    }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.log = next.log.filter((item) => item.id !== entry.id);
-      return next;
-    });
-    showToast("Deleted.");
+    const ok = await write(
+      { t: "logDelete", date: entry.date, logId: entry.id },
+      "Couldn't delete entry — try again"
+    );
+    if (ok) showToast("Deleted.");
   };
 
   return {

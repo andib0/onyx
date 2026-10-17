@@ -1,18 +1,19 @@
-﻿import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
-import { ensureState } from "../utils/storage";
-import { enqueueToggle } from "../utils/mutationQueue";
+import { enqueueWrite } from "../sync/runtime";
+import { uuidv4 } from "../sync/uuid";
+import type { Intent } from "../sync/intents";
 import type { AppState, SupplementItem } from "../types/appTypes";
-import * as supplementsApi from "../api/supplements";
 
 // Shared empty defaults keep identities stable when the slice is missing.
 const EMPTY_MAP: Record<string, boolean> = {};
 const EMPTY_LIST: SupplementItem[] = [];
 const EMPTY_LOG: Record<string, Record<string, boolean>> = {};
 
+// Writes go through the durable outbox (optimistic + offline-safe).
 function useSupplements(
   appState: AppState,
-  setAppState: Dispatch<SetStateAction<AppState>>,
+  _setAppState: Dispatch<SetStateAction<AppState>>,
   todayKeyValue: string,
   showToast: (message: string) => void
 ) {
@@ -23,132 +24,74 @@ function useSupplements(
       : appState.supp || EMPTY_MAP;
   const supplementLogByDate = appState.suppLog || EMPTY_LOG;
 
-  const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
-    // Optimistic: reflect the toggle immediately; the server call follows.
-    const applyLocal = (value: boolean) =>
-      setAppState((prev) => {
-        const next = ensureState(Object.assign({}, prev));
-        next.suppLog = Object.assign({}, next.suppLog, {
-          [todayKeyValue]: Object.assign({}, next.suppLog[todayKeyValue] || {}, {
-            [supplementId]: value,
-          }),
-        });
-        return next;
-      });
-
-    applyLocal(isChecked);
-
-    const result = await supplementsApi.toggleSupplementLog(
-      supplementId,
-      todayKeyValue,
-      isChecked
-    );
-    if (result.success) return;
-
-    if (result.networkError) {
-      await enqueueToggle("supplement", supplementId, todayKeyValue, isChecked);
-      showToast("Offline — saved locally, will sync");
-      return;
+  const write = async (intents: Intent | Intent[], failMessage: string) => {
+    try {
+      await enqueueWrite(intents);
+      return true;
+    } catch {
+      showToast(failMessage);
+      return false;
     }
+  };
 
-    applyLocal(!isChecked);
-    showToast(result.error || "Couldn't update supplement log — try again");
+  const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
+    await write(
+      {
+        t: "toggle",
+        kind: "supplement",
+        targetId: supplementId,
+        date: todayKeyValue,
+        value: isChecked,
+      },
+      "Couldn't update supplement log — try again"
+    );
   };
 
   const addSupplementItem = async (supplement: SupplementItem) => {
-    const payload = Object.assign({}, supplement);
-    delete (payload as Partial<SupplementItem>).id;
-    const result = await supplementsApi.createSupplement(
-      payload as Omit<SupplementItem, "id">
+    const data = Object.assign({}, supplement) as Record<string, unknown>;
+    delete data.id;
+    const ok = await write(
+      { t: "create", entity: "supplement", id: uuidv4(), data },
+      "Couldn't add supplement — try again"
     );
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't add supplement — try again");
-      return;
-    }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const list = next.supplementsList || [];
-      next.supplementsList = list.concat([
-        {
-          id: data.id,
-          item: data.item,
-          goal: data.goal,
-          dose: data.dose,
-          tier: data.tier || undefined,
-          rule: data.rule || undefined,
-          timeAt: data.timeAt,
-        },
-      ]);
-      return next;
-    });
-    showToast("Supplement added.");
+    if (ok) showToast("Supplement added.");
   };
 
   const updateSupplementItem = async (
     supplementId: string,
     patch: Partial<SupplementItem>
   ) => {
-    const result = await supplementsApi.updateSupplement(supplementId, patch);
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't update supplement — try again");
-      return;
-    }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.supplementsList = (next.supplementsList || []).map((item) =>
-        item.id === supplementId
-          ? Object.assign({}, item, {
-              item: data.item,
-              goal: data.goal,
-              dose: data.dose,
-              tier: data.tier || undefined,
-              rule: data.rule || undefined,
-              timeAt: data.timeAt,
-            })
-          : item
-      );
-      return next;
-    });
+    const data = Object.assign({}, patch) as Record<string, unknown>;
+    delete data.id;
+    await write(
+      { t: "update", entity: "supplement", id: supplementId, data },
+      "Couldn't update supplement — try again"
+    );
   };
 
   const removeSupplementItem = async (supplementId: string) => {
-    const result = await supplementsApi.deleteSupplement(supplementId);
-    if (!result.success) {
-      showToast(result.error || "Couldn't remove supplement — try again");
-      return;
-    }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.supplementsList = (next.supplementsList || []).filter(
-        (item) => item.id !== supplementId
-      );
-      const nextSupp = Object.assign({}, next.supp);
-      delete nextSupp[supplementId];
-      next.supp = nextSupp;
-      return next;
-    });
-    showToast("Supplement removed.");
+    const ok = await write(
+      { t: "delete", entity: "supplement", id: supplementId },
+      "Couldn't remove supplement — try again"
+    );
+    if (ok) showToast("Supplement removed.");
   };
 
   const clearSupplementChecks = async () => {
-    const entries = supplementsList.map((item) => item.id).filter(Boolean) as string[];
-    if (!entries.length) return;
-    const updates = entries.map((supplementId) =>
-      supplementsApi.toggleSupplementLog(supplementId, todayKeyValue, false)
+    const ids = supplementsList.map((item) => item.id).filter(Boolean) as string[];
+    if (!ids.length) return;
+    // One batch: all queued (or none) — no half-cleared server state.
+    const ok = await write(
+      ids.map((targetId) => ({
+        t: "toggle" as const,
+        kind: "supplement" as const,
+        targetId,
+        date: todayKeyValue,
+        value: false,
+      })),
+      "Some supplements failed to clear."
     );
-    const results = await Promise.all(updates);
-    if (results.some((result) => !result.success)) {
-      showToast("Some supplements failed to clear.");
-      return;
-    }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.suppLog = Object.assign({}, next.suppLog, { [todayKeyValue]: {} });
-      return next;
-    });
-    showToast("Cleared.");
+    if (ok) showToast("Cleared.");
   };
 
   return {

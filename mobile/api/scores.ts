@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { triggerScore } from "../sync/writes";
 
 export interface DailyScore {
   date: string;
@@ -32,6 +33,8 @@ export async function getScores(days = 30) {
   return api.get<DailyScore[]>(`/scores?days=${days}`);
 }
 
+/** Asks the server to recompute a day (it ignores client values); queued in
+ *  the outbox and skipped when nothing changed since the last trigger. */
 export async function postScore(snapshot: ScoreSnapshot) {
-  return api.post<DailyScore>("/scores", snapshot);
+  return triggerScore(snapshot as ScoreSnapshot & Record<string, unknown>);
 }

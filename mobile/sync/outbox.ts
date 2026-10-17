@@ -39,6 +39,8 @@ export type Op = {
   nextAttemptAt: number;
   lastError?: string;
   lastStatus?: number;
+  /** re-stamped once after the server rejected the HLC as too far ahead */
+  restamped?: boolean;
 };
 
 export type TransportResult = {
@@ -145,7 +147,8 @@ export function createOutbox(opts: OutboxOptions) {
         // Never stamp below anything already queued (wall clock may have gone back).
         for (const op of pending.concat(dead)) {
           opts.clock.receive(op.hlc);
-          if (op.fieldHlc) for (const h of Object.values(op.fieldHlc)) opts.clock.receive(h);
+          if (op.fieldHlc)
+            for (const h of Object.values(op.fieldHlc)) opts.clock.receive(h);
         }
         if (parsed.clock) {
           const { lastMs, counter: c } = parsed.clock;
@@ -262,7 +265,9 @@ export function createOutbox(opts: OutboxOptions) {
     await persist();
   }
 
-  function classify(res: TransportResult): "ok" | "transient" | "auth" | "notFound" | "fatal" {
+  function classify(
+    res: TransportResult
+  ): "ok" | "transient" | "auth" | "notFound" | "fatal" {
     if (res.ok) return "ok";
     if (res.auth || res.status === 401) return "auth";
     if (res.transient || res.status === 0 || res.status === 429) return "transient";
@@ -271,7 +276,11 @@ export function createOutbox(opts: OutboxOptions) {
     return "fatal";
   }
 
-  async function sendOp(op: Op): Promise<{ kind: ReturnType<typeof classify>; data: unknown[]; res?: TransportResult }> {
+  async function sendOp(op: Op): Promise<{
+    kind: ReturnType<typeof classify>;
+    data: unknown[];
+    res?: TransportResult;
+  }> {
     const requests = requestsFor(op.intent, op.hlc, op.fieldHlc);
     const data: unknown[] = [];
     for (const req of requests) {
@@ -357,12 +366,31 @@ export function createOutbox(opts: OutboxOptions) {
         break;
       }
       const serverErrorExhausted =
-        kind === "transient" && (res?.status ?? 0) >= 500 && op.attempts >= maxServerErrors;
+        kind === "transient" &&
+        (res?.status ?? 0) >= 500 &&
+        op.attempts >= maxServerErrors;
       if (kind === "transient" && !serverErrorExhausted) {
         op.nextAttemptAt = now() + backoffMs(op.attempts, random);
         await persist();
         result.blocked = "transient";
         break;
+      }
+      // The server refuses stamps > 24 h ahead of its clock (a device with a
+      // wrong date): re-stamp once from the (server-corrected) clock and retry.
+      if (
+        kind === "fatal" &&
+        res &&
+        res.status === 400 &&
+        /hlc/i.test(res.error || "") &&
+        !op.restamped
+      ) {
+        op.restamped = true;
+        op.hlc = opts.clock.tick();
+        if (op.fieldHlc)
+          for (const f of Object.keys(op.fieldHlc)) op.fieldHlc[f] = op.hlc;
+        op.nextAttemptAt = 0;
+        await persist();
+        continue;
       }
       // Permanent failure: park it where the user can see it; keep going.
       if (stillQueued) pending = pending.filter((x) => x !== op);

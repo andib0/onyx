@@ -50,7 +50,15 @@ class FreezableStorage implements KeyValueStorage {
   }
 }
 
-type Stats = { kills: number; midFlushKills: number; dupes: number; lostResponses: number; drops: number; requests: number; cancelled: number };
+type Stats = {
+  kills: number;
+  midFlushKills: number;
+  dupes: number;
+  lostResponses: number;
+  drops: number;
+  requests: number;
+  cancelled: number;
+};
 
 class Device {
   storage = new FreezableStorage();
@@ -147,7 +155,10 @@ class Device {
     // Like the app reading /today rows: later local stamps sort after them.
     for (const h of this.server.allStamps()) this.clock.receive(h);
     this.sets = new Map(
-      Array.from(this.server.sets.values()).map((s) => [s.id, { id: s.id, weightKg: s.weightKg }])
+      Array.from(this.server.sets.values()).map((s) => [
+        s.id,
+        { id: s.id, weightKg: s.weightKg },
+      ])
     );
   }
 
@@ -163,7 +174,10 @@ class Device {
     const sets = new Map(this.sets);
     for (const intent of this.pendingIntents()) {
       if (intent.t === "create" && intent.entity === "set")
-        sets.set(intent.id, { id: intent.id, weightKg: (intent.data.weightKg as number) ?? null });
+        sets.set(intent.id, {
+          id: intent.id,
+          weightKg: (intent.data.weightKg as number) ?? null,
+        });
       if (intent.t === "delete" && intent.entity === "set") sets.delete(intent.id);
     }
     return sets;
@@ -175,7 +189,14 @@ class Device {
 }
 
 type Cmd =
-  | { c: "toggle"; d: number; kind: "completion" | "supplement"; pick: number; date: number; value: boolean }
+  | {
+      c: "toggle";
+      d: number;
+      kind: "completion" | "supplement";
+      pick: number;
+      date: number;
+      value: boolean;
+    }
   | { c: "log"; d: number; date: number; field: number; value: string }
   | { c: "createBlock"; d: number }
   | { c: "deleteBlock"; d: number; pick: number }
@@ -195,33 +216,111 @@ type Cmd =
 
 const dev = fc.integer({ min: 0, max: 1 });
 const cmdArb: fc.Arbitrary<Cmd> = fc.oneof(
-  { weight: 6, arbitrary: fc.record({ c: fc.constant("toggle" as const), d: dev, kind: fc.constantFrom("completion" as const, "supplement" as const), pick: fc.nat(10), date: fc.nat(1), value: fc.boolean() }) },
-  { weight: 6, arbitrary: fc.record({ c: fc.constant("log" as const), d: dev, date: fc.nat(1), field: fc.nat(2), value: fc.constantFrom("", "1", "2", "80.5", "x") }) },
+  {
+    weight: 6,
+    arbitrary: fc.record({
+      c: fc.constant("toggle" as const),
+      d: dev,
+      kind: fc.constantFrom("completion" as const, "supplement" as const),
+      pick: fc.nat(10),
+      date: fc.nat(1),
+      value: fc.boolean(),
+    }),
+  },
+  {
+    weight: 6,
+    arbitrary: fc.record({
+      c: fc.constant("log" as const),
+      d: dev,
+      date: fc.nat(1),
+      field: fc.nat(2),
+      value: fc.constantFrom("", "1", "2", "80.5", "x"),
+    }),
+  },
   { weight: 2, arbitrary: fc.record({ c: fc.constant("createBlock" as const), d: dev }) },
-  { weight: 1, arbitrary: fc.record({ c: fc.constant("deleteBlock" as const), d: dev, pick: fc.nat(10) }) },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("deleteBlock" as const),
+      d: dev,
+      pick: fc.nat(10),
+    }),
+  },
   { weight: 2, arbitrary: fc.record({ c: fc.constant("createSupp" as const), d: dev }) },
-  { weight: 1, arbitrary: fc.record({ c: fc.constant("updateSupp" as const), pick: fc.nat(10), dose: fc.constantFrom("5 g", "10 g", "1 cap") }) },
-  { weight: 1, arbitrary: fc.record({ c: fc.constant("deleteSupp" as const), d: dev, pick: fc.nat(10) }) },
-  { weight: 1, arbitrary: fc.record({ c: fc.constant("startSession" as const), d: dev }) },
-  { weight: 3, arbitrary: fc.record({ c: fc.constant("logSet" as const), d: dev, weight: fc.integer({ min: 20, max: 140 }) }) },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("updateSupp" as const),
+      pick: fc.nat(10),
+      dose: fc.constantFrom("5 g", "10 g", "1 cap"),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("deleteSupp" as const),
+      d: dev,
+      pick: fc.nat(10),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({ c: fc.constant("startSession" as const), d: dev }),
+  },
+  {
+    weight: 3,
+    arbitrary: fc.record({
+      c: fc.constant("logSet" as const),
+      d: dev,
+      weight: fc.integer({ min: 20, max: 140 }),
+    }),
+  },
   { weight: 1, arbitrary: fc.record({ c: fc.constant("undoSet" as const), d: dev }) },
   { weight: 4, arbitrary: fc.record({ c: fc.constant("flush" as const), d: dev }) },
   { weight: 2, arbitrary: fc.record({ c: fc.constant("refetch" as const), d: dev }) },
-  { weight: 3, arbitrary: fc.record({ c: fc.constant("online" as const), d: dev, on: fc.boolean() }) },
+  {
+    weight: 3,
+    arbitrary: fc.record({ c: fc.constant("online" as const), d: dev, on: fc.boolean() }),
+  },
   { weight: 1, arbitrary: fc.record({ c: fc.constant("kill" as const), d: dev }) },
-  { weight: 1, arbitrary: fc.record({ c: fc.constant("killMidFlush" as const), d: dev, after: fc.nat(3) }) },
-  { weight: 2, arbitrary: fc.record({ c: fc.constant("editDuringFlush" as const), d: dev, value: fc.boolean() }) },
-  { weight: 2, arbitrary: fc.record({ c: fc.constant("advance" as const), ms: fc.integer({ min: 1, max: 400_000 }) }) }
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("killMidFlush" as const),
+      d: dev,
+      after: fc.nat(3),
+    }),
+  },
+  {
+    weight: 2,
+    arbitrary: fc.record({
+      c: fc.constant("editDuringFlush" as const),
+      d: dev,
+      value: fc.boolean(),
+    }),
+  },
+  {
+    weight: 2,
+    arbitrary: fc.record({
+      c: fc.constant("advance" as const),
+      ms: fc.integer({ min: 1, max: 400_000 }),
+    }),
+  }
 );
 
 /** Semantic content: false toggles ≡ absent, toggles only for live targets. */
-function canonical(state: AppState, sets: Map<string, { id: string; weightKg: number | null }>) {
+function canonical(
+  state: AppState,
+  sets: Map<string, { id: string; weightKg: number | null }>
+) {
   const blocks = new Set((state.schedule || []).map((b) => b.id!));
   const supps = new Set((state.supplementsList || []).map((s) => s.id!));
   const ticks = (map: Record<string, Record<string, boolean>>, live: Set<string>) => {
     const out: Record<string, string[]> = {};
     for (const date of Object.keys(map).sort()) {
-      const ids = Object.keys(map[date]).filter((id) => map[date][id] && live.has(id)).sort();
+      const ids = Object.keys(map[date])
+        .filter((id) => map[date][id] && live.has(id))
+        .sort();
       if (ids.length) out[date] = ids;
     }
     return out;
@@ -234,9 +333,7 @@ function canonical(state: AppState, sets: Map<string, { id: string; weightKg: nu
   }
   return {
     blocks: Array.from(blocks).sort(),
-    supplements: (state.supplementsList || [])
-      .map((s) => `${s.id}:${s.dose}`)
-      .sort(),
+    supplements: (state.supplementsList || []).map((s) => `${s.id}:${s.dose}`).sort(),
     completion: ticks(state.completion || {}, blocks),
     suppLog: ticks(state.suppLog || {}, supps),
     log,
@@ -252,9 +349,18 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
   const server = new FakeServer();
   const time = { now: T0 };
   const rnd = mulberry32(seed);
-  const stats: Stats = { kills: 0, midFlushKills: 0, dupes: 0, lostResponses: 0, drops: 0, requests: 0, cancelled: 0 };
+  const stats: Stats = {
+    kills: 0,
+    midFlushKills: 0,
+    dupes: 0,
+    lostResponses: 0,
+    drops: 0,
+    requests: 0,
+    cancelled: 0,
+  };
   // A shared catalog both devices already know, so their edits collide.
-  for (const id of ["block-seed-1", "block-seed-2"]) server.blocks.set(id, { id, title: id });
+  for (const id of ["block-seed-1", "block-seed-2"])
+    server.blocks.set(id, { id, title: id });
   for (const id of ["supp-seed-1", "supp-seed-2"])
     server.supplements.set(id, { id, item: id, dose: "1 g" });
   const devices = [
@@ -284,10 +390,18 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         return;
       }
       if (intent.t === "toggle")
-        issued.push({ key: `${intent.kind}|${intent.targetId}|${intent.date}`, value: intent.value, hlc: op.hlc });
+        issued.push({
+          key: `${intent.kind}|${intent.targetId}|${intent.date}`,
+          value: intent.value,
+          hlc: op.hlc,
+        });
       if (intent.t === "logFields")
         for (const f of Object.keys(intent.fields))
-          issued.push({ key: `log|${intent.date}|${f}`, value: intent.fields[f as LogField]!, hlc: op.fieldHlc![f] });
+          issued.push({
+            key: `log|${intent.date}|${f}`,
+            value: intent.fields[f as LogField]!,
+            hlc: op.fieldHlc![f],
+          });
     });
   };
   const enqueue = async (d: Device, intents: Intent[]) => {
@@ -306,7 +420,15 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
             : (view.supplementsList || []).map((s) => s.id!);
         if (!list.length) break;
         const targetId = list[cmd.pick % Math.min(3, list.length)];
-        await enqueue(d, [{ t: "toggle", kind: cmd.kind, targetId, date: DATES[cmd.date], value: cmd.value }]);
+        await enqueue(d, [
+          {
+            t: "toggle",
+            kind: cmd.kind,
+            targetId,
+            date: DATES[cmd.date],
+            value: cmd.value,
+          },
+        ]);
         break;
       }
       case "log": {
@@ -326,14 +448,23 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
       case "createBlock": {
         const id = d.newId("block");
         created.block.add(id);
-        await enqueue(d, [{ t: "create", entity: "block", id, data: { title: id, start: "08:00", end: "09:00" } }]);
+        await enqueue(d, [
+          {
+            t: "create",
+            entity: "block",
+            id,
+            data: { title: id, start: "08:00", end: "09:00" },
+          },
+        ]);
         break;
       }
       case "deleteBlock": {
         // Deletes are issued by the creating device only: without server
         // tombstones a delete from another device can race a delayed create
         // retry and resurrect the row (documented contract limitation).
-        const own = (view.schedule || []).map((b) => b.id!).filter((id) => id.includes(`-${d.name}-`));
+        const own = (view.schedule || [])
+          .map((b) => b.id!)
+          .filter((id) => id.includes(`-${d.name}-`));
         if (!own.length) break;
         const id = own[cmd.pick % own.length];
         deleted.add(`block:${id}`);
@@ -344,7 +475,14 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         const id = d.newId("supp");
         created.supplement.add(id);
         doses.set(id, "1 g");
-        await enqueue(d, [{ t: "create", entity: "supplement", id, data: { item: id, dose: "1 g", goal: "", timeAt: "08:00" } }]);
+        await enqueue(d, [
+          {
+            t: "create",
+            entity: "supplement",
+            id,
+            data: { item: id, dose: "1 g", goal: "", timeAt: "08:00" },
+          },
+        ]);
         break;
       }
       case "updateSupp": {
@@ -354,11 +492,15 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         if (!list.length) break;
         const id = list[cmd.pick % list.length];
         doses.set(id, cmd.dose);
-        await enqueue(a, [{ t: "update", entity: "supplement", id, data: { dose: cmd.dose } }]);
+        await enqueue(a, [
+          { t: "update", entity: "supplement", id, data: { dose: cmd.dose } },
+        ]);
         break;
       }
       case "deleteSupp": {
-        const own = (view.supplementsList || []).map((s) => s.id!).filter((id) => id.includes(`-${d.name}-`));
+        const own = (view.supplementsList || [])
+          .map((s) => s.id!)
+          .filter((id) => id.includes(`-${d.name}-`));
         if (!own.length) break;
         const id = own[cmd.pick % own.length];
         deleted.add(`supplement:${id}`);
@@ -369,7 +511,18 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         const id = d.newId("session");
         d.sessionId = id;
         d.setCounter = 0;
-        await enqueue(d, [{ t: "create", entity: "session", id, data: { date: DATES[1], programDayName: "Upper", startedAt: new Date(time.now).toISOString() } }]);
+        await enqueue(d, [
+          {
+            t: "create",
+            entity: "session",
+            id,
+            data: {
+              date: DATES[1],
+              programDayName: "Upper",
+              startedAt: new Date(time.now).toISOString(),
+            },
+          },
+        ]);
         break;
       }
       case "logSet": {
@@ -378,7 +531,21 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         d.setCounter += 1;
         d.lastSetId = id;
         created.set.set(id, cmd.weight);
-        await enqueue(d, [{ t: "create", entity: "set", id, data: { sessionId: d.sessionId, exerciseName: "Bench Press", setNumber: d.setCounter, weightKg: cmd.weight, reps: 5, rir: null } }]);
+        await enqueue(d, [
+          {
+            t: "create",
+            entity: "set",
+            id,
+            data: {
+              sessionId: d.sessionId,
+              exerciseName: "Bench Press",
+              setNumber: d.setCounter,
+              weightKg: cmd.weight,
+              reps: 5,
+              rir: null,
+            },
+          },
+        ]);
         break;
       }
       case "undoSet": {
@@ -457,12 +624,18 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
     const cur = winners.get(w.key);
     if (!cur || w.hlc > cur.hlc) winners.set(w.key, w);
   }
-  const liveBlocks = Array.from(created.block).filter((id) => !deleted.has(`block:${id}`)).sort();
-  const liveSupps = Array.from(created.supplement).filter((id) => !deleted.has(`supplement:${id}`));
+  const liveBlocks = Array.from(created.block)
+    .filter((id) => !deleted.has(`block:${id}`))
+    .sort();
+  const liveSupps = Array.from(created.supplement).filter(
+    (id) => !deleted.has(`supplement:${id}`)
+  );
   const ticks = (kind: string, live: string[]) => {
     const out: Record<string, string[]> = {};
     for (const date of DATES) {
-      const ids = live.filter((id) => winners.get(`${kind}|${id}|${date}`)?.value === true).sort();
+      const ids = live
+        .filter((id) => winners.get(`${kind}|${id}|${date}`)?.value === true)
+        .sort();
       if (ids.length) out[date] = ids;
     }
     return out;
@@ -488,25 +661,44 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
       .sort(),
   };
 
-  const serverSets = new Map(Array.from(server.sets.values()).map((s) => [s.id, { id: s.id, weightKg: s.weightKg }]));
+  const serverSets = new Map(
+    Array.from(server.sets.values()).map((s) => [
+      s.id,
+      { id: s.id, weightKg: s.weightKg },
+    ])
+  );
   const serverView = canonical(server.toAppState(), serverSets);
   expect(serverView).toEqual(reference);
   for (const d of devices) expect(canonical(d.view(), d.setsView())).toEqual(serverView);
   // Nothing was dead-lettered except edits of a supplement deleted meanwhile.
   for (const d of devices)
     for (const op of d.outbox.dead())
-      expect(op.intent.t === "update" && deleted.has(`supplement:${(op.intent as { id: string }).id}`)).toBe(true);
+      expect(
+        op.intent.t === "update" &&
+          deleted.has(`supplement:${(op.intent as { id: string }).id}`)
+      ).toBe(true);
   return stats;
 }
 
 describe("outbox convergence (two devices, fast-check)", () => {
   it("devices and server converge to the max-HLC reference model", async () => {
-    const totals: Stats = { kills: 0, midFlushKills: 0, dupes: 0, lostResponses: 0, drops: 0, requests: 0, cancelled: 0 };
+    const totals: Stats = {
+      kills: 0,
+      midFlushKills: 0,
+      dupes: 0,
+      lostResponses: 0,
+      drops: 0,
+      requests: 0,
+      cancelled: 0,
+    };
     let runs = 0;
     await fc.assert(
       fc.asyncProperty(
         fc.array(cmdArb, { minLength: 10, maxLength: 70 }),
-        fc.tuple(fc.integer({ min: -600_000, max: 600_000 }), fc.integer({ min: -600_000, max: 600_000 })),
+        fc.tuple(
+          fc.integer({ min: -600_000, max: 600_000 }),
+          fc.integer({ min: -600_000, max: 600_000 })
+        ),
         fc.integer(),
         async (cmds, skews, seed) => {
           const s = await runScenario(cmds, skews, seed);

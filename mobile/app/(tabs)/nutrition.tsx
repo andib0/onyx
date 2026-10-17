@@ -208,7 +208,8 @@ export default function NutritionScreen() {
 
   const handleSaveFood = async (foodId: string) => {
     try {
-      const result = await addUserFood(foodId);
+      const food = foodResults.concat(recentFoods).find((f) => f.id === foodId);
+      const result = await addUserFood(foodId, food);
       if (result.success && result.data) {
         setMyFoods((prev) => prev.concat(result.data as UserFood));
         showToast("Saved to My Foods");

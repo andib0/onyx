@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { subscribePendingCount } from "../../utils/mutationQueue";
 import { useTheme } from "../../contexts/ThemeContext";
+import useSyncStatus from "../../hooks/useSyncStatus";
 import { spacing, radii, fontSizes, type Palette } from "../../theme";
 
-// Small pill shown while offline writes wait for replay. Renders nothing when
+// Small pill shown while queued writes wait for the server. Renders nothing when
 // the queue is empty (the overwhelmingly common case).
 export default function SyncStatusPill() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [pending, setPending] = useState(0);
+  const { pendingCount: pending, waiting } = useSyncStatus();
 
-  useEffect(() => subscribePendingCount(setPending), []);
-
-  if (pending === 0) return null;
+  // Hidden while writes are merely in flight; shown when they are waiting
+  // (offline / server unreachable).
+  if (pending === 0 || !waiting) return null;
 
   return (
     <View

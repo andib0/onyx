@@ -31,7 +31,11 @@ export type Intent =
   | { t: "delete"; entity: Entity; id: string; data?: Record<string, unknown> }
   | { t: "prefs"; data: Record<string, unknown> }
   | { t: "profile"; data: Record<string, unknown> }
-  | { t: "finishSession"; id: string; data: { durationSeconds?: number; endedAt?: string } }
+  | {
+      t: "finishSession";
+      id: string;
+      data: { durationSeconds?: number; endedAt?: string };
+    }
   | { t: "scoreTrigger"; date: string; data: Record<string, unknown> };
 
 export type Coalesce = "replace" | "merge" | "fields" | "append";
@@ -318,9 +322,7 @@ export function requestsFor(
         },
       ];
     case "scoreTrigger":
-      return [
-        { method: "POST", path: "/scores", body: Object.assign({}, intent.data) },
-      ];
+      return [{ method: "POST", path: "/scores", body: Object.assign({}, intent.data) }];
   }
 }
 

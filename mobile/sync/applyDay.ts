@@ -45,7 +45,13 @@ function toBlock(id: string, data: Record<string, unknown>, prev?: ScheduleBlock
 }
 
 function toSupplement(id: string, data: Record<string, unknown>, prev?: SupplementItem) {
-  const base: SupplementItem = prev || { id, item: "", goal: "", dose: "", timeAt: "08:00" };
+  const base: SupplementItem = prev || {
+    id,
+    item: "",
+    goal: "",
+    dose: "",
+    timeAt: "08:00",
+  };
   const next = Object.assign({}, base, { id });
   for (const k of ["item", "goal", "dose", "timeAt"] as const) {
     if (k in data) next[k] = str(data[k]);
@@ -61,7 +67,8 @@ function toMeal(id: string, data: Record<string, unknown>, prev?: MealTemplate) 
   if ("name" in data) next.name = str(data.name);
   if ("examples" in data) next.examples = str(data.examples);
   if ("grams" in data)
-    next.grams = data.grams === null || data.grams === undefined ? null : Number(data.grams);
+    next.grams =
+      data.grams === null || data.grams === undefined ? null : Number(data.grams);
   if ("foodId" in data) next.foodId = (data.foodId as string | null) ?? null;
   if ("tags" in data && Array.isArray(data.tags))
     next.tags = (data.tags as MealTemplate["tags"]).map((t) => ({
@@ -83,10 +90,26 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
     case "toggle": {
       const next = Object.assign({}, state);
       if (intent.kind === "completion")
-        next.completion = setNested(state.completion || {}, intent.date, intent.targetId, intent.value);
+        next.completion = setNested(
+          state.completion || {},
+          intent.date,
+          intent.targetId,
+          intent.value
+        );
       else if (intent.kind === "supplement")
-        next.suppLog = setNested(state.suppLog || {}, intent.date, intent.targetId, intent.value);
-      else next.mealLog = setNested(state.mealLog || {}, intent.date, intent.targetId, intent.value);
+        next.suppLog = setNested(
+          state.suppLog || {},
+          intent.date,
+          intent.targetId,
+          intent.value
+        );
+      else
+        next.mealLog = setNested(
+          state.mealLog || {},
+          intent.date,
+          intent.targetId,
+          intent.value
+        );
       return next;
     }
     case "logFields": {
@@ -102,7 +125,9 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
         top: "",
         notes: "",
       };
-      const entry = Object.assign({}, base, intent.fields, { id: base.id || intent.logId });
+      const entry = Object.assign({}, base, intent.fields, {
+        id: base.id || intent.logId,
+      });
       const rest = log.filter((e) => e.date !== intent.date);
       // Newest date first, like the server's export.
       const nextLog = rest.concat([entry]).sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -110,7 +135,9 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
     }
     case "logDelete":
       return Object.assign({}, state, {
-        log: (state.log || []).filter((e) => e.date !== intent.date && e.id !== intent.logId),
+        log: (state.log || []).filter(
+          (e) => e.date !== intent.date && e.id !== intent.logId
+        ),
       });
     case "create":
     case "update": {
@@ -179,7 +206,9 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
         const supp = Object.assign({}, state.supp || {});
         delete supp[intent.id];
         return Object.assign({}, state, {
-          supplementsList: (state.supplementsList || []).filter((s) => s.id !== intent.id),
+          supplementsList: (state.supplementsList || []).filter(
+            (s) => s.id !== intent.id
+          ),
           suppLog,
           supp,
         });
@@ -187,7 +216,9 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
       if (intent.entity === "meal") {
         const byDay: AppState["mealTemplatesByDay"] = {};
         for (const day of Object.keys(state.mealTemplatesByDay || {})) {
-          byDay[day] = (state.mealTemplatesByDay[day] || []).filter((m) => m.id !== intent.id);
+          byDay[day] = (state.mealTemplatesByDay[day] || []).filter(
+            (m) => m.id !== intent.id
+          );
         }
         const mealLog: AppState["mealLog"] = {};
         for (const date of Object.keys(state.mealLog || {})) {

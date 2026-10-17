@@ -62,6 +62,7 @@ import {
   weightSlopeKgPerWeek,
 } from "../../utils/trends";
 import { postScore } from "../../api/scores";
+import { perfMark } from "../../utils/perfMarks";
 import {
   buildAchievementCtx,
   evaluateAchievements,
@@ -393,6 +394,13 @@ export default function FocusScreen() {
     todayKeyValue,
     slotTick,
   ]);
+
+  // Startup marks for scripts/measure-tti.sh (first render with data).
+  useEffect(() => {
+    if (stateLoading) return;
+    perfMark("focus_first_render");
+    requestAnimationFrame(() => perfMark("focus_interactive"));
+  }, [stateLoading]);
 
   if (stateLoading) return <LoadingScreen />;
 

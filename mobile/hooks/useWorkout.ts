@@ -21,14 +21,9 @@ import {
   type WorkoutTiming,
 } from "../utils/workoutClock";
 import type { SessionLog } from "../utils/progression";
-import {
-  startWorkoutSession,
-  logWorkoutSet,
-  deleteWorkoutSet,
-  finishWorkoutSession,
-  getWorkoutSessions,
-  type ExerciseHistory,
-} from "../api/workouts";
+import { getWorkoutSessions, type ExerciseHistory } from "../api/workouts";
+import { enqueueWrite } from "../sync/runtime";
+import { uuidv4 } from "../sync/uuid";
 
 export type WorkoutMode = "lifting" | "rest";
 
@@ -305,6 +300,21 @@ export default function useWorkout(
     sessionStartRef.current = Date.now();
     syncTiming();
 
+    // The session id is made on the device, so every set can be queued at once
+    // even offline (sets were silently lost when the start request failed).
+    const sessionId = uuidv4();
+    sessionIdRef.current = sessionId;
+    enqueueWrite({
+      t: "create",
+      entity: "session",
+      id: sessionId,
+      data: {
+        date: todayKey(),
+        programDayName: programLabel,
+        startedAt: new Date(sessionStartRef.current).toISOString(),
+      },
+    }).catch(() => {});
+
     // Full recent history (one request): last session per lift for prefill,
     // the session sequence for stall detection, all sets for all-time PRs.
     // Names fold onto canonical library names (legacy rows migrate on read).
@@ -320,17 +330,16 @@ export default function useWorkout(
         prTrackerRef.current = fresh;
       })
       .catch(() => {});
-    startWorkoutSession(todayKey(), programLabel)
-      .then((result) => {
-        if (result.success && result.data) sessionIdRef.current = result.data.id;
-      })
-      .catch(() => {});
   }, [programRows, programLabel, resetAll, syncTiming]);
 
   const finishSession = useCallback((durationSeconds: number) => {
     const sessionId = sessionIdRef.current;
     if (sessionId) {
-      finishWorkoutSession(sessionId, durationSeconds).catch(() => {});
+      enqueueWrite({
+        t: "finishSession",
+        id: sessionId,
+        data: { durationSeconds, endedAt: new Date().toISOString() },
+      }).catch(() => {});
     }
   }, []);
 
@@ -386,31 +395,27 @@ export default function useWorkout(
 
       const sessionId = sessionIdRef.current;
       if (sessionId) {
-        const setNumber = currentSet;
-        logWorkoutSet(sessionId, {
-          exerciseName: exercise,
-          setNumber,
-          weightKg: setValues.weightKg,
-          reps: setValues.reps,
-          // Only what the lifter reported — the program's target RIR is not data
-          rir:
-            setValues.rir !== null && setValues.rir !== undefined
-              ? String(setValues.rir)
-              : null,
-        })
-          .then((result) => {
-            const snap = lastSetRef.current;
-            if (
-              result.success &&
-              result.data &&
-              snap &&
-              snap.exerciseName === row.ex &&
-              snap.setNumber === setNumber
-            ) {
-              snap.serverId = result.data.id;
-            }
-          })
-          .catch(() => {});
+        // Client id: the set can be undone (or its delete cancel the unsent
+        // create) without waiting for a server response.
+        const setId = uuidv4();
+        lastSetRef.current.serverId = setId;
+        enqueueWrite({
+          t: "create",
+          entity: "set",
+          id: setId,
+          data: {
+            sessionId,
+            exerciseName: exercise,
+            setNumber: currentSet,
+            weightKg: setValues.weightKg,
+            reps: setValues.reps,
+            // Only what the lifter reported — the program's target RIR is not data
+            rir:
+              setValues.rir !== null && setValues.rir !== undefined
+                ? String(setValues.rir)
+                : null,
+          },
+        }).catch(() => {});
       }
 
       if (isLastSetOfExercise) {
@@ -510,7 +515,8 @@ export default function useWorkout(
     setMode("lifting");
     setExerciseIndex(snap.exerciseIndex);
     setCurrentSet(snap.setNumber);
-    if (snap.serverId) deleteWorkoutSet(snap.serverId).catch(() => {});
+    if (snap.serverId)
+      enqueueWrite({ t: "delete", entity: "set", id: snap.serverId }).catch(() => {});
     syncTiming();
   }, [syncTiming]);
 

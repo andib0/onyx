@@ -209,14 +209,8 @@ test.describe("core actions", () => {
       seed: seedDay,
       ready: "Deep work",
     });
-    // Known bug: useCompletion mutates appState.completion in place
-    // (ensureState shallow-copies, then next.completion[day] = …), so TanStack Query's
-    // structural sharing sees the same reference and keeps the old state: the server
-    // records the completion but the row never shows as done. Flips when fixed.
-    test.fail(
-      !process.env.E2E_SHOW_KNOWN_BUGS,
-      "schedule tick saved server-side but never rendered (in-place mutation)"
-    );
+    // Was bug B3 (in-place mutation of the cached state); fixed by the outbox's
+    // pure reducers (mobile/sync/applyDay.ts).
     const f = new Flow(page, {
       id: "tick-block",
       n: "7",
@@ -259,12 +253,20 @@ test.describe("core actions", () => {
       await f.type(page.getByPlaceholder(metric.ph), metric.v);
       await f.tap(page.getByText("Add Entry", { exact: true }));
       await f.end(() => expect(page.getByText(metric.v).first()).toBeVisible());
-      const logs = await api.get<{ date: string; bw: string; sleep: string }[]>(
-        s,
-        "/logs"
-      );
-      const today = logs.find((l) => l.date === localDateKey());
-      expect(today?.[metric.id === "bodyweight" ? "bw" : "sleep"]).toBe(metric.v);
+      // Writes are local-first: the outbox delivers them right after the UI updates.
+      await expect
+        .poll(
+          async () => {
+            const logs = await api.get<{ date: string; bw: string; sleep: string }[]>(
+              s,
+              "/logs"
+            );
+            const today = logs.find((l) => l.date === localDateKey());
+            return today?.[metric.id === "bodyweight" ? "bw" : "sleep"];
+          },
+          { timeout: 10_000 }
+        )
+        .toBe(metric.v);
     });
   }
 
