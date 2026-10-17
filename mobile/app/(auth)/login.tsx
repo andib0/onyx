@@ -28,7 +28,7 @@ export default function LoginScreen() {
     if (!email.trim() || !password.trim()) return;
     const success = await login(email.trim(), password);
     if (success) {
-      router.replace("/(tabs)/focus");
+      router.replace("/(tabs)/today");
     }
   };
 

@@ -121,6 +121,8 @@ const makeStyles = (colors: Palette) =>
     },
     input: {
       flex: 1,
+      // web: a TextInput's intrinsic width (size=20) otherwise beats flex
+      minWidth: 0,
       height: 52,
       backgroundColor: colors.bg,
       borderWidth: 1,

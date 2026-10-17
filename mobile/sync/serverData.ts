@@ -127,19 +127,20 @@ export function mergeToday(prev: AppState | undefined, payload: TodayPayload): A
   next.suppLog = Object.assign({}, base.suppLog, {
     [date]: toMap(payload.supplements.logs, "supplementId", "isTaken", date)[date] || {},
   });
+  // /today returns this weekday's plan plus one-off foods dated today (their
+  // dayOfWeek is the ISO date, so they never recur).
+  const toTemplate = (t: Row) =>
+    meal(
+      t,
+      ((t.tags as Row[]) || []).map((tag) => ({
+        label: s(tag.label),
+        value: s(tag.value),
+      }))
+    );
+  const sorted = payload.meals.templates.slice().sort(byOrder);
   next.mealTemplatesByDay = Object.assign({}, base.mealTemplatesByDay, {
-    [payload.weekday]: payload.meals.templates
-      .slice()
-      .sort(byOrder)
-      .map((t) =>
-        meal(
-          t,
-          ((t.tags as Row[]) || []).map((tag) => ({
-            label: s(tag.label),
-            value: s(tag.value),
-          }))
-        )
-      ),
+    [payload.weekday]: sorted.filter((t) => s(t.dayOfWeek) !== date).map(toTemplate),
+    [date]: sorted.filter((t) => s(t.dayOfWeek) === date).map(toTemplate),
   });
   next.mealLog = Object.assign({}, base.mealLog, {
     [date]: toMap(payload.meals.logs, "mealTemplateId", "isEaten", date)[date] || {},

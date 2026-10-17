@@ -67,3 +67,21 @@ tests, bundle budget PASS.
 | API tests | 117 | 171 (61/61 routes 2xx+4xx) | `npm run test:api` |
 Verified on main after merge.
 Open: no tombstones (client outbox must cancel create+delete), no delta sync.
+
+## 2026-10-17 — Bet 14 machinery (details `docs/log/machinery.md`)
+- `npm run check` in backend/ (tsc, eslint, prettier, unit, API, migration drift) and mobile/
+  (tsc, eslint, prettier, unit, app.config, bundle budget, e2e smoke). Local DB URLs in a
+  gitignored `.env.check.local`. Verified on main: both CHECK PASSED.
+- Playwright self-contained (starts API from migrations + Expo web); fixed Monday-09:00 clock.
+- Tap/time harness, baseline (current UI): pass ≤2 taps — log set, planned meal, one
+  supplement, check-in, what's-next; fail — finish workout 15 taps, all AM supplements 3,
+  bodyweight/sleep 3 taps + 1 input via 2 screens, ad-hoc food blocked by crash (B2), schedule
+  tick blocked (B3: UI never updates).
+- `mobile/app.config.ts`: cleartext only for local API builds (5 config cases tested).
+- `.github/workflows/ci.yml`: backend (Postgres service), migration drift, mobile, e2e jobs.
+  Not yet run on GitHub — push is blocked in this session.
+- Android scripts: `scripts/android/` build + cold-start (p50/p90). Loaded host run: first frame
+  p50 796 ms, "Day score" p50 6.5 s — re-measure idle.
+- Bugs found by the harness: B1 web logout after login (refresh via cookie only), B2 Nutrition
+  crash after food add, B3 schedule tick not re-rendered (in-place cache mutation). Routed to
+  client-data (B1, B3) and nav (B2) agents.

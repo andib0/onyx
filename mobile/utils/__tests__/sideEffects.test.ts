@@ -40,7 +40,11 @@ vi.mock("expo-notifications", () => ({
       return identifier;
     }
   ),
-  SchedulableTriggerInputTypes: { DAILY: "daily", TIME_INTERVAL: "timeInterval" },
+  SchedulableTriggerInputTypes: {
+    DAILY: "daily",
+    TIME_INTERVAL: "timeInterval",
+    DATE: "date",
+  },
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -55,7 +59,9 @@ import {
   loadNotificationPrefs,
   saveNotificationPrefs,
   scheduleRestEndNotification,
+  onReminderPrefsChanged,
   syncCheckInReminder,
+  syncPlannedReminders,
   syncSupplementReminders,
 } from "../notifications";
 import type { Food } from "../../api/foods";
@@ -146,12 +152,19 @@ describe("notifications", () => {
       supplements: false,
       checkIn: false,
       rest: true,
+      training: false,
     });
-    await saveNotificationPrefs({ supplements: true, checkIn: false, rest: false });
+    await saveNotificationPrefs({
+      supplements: true,
+      checkIn: false,
+      rest: false,
+      training: true,
+    });
     expect(await loadNotificationPrefs()).toEqual({
       supplements: true,
       checkIn: false,
       rest: false,
+      training: true,
     });
   });
 
@@ -161,25 +174,75 @@ describe("notifications", () => {
     expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledTimes(2);
   });
 
-  it("supplement reminders reschedule from scratch, skip bad times", async () => {
-    const supps = [
-      { id: "a", item: "Creatine", goal: "", dose: "5g", timeAt: "08:00" },
-      { id: "b", item: "Magnesium", goal: "sleep", dose: "400mg", timeAt: "22:15" },
-      { id: "c", item: "Broken", goal: "", dose: "", timeAt: "25:99" },
-    ];
-    await syncSupplementReminders(true, supps);
-    await syncSupplementReminders(true, supps);
-    expect(scheduled.filter((n) => n.content.data?.type === "supplement")).toHaveLength(
-      2
+  it("legacy daily reminders are only removed now (planner owns scheduling)", async () => {
+    scheduled.push(
+      { identifier: "old-supp", content: { data: { type: "supplement" } } },
+      { identifier: "old-checkin", content: { data: { type: "checkin" } } },
+      {
+        identifier: "planned",
+        content: { data: { type: "supplement", planned: "k@1" } as never },
+      }
     );
-    await syncSupplementReminders(false, supps);
-    expect(scheduled).toHaveLength(0);
+    const supps = [{ id: "a", item: "Creatine", goal: "", dose: "5g", timeAt: "08:00" }];
+    await syncSupplementReminders(true, supps);
+    await syncCheckInReminder(true);
+    expect(scheduled.map((n) => n.identifier)).toEqual(["planned"]);
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 
-  it("check-in reminder is a single daily notification", async () => {
-    await syncCheckInReminder(true);
-    await syncCheckInReminder(true);
-    expect(scheduled.filter((n) => n.content.data?.type === "checkin")).toHaveLength(1);
+  it("planned reminders: one-shot DATE triggers, diffed (no churn), stale ones cancelled", async () => {
+    const at = (h: number) => new Date(2026, 9, 19, h, 0, 0, 0);
+    const plan = [
+      {
+        key: "supplement:2026-10-19:08:00",
+        type: "supplement" as const,
+        fireAt: at(8),
+        title: "3 supplements · 08:00",
+        body: "A, B, C",
+        data: { type: "supplement", supplementIds: ["a", "b", "c"] },
+        categoryIdentifier: "supplement",
+      },
+      {
+        key: "checkin:2026-10-19",
+        type: "checkin" as const,
+        fireAt: at(20),
+        title: "Evening check-in",
+        body: "",
+        data: { type: "checkin" },
+      },
+    ];
+    scheduled.push({ identifier: "legacy", content: { data: { type: "checkin" } } });
+    expect(await syncPlannedReminders(plan)).toEqual({ scheduled: 2, cancelled: 1 });
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ trigger: { type: "date", date: at(8) } })
+    );
+    // Same plan again: nothing to do.
+    expect(await syncPlannedReminders(plan)).toEqual({ scheduled: 0, cancelled: 0 });
+    // Supplements taken → slot drops out of the plan → its banner is cancelled.
+    expect(await syncPlannedReminders(plan.slice(1))).toEqual({
+      scheduled: 0,
+      cancelled: 1,
+    });
+    expect(scheduled).toHaveLength(1);
+  });
+
+  it("saving prefs notifies reminder listeners", async () => {
+    const listener = vi.fn();
+    const off = onReminderPrefsChanged(listener);
+    await saveNotificationPrefs({
+      supplements: true,
+      checkIn: true,
+      rest: true,
+      training: true,
+    });
+    off();
+    await saveNotificationPrefs({
+      supplements: true,
+      checkIn: true,
+      rest: true,
+      training: true,
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("rest-end: none under 2 s, cancellable otherwise", async () => {

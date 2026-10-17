@@ -30,6 +30,16 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function logOneOff(req: AuthenticatedRequest, res: Response) {
+  try {
+    const result = await mealsService.logOneOff(req.userId!, req.body);
+    return sendIdempotent(res, result);
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
 export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
   try {
     const template = await mealsService.updateTemplate(

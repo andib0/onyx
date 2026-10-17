@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProgram, listPrograms } from "../api/programs";
 import { updatePreferences } from "../api/preferences";
 import { qk } from "../sync/queryKeys";
+import useTrainingIntention from "./ui/useTrainingIntention";
+import { isTrainingDate } from "../utils/trainingIntention";
 import type { ProgramDetail, ProgramSummary } from "../api/programs";
 import type { UserWithPreferences } from "../types/appTypes";
 import { canonicalExerciseName } from "../utils/exerciseNames";
@@ -167,12 +169,19 @@ export default function useProgram(
     [selectedProgramDayId]
   );
 
-  // Planned rest days from the program's weekly frequency
+  // Planned rest days: the user's implementation intention ("I will train on
+  // Mon/Wed/Fri") when set, else spread from the program's weekly frequency.
+  // Today, Train and past-day streak scoring all read this, so they agree.
+  const intention = useTrainingIntention();
   const perWeek = programDetail ? sessionsPerWeek(programDetail) : 0;
   const planFor = useCallback(
-    (date: string): DayPlan | null =>
-      programDetail && perWeek > 0 ? planForDate(date, perWeek) : null,
-    [programDetail, perWeek]
+    (date: string): DayPlan | null => {
+      if (!programDetail) return null;
+      if (intention && intention.weekdays.length > 0)
+        return isTrainingDate(intention, date) ? "train" : "rest";
+      return perWeek > 0 ? planForDate(date, perWeek) : null;
+    },
+    [programDetail, perWeek, intention]
   );
   const todayPlan = planFor(today);
   const trainAnyway = useCallback(() => setTrainAnywayDate(todayKey()), []);

@@ -51,6 +51,30 @@ export class MealsService {
     return result;
   }
 
+  /**
+   * One-off food: a template dated `date` (never matches a weekday, so it does
+   * not recur) plus an eaten log for that date. Idempotent on the client `id`:
+   * a replay returns the same template and re-applies the eaten toggle.
+   */
+  async logOneOff(
+    userId: string,
+    data: {
+      id?: string;
+      date: string;
+      name: string;
+      examples?: string;
+      grams?: number | null;
+      foodId?: string | null;
+      tags?: Tag[];
+      hlc?: string;
+    }
+  ) {
+    const { date, hlc, ...template } = data;
+    const result = await this.createTemplate(userId, { ...template, dayOfWeek: date });
+    const log = await this.toggleLog(userId, result.row.id, date, true, { hlc });
+    return { row: { template: result.row, log }, created: result.created };
+  }
+
   async getTemplateById(userId: string, templateId: string) {
     return prisma.mealTemplate.findUnique({
       where: { id: templateId, userId },

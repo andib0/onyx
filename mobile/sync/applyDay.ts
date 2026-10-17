@@ -142,6 +142,18 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
     case "create":
     case "update": {
       const data = intent.data;
+      if (intent.entity === "oneOffMeal") {
+        if (intent.t !== "create") return state;
+        const date = String(data.date);
+        const list = (state.mealTemplatesByDay || {})[date] || [];
+        if (list.some((m) => m.id === intent.id)) return state;
+        return Object.assign({}, state, {
+          mealTemplatesByDay: Object.assign({}, state.mealTemplatesByDay, {
+            [date]: list.concat([toMeal(intent.id, data)]),
+          }),
+          mealLog: setNested(state.mealLog || {}, date, intent.id, true),
+        });
+      }
       if (intent.entity === "block") {
         const list = state.schedule || [];
         const prev = list.find((b) => b.id === intent.id);
@@ -213,7 +225,7 @@ export function applyIntent(state: AppState, intent: Intent): AppState {
           supp,
         });
       }
-      if (intent.entity === "meal") {
+      if (intent.entity === "meal" || intent.entity === "oneOffMeal") {
         const byDay: AppState["mealTemplatesByDay"] = {};
         for (const day of Object.keys(state.mealTemplatesByDay || {})) {
           byDay[day] = (state.mealTemplatesByDay[day] || []).filter(

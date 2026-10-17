@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
 import { ToastProvider, useToastContext } from "./ToastContext";
@@ -8,7 +8,6 @@ import { ScheduleProvider, useSchedule } from "./ScheduleContext";
 import { MealsProvider, useMeals } from "./MealsContext";
 import { SupplementsProvider, useSupplements } from "./SupplementsContext";
 import { TimelineProvider } from "./TimelineContext";
-import { loadNotificationPrefs, syncSupplementReminders } from "../utils/notifications";
 
 // ── Composed provider tree ──
 
@@ -16,14 +15,6 @@ function InnerProviders({ children }: { children: ReactNode }) {
   const { scheduleBlocks, completionByBlockId } = useSchedule();
   const { supplementsList, supplementChecksForToday } = useSupplements();
 
-  // Keep daily supplement reminders aligned with the current stack
-  useEffect(() => {
-    loadNotificationPrefs().then((prefs) => {
-      if (prefs.supplements) {
-        syncSupplementReminders(true, supplementsList).catch(() => {});
-      }
-    });
-  }, [supplementsList]);
   const { mealTemplatesForDay, mealCheckMap } = useMeals();
   const { programLabel, trainingDayActive, workoutCompletedToday } = useProgram();
 

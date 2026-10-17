@@ -653,9 +653,50 @@ export default function useWorkout(
     canUndo,
   };
 
+  // "Trained but didn't log" (plan §2a: ~15 % of misses): the day counts as a
+  // workout. An open session is finished; otherwise a finished session without
+  // sets is recorded for today (client id, offline-safe) so other devices and
+  // the plan see that training happened.
+  const markWorkoutDone = useCallback(() => {
+    const now = new Date();
+    if (isActive && sessionIdRef.current) {
+      finishSession(currentSessionSeconds());
+      markCompleted();
+      resetAll();
+      return;
+    }
+    const id = uuidv4();
+    enqueueWrite([
+      {
+        t: "create",
+        entity: "session",
+        id,
+        data: {
+          date: todayKey(),
+          programDayName: programLabel,
+          startedAt: now.toISOString(),
+        },
+      },
+      {
+        t: "finishSession",
+        id,
+        data: { durationSeconds: 0, endedAt: now.toISOString() },
+      },
+    ]).catch(() => {});
+    markCompleted();
+  }, [
+    isActive,
+    programLabel,
+    finishSession,
+    currentSessionSeconds,
+    markCompleted,
+    resetAll,
+  ]);
+
   return {
     workout: state,
     workoutCompletedToday: completedToday,
+    markWorkoutDone,
     startWorkout: start,
     completeWorkoutSet: completeSet,
     skipWorkoutRest: skipRest,

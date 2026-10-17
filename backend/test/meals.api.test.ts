@@ -137,3 +137,56 @@ describe('/api/meals', () => {
     expect((await http().delete(`/api/meals/templates/${id}`).set(H)).status).toBe(404);
   });
 });
+
+describe('/api/meals/one-off (ad-hoc food = one-off log, not a weekly template)', () => {
+  const DATE = '2026-10-19'; // a Monday
+  let O: Record<string, string>;
+
+  beforeAll(async () => {
+    O = auth(await registerUser());
+  });
+
+  it('creates a dated template + eaten log (201), replays idempotently (200)', async () => {
+    const id = crypto.randomUUID();
+    const body = {
+      id,
+      date: DATE,
+      name: 'Chicken breast',
+      grams: 150,
+      foodId,
+      tags: [{ label: 'Protein', value: '31' }],
+    };
+    const res = await http().post('/api/meals/one-off').set(O).send(body);
+    expect(res.status).toBe(201);
+    expect(res.body.data.template.id).toBe(id);
+    expect(res.body.data.template.dayOfWeek).toBe(DATE);
+    expect(res.body.data.log).toMatchObject({ date: DATE, isEaten: true });
+
+    const replay = await http().post('/api/meals/one-off').set(O).send(body);
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.template.id).toBe(id);
+    expect(await prisma.mealTemplate.count({ where: { id } })).toBe(1);
+  });
+
+  it('never becomes a weekday template; /today lists it and counts it eaten', async () => {
+    const monday = await http().get('/api/meals/templates?day=Monday').set(O);
+    expect(monday.body.data).toHaveLength(0);
+    const today = await http().get(`/api/today?date=${DATE}`).set(O);
+    expect(today.status).toBe(200);
+    const names = (d: { meals: { templates: { name: string }[] } }) =>
+      d.meals.templates.map((t) => t.name);
+    expect(names(today.body.data)).toContain('Chicken breast');
+    expect(today.body.data.meals.consumed).not.toBeNull();
+    const nextWeek = await http().get('/api/today?date=2026-10-26').set(O);
+    expect(names(nextWeek.body.data)).not.toContain('Chicken breast');
+  });
+
+  it('rejects a bad date, a missing name and anonymous callers', async () => {
+    const post = () => http().post('/api/meals/one-off');
+    expect((await post().set(O).send({ date: '2026-02-31', name: 'x' })).status).toBe(
+      400
+    );
+    expect((await post().set(O).send({ date: DATE })).status).toBe(400);
+    expect((await post().send({ date: DATE, name: 'x' })).status).toBe(401);
+  });
+});

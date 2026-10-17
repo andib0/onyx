@@ -11,6 +11,9 @@ import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
 import { useProgram } from "../../contexts/ProgramContext";
+import useTodayPlan from "../../hooks/ui/useTodayPlan";
+import WorkoutCard from "../../components/train/WorkoutCard";
+import { describeIntention } from "../../utils/trainingIntention";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import Header from "../../components/layout/Header";
@@ -102,11 +105,11 @@ export default function ProgramScreen() {
     selectedProgramDay,
     programRows,
     programLabel,
-    trainingDayActive,
     handleSelectProgram,
     setSelectedProgramDayId,
     refreshPrograms,
   } = useProgram();
+  const plan = useTodayPlan();
 
   // Last-session sets per exercise for "last" + progression chips on the card
   const exerciseNames = programRows.map((r) => r.ex).join("|");
@@ -158,7 +161,30 @@ export default function ProgramScreen() {
 
   return (
     <ScreenContainer>
-      <Header title="Program" />
+      <Header
+        title="Train"
+        subtitle={
+          plan.intention
+            ? `Plan: ${describeIntention(plan.intention)}`
+            : "Set when and where you train"
+        }
+        right={
+          <Button
+            label={plan.intention ? "Edit plan" : "Set plan"}
+            variant="ghost"
+            size="sm"
+            icon="calendar-outline"
+            onPress={() => router.push("/training-plan")}
+          />
+        }
+      />
+
+      {/* Today's session: start / log sets / finish (with undo) */}
+      {selectedProgramDay ? (
+        <View testID="workout-card">
+          <WorkoutCard trainingDay={plan.trainingDay} compact />
+        </View>
+      ) : null}
 
       {/* Program picker: collapses to compact row once selected */}
       {!selectedProgramId || showPicker ? (
@@ -294,107 +320,94 @@ export default function ProgramScreen() {
 
       {/* Session detail — one roomy card per exercise */}
       {selectedProgramDay ? (
-        trainingDayActive ? (
-          <>
-            <View style={styles.sessionHeader}>
-              <Text style={styles.sessionTitle} numberOfLines={1}>
-                {selectedProgramDay.name}
-              </Text>
-              <Button
-                label="Copy"
-                variant="secondary"
-                size="sm"
-                icon="copy-outline"
-                onPress={handleCopy}
-              />
-            </View>
-            {programRows.map((row, idx) => {
-              const h = history[row.ex];
-              const sug = h ? suggestProgression(row.ex, h.sets, row.reps) : null;
-              const lastStr = h
-                ? h.sets.map((s) => (s.reps !== null ? s.reps : "-")).join("/") +
-                  (h.sets[0]?.weightKg != null ? ` @ ${h.sets[0].weightKg}kg` : "")
-                : null;
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityHint="Opens exercise details"
-                  key={`row-${idx}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/exercise/[name]",
-                      params: { name: row.ex },
-                    })
-                  }
-                  style={({ pressed }) => (pressed ? sharedStyles.pressed : undefined)}
-                >
-                  <Card>
-                    <View style={styles.exHead}>
-                      <View style={styles.exIndexBadge}>
-                        <Text style={styles.exIndexText}>{idx + 1}</Text>
-                      </View>
-                      <Text style={styles.exName} numberOfLines={2}>
-                        {row.ex}
+        <>
+          <View style={styles.sessionHeader}>
+            <Text style={styles.sessionTitle} numberOfLines={1}>
+              {plan.trainingDay ? "" : "Next: "}
+              {selectedProgramDay.name}
+            </Text>
+            <Button
+              label="Copy"
+              variant="secondary"
+              size="sm"
+              icon="copy-outline"
+              onPress={handleCopy}
+            />
+          </View>
+          {programRows.map((row, idx) => {
+            const h = history[row.ex];
+            const sug = h ? suggestProgression(row.ex, h.sets, row.reps) : null;
+            const lastStr = h
+              ? h.sets.map((s) => (s.reps !== null ? s.reps : "-")).join("/") +
+                (h.sets[0]?.weightKg != null ? ` @ ${h.sets[0].weightKg}kg` : "")
+              : null;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityHint="Opens exercise details"
+                key={`row-${idx}`}
+                onPress={() =>
+                  router.push({
+                    pathname: "/exercise/[name]",
+                    params: { name: row.ex },
+                  })
+                }
+                style={({ pressed }) => (pressed ? sharedStyles.pressed : undefined)}
+              >
+                <Card>
+                  <View style={styles.exHead}>
+                    <View style={styles.exIndexBadge}>
+                      <Text style={styles.exIndexText}>{idx + 1}</Text>
+                    </View>
+                    <Text style={styles.exName} numberOfLines={2}>
+                      {row.ex}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                  </View>
+                  <View style={styles.exStats}>
+                    <View style={styles.statChip}>
+                      <Ionicons name="repeat" size={12} color={colors.muted} />
+                      <Text style={styles.statChipText}>
+                        {row.sets}×{row.reps}
                       </Text>
-                      <Ionicons name="chevron-forward" size={18} color={colors.faint} />
                     </View>
-                    <View style={styles.exStats}>
-                      <View style={styles.statChip}>
-                        <Ionicons name="repeat" size={12} color={colors.muted} />
-                        <Text style={styles.statChipText}>
-                          {row.sets}×{row.reps}
-                        </Text>
-                      </View>
-                      <View style={styles.statChip}>
-                        <Text style={styles.statChipLabel}>RIR</Text>
-                        <Text style={styles.statChipText}>{row.rir}</Text>
-                      </View>
-                      <View style={styles.statChip}>
-                        <Ionicons name="time-outline" size={12} color={colors.muted} />
-                        <Text style={styles.statChipText}>{row.rest}</Text>
-                      </View>
+                    <View style={styles.statChip}>
+                      <Text style={styles.statChipLabel}>RIR</Text>
+                      <Text style={styles.statChipText}>{row.rir}</Text>
                     </View>
-                    {lastStr ? (
-                      <View style={styles.histRow}>
-                        <Text style={styles.histText} numberOfLines={1}>
-                          Last {lastStr}
-                        </Text>
-                        {sug ? (
-                          <View
-                            style={[styles.progChip, sug.isProgress && styles.progChipUp]}
+                    <View style={styles.statChip}>
+                      <Ionicons name="time-outline" size={12} color={colors.muted} />
+                      <Text style={styles.statChipText}>{row.rest}</Text>
+                    </View>
+                  </View>
+                  {lastStr ? (
+                    <View style={styles.histRow}>
+                      <Text style={styles.histText} numberOfLines={1}>
+                        Last {lastStr}
+                      </Text>
+                      {sug ? (
+                        <View
+                          style={[styles.progChip, sug.isProgress && styles.progChipUp]}
+                        >
+                          {sug.isProgress ? (
+                            <Ionicons name="arrow-up" size={11} color={colors.good} />
+                          ) : null}
+                          <Text
+                            style={[styles.progText, sug.isProgress && styles.progTextUp]}
+                            numberOfLines={1}
                           >
-                            {sug.isProgress ? (
-                              <Ionicons name="arrow-up" size={11} color={colors.good} />
-                            ) : null}
-                            <Text
-                              style={[
-                                styles.progText,
-                                sug.isProgress && styles.progTextUp,
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {sug.text}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    ) : null}
-                    {row.notes ? <Text style={styles.exNotes}>{row.notes}</Text> : null}
-                  </Card>
-                </Pressable>
-              );
-            })}
-          </>
-        ) : (
-          <Card>
-            <View style={styles.restDay}>
-              <Text style={styles.restDayText}>Rest day</Text>
-              <Text style={styles.restDaySubtext}>
-                Recovery is when adaptation happens.
-              </Text>
-            </View>
-          </Card>
-        )
+                            {sug.text}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                  {row.notes ? <Text style={styles.exNotes}>{row.notes}</Text> : null}
+                </Card>
+              </Pressable>
+            );
+          })}
+        </>
       ) : null}
 
       <ConfirmModal

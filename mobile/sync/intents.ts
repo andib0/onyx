@@ -13,7 +13,9 @@ export type Entity =
   | "program"
   | "session"
   | "set"
-  | "userFood";
+  | "userFood"
+  /** an ad-hoc food eaten once (POST /meals/one-off: dated template + eaten log) */
+  | "oneOffMeal";
 
 export type Intent =
   | { t: "toggle"; kind: ToggleKind; targetId: string; date: string; value: boolean }
@@ -70,6 +72,7 @@ const ENTITY_LABEL: Record<Entity, string> = {
   session: "Workout session",
   set: "Workout set",
   userFood: "Saved food",
+  oneOffMeal: "Logged food",
 };
 
 const ENTITY_DOMAIN: Record<Entity, Domain> = {
@@ -80,6 +83,7 @@ const ENTITY_DOMAIN: Record<Entity, Domain> = {
   session: "workout",
   set: "workout",
   userFood: "foods",
+  oneOffMeal: "day",
 };
 
 export const entityKey = (entity: Entity, id: string) => `${entity}:${id}`;
@@ -222,6 +226,8 @@ const ENTITY_PATH: Record<Entity, string> = {
   session: "/workouts/sessions",
   set: "/workouts/sets",
   userFood: "/user-foods",
+  // create goes to /meals/one-off; the entry is a template, so it is deleted there
+  oneOffMeal: "/meals/templates",
 };
 
 /**
@@ -285,6 +291,15 @@ export function requestsFor(
     case "logDelete":
       return [{ method: "DELETE", path: `/logs/${intent.logId}` }];
     case "create": {
+      if (intent.entity === "oneOffMeal") {
+        return [
+          {
+            method: "POST",
+            path: "/meals/one-off",
+            body: Object.assign({}, intent.data, { id: intent.id, hlc }),
+          },
+        ];
+      }
       if (intent.entity === "set") {
         const sessionId = String(intent.data.sessionId);
         const body = Object.assign({}, intent.data, { id: intent.id, hlc });
