@@ -13,7 +13,11 @@ import {
   createBlockSchema,
   updateBlockSchema,
   toggleCompletionSchema,
+  completionsQuerySchema,
 } from '../validators/schedule.schema.js';
+import { idParams } from '../validators/common.js';
+
+const id = validate(idParams, 'params');
 
 const router = Router();
 
@@ -21,11 +25,11 @@ router.use(authMiddleware);
 
 router.get('/', getBlocks);
 router.post('/', validate(createBlockSchema), createBlock);
-router.put('/:id', validate(updateBlockSchema), updateBlock);
-router.delete('/:id', deleteBlock);
+router.put('/:id', id, validate(updateBlockSchema), updateBlock);
+router.delete('/:id', id, deleteBlock);
 
 // Completions
-router.get('/completions', getCompletions);
+router.get('/completions', validate(completionsQuerySchema, 'query'), getCompletions);
 router.post('/completions', validate(toggleCompletionSchema), toggleCompletion);
 
 export default router;

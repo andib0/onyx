@@ -1,7 +1,7 @@
 import { z } from 'zod';
+import { isoDate, recordId } from './common.js';
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export const createBlockSchema = z.object({
   start: z.string().regex(timePattern, 'Invalid time format (HH:MM)'),
@@ -18,11 +18,15 @@ export const createBlockSchema = z.object({
 export const updateBlockSchema = createBlockSchema.partial();
 
 export const toggleCompletionSchema = z.object({
-  blockId: z.string().min(1, 'blockId is required'),
-  date: z.string().regex(datePattern, 'Invalid date format (YYYY-MM-DD)'),
+  blockId: recordId,
+  date: isoDate,
   isComplete: z.boolean(),
 });
 
 export type CreateBlockInput = z.infer<typeof createBlockSchema>;
 export type UpdateBlockInput = z.infer<typeof updateBlockSchema>;
 export type ToggleCompletionInput = z.infer<typeof toggleCompletionSchema>;
+
+export const completionsQuerySchema = z.object({
+  date: isoDate,
+});

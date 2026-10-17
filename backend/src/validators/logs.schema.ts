@@ -1,9 +1,8 @@
 import { z } from 'zod';
-
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+import { intQuery, isoDate } from './common.js';
 
 export const createOrUpdateLogSchema = z.object({
-  date: z.string().regex(datePattern, 'Invalid date format (YYYY-MM-DD)'),
+  date: isoDate,
   day: z.string().max(20).optional().default(''),
   bw: z.string().max(20).optional().default(''),
   sleep: z.string().max(20).optional().default(''),
@@ -13,3 +12,14 @@ export const createOrUpdateLogSchema = z.object({
 });
 
 export type CreateOrUpdateLogInput = z.infer<typeof createOrUpdateLogSchema>;
+
+export const logsQuerySchema = z.object({
+  startDate: isoDate.optional(),
+  endDate: isoDate.optional(),
+  limit: intQuery(1, 200, 50),
+  offset: intQuery(0, 100000, 0),
+});
+
+export const logStatsQuerySchema = z.object({
+  days: intQuery(1, 365, 30),
+});

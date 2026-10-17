@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { isoDate } from './common.js';
 
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const createSupplementSchema = z.object({
@@ -22,10 +22,15 @@ export const createSupplementSchema = z.object({
 export const updateSupplementSchema = createSupplementSchema.partial();
 
 export const toggleSupplementLogSchema = z.object({
-  date: z.string().regex(datePattern, 'Invalid date format (YYYY-MM-DD)'),
+  date: isoDate,
   isTaken: z.boolean(),
 });
 
 export type CreateSupplementInput = z.infer<typeof createSupplementSchema>;
 export type UpdateSupplementInput = z.infer<typeof updateSupplementSchema>;
 export type ToggleSupplementLogInput = z.infer<typeof toggleSupplementLogSchema>;
+
+export const supplementLogsQuerySchema = z.object({
+  startDate: isoDate.optional(),
+  endDate: isoDate.optional(),
+});

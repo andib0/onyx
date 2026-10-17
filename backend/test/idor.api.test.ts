@@ -89,6 +89,10 @@ const BODY_REFERENCES: Record<string, Call> = {
     url: () => '/api/schedule/completions',
     body: (i) => ({ blockId: i.block, date: DATE, isComplete: true }),
   },
+  'PUT /api/preferences (selectedProgramId)': {
+    url: () => '/api/preferences',
+    body: (i) => ({ selectedProgramId: i.program }),
+  },
 };
 
 /** Param routes that are deliberately not user-owned. */

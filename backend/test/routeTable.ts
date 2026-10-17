@@ -52,7 +52,7 @@ function walk(stack: Layer[], prefix: string, inherited: Fn[], out: RouteInfo[])
       const methods = Object.keys(layer.route.methods).filter((m) => m !== '_all');
       for (const m of methods) {
         const method = m.toUpperCase();
-        const path = prefix + layer.route.path;
+        const path = (prefix + layer.route.path).replace(/(.)\/$/, '$1');
         out.push({
           method,
           path,

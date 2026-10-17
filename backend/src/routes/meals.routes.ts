@@ -15,20 +15,25 @@ import {
   updateMealTemplateSchema,
   updateGramsSchema,
   toggleMealLogSchema,
+  templatesQuerySchema,
+  mealLogsQuerySchema,
 } from '../validators/meals.schema.js';
+import { idParams } from '../validators/common.js';
+
+const id = validate(idParams, 'params');
 
 const router = Router();
 
 router.use(authMiddleware);
 
-router.get('/templates', getTemplates);
+router.get('/templates', validate(templatesQuerySchema, 'query'), getTemplates);
 router.post('/templates', validate(createMealTemplateSchema), createTemplate);
-router.put('/templates/:id', validate(updateMealTemplateSchema), updateTemplate);
-router.patch('/templates/:id/grams', validate(updateGramsSchema), updateGrams);
-router.delete('/templates/:id', deleteTemplate);
+router.put('/templates/:id', id, validate(updateMealTemplateSchema), updateTemplate);
+router.patch('/templates/:id/grams', id, validate(updateGramsSchema), updateGrams);
+router.delete('/templates/:id', id, deleteTemplate);
 
 // Logs
-router.get('/logs', getLogs);
-router.post('/:id/log', validate(toggleMealLogSchema), toggleLog);
+router.get('/logs', validate(mealLogsQuerySchema, 'query'), getLogs);
+router.post('/:id/log', id, validate(toggleMealLogSchema), toggleLog);
 
 export default router;

@@ -6,11 +6,9 @@ import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function searchFoods(req: AuthenticatedRequest, res: Response) {
   try {
-    const query = req.query.search as string;
-    if (!query || query.length < 2) {
-      return sendError(res, 'Search query must be at least 2 characters');
-    }
-    const limit = parseInt(req.query.limit as string) || 50;
+    // Validated by searchFoodsQuerySchema: search 2..100 chars, limit 1..100.
+    const query = String(req.query.search);
+    const limit = Number(req.query.limit);
     const foods = await foodsService.search(query, limit);
     return sendSuccess(res, foods);
   } catch (error) {
