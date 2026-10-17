@@ -9,7 +9,7 @@ RUNS="${1:-10}"
 PKG="${2:-com.onyx.daily}"
 ACTIVITY="$PKG/.MainActivity"
 OUT="tti-results.csv"
-echo "run,am_total_ms,js_bundle_start_ms,fonts_ms,auth_ms,focus_first_render_ms,focus_interactive_ms" > "$OUT"
+echo "run,am_total_ms,js_bundle_start_ms,fonts_ms,cache_restored_ms,auth_ms,focus_first_render_ms,focus_interactive_ms" > "$OUT"
 
 for i in $(seq 1 "$RUNS"); do
   adb shell am force-stop "$PKG"
@@ -26,7 +26,7 @@ for i in $(seq 1 "$RUNS"); do
   done
   LOG=$(adb logcat -d -s ReactNativeJS:V | tr -d '\r')
   mark() { echo "$LOG" | grep -o "ONYX_PERF $1 [0-9.]*" | tail -1 | awk '{print $3}'; }
-  echo "$i,$TOTAL,$(mark js_start),$(mark fonts_loaded),$(mark auth_ready),$(mark focus_first_render),$(mark focus_interactive)" | tee -a "$OUT"
+  echo "$i,$TOTAL,$(mark js_start),$(mark fonts_loaded),$(mark cache_restored),$(mark auth_ready),$(mark focus_first_render),$(mark focus_interactive)" | tee -a "$OUT"
 done
 
 # p50 / p90 per column (sorted numeric)

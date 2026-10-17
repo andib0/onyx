@@ -1,0 +1,13 @@
+# Logged-in cold start with NO network (Bet 1). Run after login.yaml, with the
+# device in airplane mode (adb shell cmd connectivity airplane-mode enable):
+# the app must open on Today with yesterday's cached data, not on Login.
+appId: com.onyx.daily
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Day score.*"
+    timeout: 30000
+- assertVisible: ".*Deep work.*"
+- assertNotVisible: "Sign in"
+- takeScreenshot: results/android-offline-coldstart
