@@ -143,6 +143,20 @@ export function getGoalLabel(programGoal: string | undefined): string {
   return "General";
 }
 
+// Target bodyweight change in kg/week per goal — midpoints of each profile's
+// weightNote (cut 0.3–0.5 loss, bulk 0.2–0.4 gain). Outcome Score Bw input.
+const GOAL_RATES: Record<string, number> = {
+  cut: -0.4,
+  bulk: 0.3,
+  strength: 0.15,
+  recomp: 0,
+  general: 0,
+};
+
+export function getGoalRateKgPerWeek(programGoal: string | undefined): number {
+  return GOAL_RATES[programGoal || ""] ?? 0;
+}
+
 // -- Consumed macros from checked meals --
 
 export type ConsumedMacros = {
