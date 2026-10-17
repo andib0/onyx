@@ -1,7 +1,11 @@
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "./tokenStore";
 import Constants from "expo-constants";
 
-const API_BASE = Constants.expoConfig?.extra?.apiUrl || "http://localhost:3001/api";
+// EXPO_PUBLIC_API_URL lets local dev/e2e runs target a local API instead of production.
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL ||
+  Constants.expoConfig?.extra?.apiUrl ||
+  "http://localhost:3001/api";
 
 const ACCESS_TOKEN_KEY = "onyx_access_token";
 const REFRESH_TOKEN_KEY = "onyx_refresh_token";
@@ -12,9 +16,9 @@ let refreshPromise: Promise<string | null> | null = null;
 export function setAccessToken(token: string | null) {
   cachedAccessToken = token;
   if (token) {
-    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token).catch(() => {});
+    SecureStore.setItem(ACCESS_TOKEN_KEY, token).catch(() => {});
   } else {
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY).catch(() => {});
+    SecureStore.deleteItem(ACCESS_TOKEN_KEY).catch(() => {});
   }
 }
 
@@ -24,7 +28,7 @@ export function getAccessToken(): string | null {
 
 export async function loadAccessToken(): Promise<string | null> {
   try {
-    const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    const token = await SecureStore.getItem(ACCESS_TOKEN_KEY);
     cachedAccessToken = token;
     return token;
   } catch {
@@ -34,15 +38,15 @@ export async function loadAccessToken(): Promise<string | null> {
 
 export async function setRefreshToken(token: string | null): Promise<void> {
   if (token) {
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+    await SecureStore.setItem(REFRESH_TOKEN_KEY, token);
   } else {
-    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItem(REFRESH_TOKEN_KEY);
   }
 }
 
 export async function getRefreshToken(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    return await SecureStore.getItem(REFRESH_TOKEN_KEY);
   } catch {
     return null;
   }
@@ -51,8 +55,8 @@ export async function getRefreshToken(): Promise<string | null> {
 export async function clearTokens(): Promise<void> {
   cachedAccessToken = null;
   await Promise.all([
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY).catch(() => {}),
-    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY).catch(() => {}),
+    SecureStore.deleteItem(ACCESS_TOKEN_KEY).catch(() => {}),
+    SecureStore.deleteItem(REFRESH_TOKEN_KEY).catch(() => {}),
   ]);
 }
 

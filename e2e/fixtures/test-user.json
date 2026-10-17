@@ -1,0 +1,6 @@
+{
+  "_note": "Local-only e2e user for the onyx_dev / onyx_test databases. Never valid against production.",
+  "name": "E2E Tester",
+  "email": "e2e@onyx.test",
+  "password": "e2e-local-Passw0rd!"
+}

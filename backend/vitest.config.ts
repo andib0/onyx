@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // HTTP tests need a real database; they run via vitest.api.config.ts.
+    exclude: ['**/node_modules/**', '**/dist/**', 'test/**/*.api.test.ts'],
     // env.ts validates these at import time; tests never touch a real DB.
     env: {
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
