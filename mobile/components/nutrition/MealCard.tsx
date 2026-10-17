@@ -51,7 +51,7 @@ export default function MealCard({
   return (
     <View style={styles.mealCard}>
       <View style={styles.mealTopRow}>
-        <Checkbox checked={isChecked} onToggle={onToggle} />
+        <Checkbox checked={isChecked} onToggle={onToggle} label={meal.name} />
         <View style={styles.mealInfo}>
           <Text style={[styles.mealName, isChecked && styles.mealNameDone]}>
             {meal.name}
@@ -86,6 +86,10 @@ export default function MealCard({
           <View style={styles.presetRow}>
             {GRAM_PRESETS.map((preset) => (
               <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                accessibilityLabel={`${preset} grams`}
+                accessibilityState={{ selected: Math.round(localGrams) === preset }}
                 key={`preset-${preset}`}
                 onPress={() => {
                   setLocalGrams(preset);

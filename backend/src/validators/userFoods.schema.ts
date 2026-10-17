@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { recordId } from './common.js';
 import { clientId } from './common.schema.js';
 
 export const addUserFoodSchema = z.object({
   id: clientId.optional(),
-  foodId: z.string().min(1, 'foodId is required').max(100),
+  foodId: recordId,
 });
 
 export type AddUserFoodInput = z.infer<typeof addUserFoodSchema>;

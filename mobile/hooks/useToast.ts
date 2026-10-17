@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TOAST_DURATION_MS } from "../constants";
 
 export type ToastType = "success" | "error";
@@ -27,7 +27,9 @@ function useToast() {
     };
   }, []);
 
-  const showToast = (message: string, type?: ToastType) => {
+  // Stable identity: every provider and screen receives showToast, so a new
+  // function per render would cascade re-renders through the whole tree.
+  const showToast = useCallback((message: string, type?: ToastType) => {
     setToastMessage(message);
     setToastType(type ?? classify(message));
     setToastVisible(true);
@@ -37,7 +39,7 @@ function useToast() {
     timerRef.current = setTimeout(() => {
       setToastVisible(false);
     }, TOAST_DURATION_MS);
-  };
+  }, []);
 
   return {
     toastMessage,

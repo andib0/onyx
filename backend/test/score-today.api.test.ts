@@ -142,7 +142,7 @@ describe('server-computed DailyScore', () => {
       });
     }
     await prisma.userPreferences.update({ where: { userId }, data: { timezone: 'UTC' } });
-    const v1 = await http().get('/api/scores?days=400').set(auth(u));
+    const v1 = await http().get('/api/scores?days=365').set(auth(u));
     expect(Array.isArray(v1.body.data)).toBe(true);
     const v2 = await http().get('/api/scores?v=2&days=30').set(auth(u));
     expect(v2.status).toBe(200);
@@ -199,6 +199,20 @@ describe('GET /api/today', () => {
       kept: true,
       routinePct: 50,
     });
+  });
+
+  it('profile heightCm/sex round-trip through /auth/profile, /auth/me and /today', async () => {
+    const put = await http()
+      .put('/api/auth/profile')
+      .set(auth(u))
+      .send({ heightCm: 180, sex: 'male' });
+    expect(put.status).toBe(200);
+    const me = await http().get('/api/auth/me').set(auth(u));
+    expect(me.body.data.user).toMatchObject({ heightCm: 180, sex: 'male' });
+    const t = await http().get(`/api/today?date=${DATE}`).set(auth(u));
+    expect(t.body.data.user).toMatchObject({ heightCm: 180, sex: 'male' });
+    const bad = await http().put('/api/auth/profile').set(auth(u)).send({ sex: 'other' });
+    expect(bad.status).toBe(400);
   });
 
   it('defaults the date to the user’s local today and rejects bad dates', async () => {

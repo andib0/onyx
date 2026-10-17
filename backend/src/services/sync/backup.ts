@@ -255,6 +255,8 @@ export async function exportV2(userId: string) {
       username: true,
       age: true,
       weight: true,
+      heightCm: true,
+      sex: true,
       dataEpoch: true,
       createdAt: true,
       updatedAt: true,
@@ -325,6 +327,8 @@ export async function exportV2(userId: string) {
         username: user.username,
         age: user.age,
         weight: user.weight === null ? null : Number(user.weight),
+        heightCm: user.heightCm,
+        sex: user.sex,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       },
@@ -529,14 +533,18 @@ export async function importV2(
           username: input.user.username ?? null,
           age: input.user.age ?? null,
           weight: input.user.weight ?? null,
+          heightCm: input.user.heightCm ?? null,
+          sex: input.user.sex ?? null,
         };
         const current = await tx.user.findUniqueOrThrow({
           where: { id: userId },
-          select: { username: true, age: true, weight: true },
+          select: { username: true, age: true, weight: true, heightCm: true, sex: true },
         });
         const same =
           current.username === profile.username &&
           current.age === profile.age &&
+          current.heightCm === profile.heightCm &&
+          current.sex === profile.sex &&
           (current.weight === null ? null : Number(current.weight)) === profile.weight;
         if (!same) await tx.user.update({ where: { id: userId }, data: profile });
       }

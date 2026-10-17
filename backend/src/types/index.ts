@@ -11,6 +11,10 @@ export interface AuthenticatedRequest extends Request<Record<string, string>> {
 export interface JWTPayload {
   sub: string;
   email: string;
+  typ: 'access' | 'refresh';
+  /** Session family id (refresh tokens always; access tokens since F1). */
+  fam?: string;
+  jti?: string;
   iat: number;
   exp: number;
 }

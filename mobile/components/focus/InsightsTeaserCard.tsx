@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import Card from "../ui/Card";
 import ProgressBar from "../ui/ProgressBar";
@@ -45,7 +45,11 @@ export default function InsightsTeaserCard({
   if (insights.length > 0) {
     const top = insights[0];
     return (
-      <Pressable onPress={go}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Opens insights"
+        onPress={go}
+      >
         <Card>
           <View style={styles.head}>
             <View style={styles.badge}>
@@ -72,7 +76,7 @@ export default function InsightsTeaserCard({
   const daysLeft = daysUntilInsights(scoreHistory);
   const pct = Math.round((scoreHistory.length / INSIGHTS_MIN_DAYS) * 100);
   return (
-    <Pressable onPress={go}>
+    <Pressable accessibilityRole="button" accessibilityHint="Opens insights" onPress={go}>
       <Card>
         <View style={styles.head}>
           <View style={styles.badge}>

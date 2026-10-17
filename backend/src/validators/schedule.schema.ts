@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { clientId, hlc, isoDate } from './common.schema.js';
+import { clientId, hlc } from './common.schema.js';
+import { isoDate, recordId } from './common.js';
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -19,7 +20,7 @@ export const createBlockSchema = z.object({
 export const updateBlockSchema = createBlockSchema.omit({ id: true }).partial();
 
 export const toggleCompletionSchema = z.object({
-  blockId: z.string().min(1, 'blockId is required'),
+  blockId: recordId,
   date: isoDate,
   isComplete: z.boolean(),
   hlc: hlc.optional(),
@@ -29,3 +30,7 @@ export const toggleCompletionSchema = z.object({
 export type CreateBlockInput = z.infer<typeof createBlockSchema>;
 export type UpdateBlockInput = z.infer<typeof updateBlockSchema>;
 export type ToggleCompletionInput = z.infer<typeof toggleCompletionSchema>;
+
+export const completionsQuerySchema = z.object({
+  date: isoDate,
+});

@@ -41,6 +41,7 @@ export default function ChipSelector({
               pressed && styles.chipPressed,
             ]}
             onPress={() => onSelect(option)}
+            hitSlop={CHIP_HIT_SLOP}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
           >
@@ -53,6 +54,9 @@ export default function ChipSelector({
     </View>
   );
 }
+
+// 32 pt chips + 6 pt vertical slop = 44 pt target; 4 pt sides stay inside the 8 pt gap.
+const CHIP_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({

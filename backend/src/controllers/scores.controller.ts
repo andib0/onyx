@@ -3,6 +3,7 @@ import { scoresService } from '../services/scores.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
+import type { UpsertScoreInput } from '../validators/scores.schema.js';
 
 export async function upsertScore(req: AuthenticatedRequest, res: Response) {
   try {

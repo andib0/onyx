@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { clientId, hlc, isoDate } from './common.schema.js';
+import { clientId, hlc } from './common.schema.js';
+import { isoDate } from './common.js';
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -33,3 +34,8 @@ export const toggleSupplementLogSchema = z.object({
 export type CreateSupplementInput = z.infer<typeof createSupplementSchema>;
 export type UpdateSupplementInput = z.infer<typeof updateSupplementSchema>;
 export type ToggleSupplementLogInput = z.infer<typeof toggleSupplementLogSchema>;
+
+export const supplementLogsQuerySchema = z.object({
+  startDate: isoDate.optional(),
+  endDate: isoDate.optional(),
+});

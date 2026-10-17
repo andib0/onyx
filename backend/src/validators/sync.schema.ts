@@ -240,6 +240,8 @@ export const importV2Schema = z.object(
           username: optStr(100),
           age: z.number().int().min(0).max(150).nullable().optional(),
           weight: z.number().min(0).max(1000).nullable().optional(),
+          heightCm: z.number().int().min(0).max(300).nullable().optional(),
+          sex: z.enum(['male', 'female']).nullable().optional(),
         })
         .optional(),
       preferences: z

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { addUserFoodSchema } from '../validators/userFoods.schema.js';
+import { idParams } from '../validators/common.js';
 import {
   addUserFood,
   listUserFoods,
@@ -14,6 +15,6 @@ router.use(authMiddleware);
 
 router.get('/', listUserFoods);
 router.post('/', validate(addUserFoodSchema), addUserFood);
-router.delete('/:id', removeUserFood);
+router.delete('/:id', validate(idParams, 'params'), removeUserFood);
 
 export default router;

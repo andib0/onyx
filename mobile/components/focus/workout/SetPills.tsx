@@ -38,6 +38,7 @@ export default function SetPills({
             ]}
           >
             <Text
+              maxFontSizeMultiplier={1.4}
               style={[
                 styles.setPillText,
                 done && styles.setPillTextDone,

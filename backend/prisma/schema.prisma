@@ -18,6 +18,8 @@ model User {
   username     String?
   age          Int?
   weight       Decimal?
+  heightCm     Int?
+  sex          String? // male | female (Mifflin-St Jeor)
   // Random identity of this account's server-side data. A client that sees a
   // different epoch than the one it stored knows the server lost its data (e.g.
   // the Render free DB was recreated) and must rehydrate via /sync/import?v=2.
@@ -61,12 +63,18 @@ model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String
+  // sha256(token) hex. Refresh JWTs carry a random jti, so this is unique and
+  // looked up directly (no bcrypt scan).
+  tokenHash String   @unique
+  // Login session ("token family"): every rotation stays in the same family;
+  // reuse of a rotated token revokes the whole family. Nullable only so that
+  // `prisma db push` can add it to a table with pre-existing (legacy) rows.
+  familyId  String?
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@index([tokenHash])
+  @@index([familyId])
 }
 
 // ============================================

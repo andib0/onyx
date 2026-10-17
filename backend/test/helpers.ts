@@ -1,7 +1,10 @@
 import request from 'supertest';
 import app from '../src/app.js';
+import { wrapWithRecorder } from './apiCoverage.js';
 
-export const http = () => request(app);
+// Every request is recorded for the route-coverage report (see apiCoverage.ts).
+const recorded = wrapWithRecorder(app);
+export const http = () => request(recorded);
 
 let counter = 0;
 
@@ -24,6 +27,21 @@ export async function registerUser(): Promise<TestUser> {
   return {
     email,
     password,
+    accessToken: res.body.data.accessToken,
+    refreshToken: res.body.data.refreshToken,
+  };
+}
+
+/** A second session ("device") for an existing user. */
+export async function loginUser(u: TestUser): Promise<TestUser> {
+  const res = await http()
+    .post('/api/auth/login')
+    .send({ email: u.email, password: u.password });
+  if (res.status !== 200)
+    throw new Error(`login failed ${res.status} ${JSON.stringify(res.body)}`);
+  return {
+    email: u.email,
+    password: u.password,
     accessToken: res.body.data.accessToken,
     refreshToken: res.body.data.refreshToken,
   };

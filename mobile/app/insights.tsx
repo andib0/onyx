@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useData } from "../contexts/DataContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Card from "../components/ui/Card";

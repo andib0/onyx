@@ -4,16 +4,18 @@
 // Exports an Android Hermes bundle, then fails (exit 1) if any budget is exceeded.
 // --dump-sourcemap matters: without it Hermes keeps debug info inline and the
 // .hbc measures ~5.3 MB instead of ~3.5 MB for identical code.
-// Budgets are set ~5% above the 2026-10-17 baseline (see docs/audit/07-performance.md).
+// Budgets are ~5% above the 2026-10-17 post-cleanup numbers (deep icon/font imports;
+// see docs/log/mobile-a11y-perf.md). Pre-cleanup baseline: HBC 3,461,852 B,
+// assets 8,240,043 B / 77 files / 53 fonts.
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 const BUDGET = {
-  hbcBytes: 3_650_000, // baseline 3,459,736 B (Hermes bytecode)
-  assetBytes: 8_700_000, // baseline 8,240,043 B (77 files) — target after cleanup: < 1.5 MB
-  assetCount: 80, // baseline 77 — target after cleanup: ~25
-  fontAssetCount: 55, // baseline 53 font files (34 google + 19 icon) — target: 4 + 1
+  hbcBytes: 3_280_000, // measured 3,121,856 B (Hermes bytecode)
+  assetBytes: 930_000, // measured 883,283 B
+  assetCount: 31, // measured 29
+  fontAssetCount: 5, // measured 5: Archivo 700/800, JetBrains Mono 500/700, Ionicons
 };
 
 const args = process.argv.slice(2);

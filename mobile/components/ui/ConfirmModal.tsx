@@ -36,10 +36,19 @@ export default function ConfirmModal({
         style={styles.backdrop}
         entering={reduceMotion ? undefined : FadeIn.duration(motion.fast)}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel={cancelLabel}
+        />
+        {/* Swallows taps so they don't reach the backdrop; not itself focusable,
+            otherwise it would group the buttons into one screen-reader stop. */}
         <AnimatedPressable
           style={styles.sheet}
           onPress={() => {}}
+          accessible={false}
+          accessibilityViewIsModal
           entering={
             reduceMotion
               ? undefined
@@ -58,6 +67,7 @@ export default function ConfirmModal({
                 pressed && styles.pressed,
               ]}
               onPress={onCancel}
+              accessibilityRole="button"
             >
               <Text style={styles.cancelText}>{cancelLabel}</Text>
             </Pressable>
@@ -68,6 +78,7 @@ export default function ConfirmModal({
                 pressed && styles.pressed,
               ]}
               onPress={onConfirm}
+              accessibilityRole="button"
             >
               <Text style={styles.confirmText}>{confirmLabel}</Text>
             </Pressable>

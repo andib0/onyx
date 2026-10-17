@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import Animated, {
+  SlideInDown,
+  SlideOutDown,
+  FadeIn,
+  FadeOut,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   spacing,
@@ -23,16 +29,26 @@ interface ToastProps {
 export default function Toast({ message, visible, type = "success" }: ToastProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const reduceMotion = useReducedMotion();
   if (!visible) return null;
 
   const isError = type === "error";
 
   return (
     <Animated.View
-      entering={SlideInDown.springify()
-        .damping(motion.spring.damping)
-        .stiffness(motion.spring.stiffness)}
-      exiting={SlideOutDown.duration(motion.exit)}
+      // Reduced motion: a plain cross-fade instead of the spring slide
+      entering={
+        reduceMotion
+          ? FadeIn.duration(motion.fast)
+          : SlideInDown.springify()
+              .damping(motion.spring.damping)
+              .stiffness(motion.spring.stiffness)
+      }
+      exiting={
+        reduceMotion ? FadeOut.duration(motion.fast) : SlideOutDown.duration(motion.exit)
+      }
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
       style={[styles.toast, elevation.md, isError && styles.toastError]}
     >
       <Ionicons

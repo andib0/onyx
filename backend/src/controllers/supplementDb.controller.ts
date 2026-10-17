@@ -5,9 +5,9 @@ import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function listSupplements(req: AuthenticatedRequest, res: Response) {
   try {
+    // Validated by supplementDbQuerySchema: search <= 100 chars, limit 1..200.
     const query = String(req.query.search || '').trim();
-    const limitRaw = Number(req.query.limit || 50);
-    const limit = Number.isFinite(limitRaw) ? Math.min(200, Math.max(1, limitRaw)) : 50;
+    const limit = Number(req.query.limit);
     const supplements = query
       ? await supplementDbService.search(query, limit)
       : await supplementDbService.list(limit);

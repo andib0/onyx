@@ -1,4 +1,5 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import useStableHandlers from "../hooks/useStableHandlers";
 import useProgramHook from "../hooks/useProgram";
 import useWorkout from "../hooks/useWorkout";
 import type { WorkoutState, LoggedSetValues } from "../hooks/useWorkout";
@@ -47,52 +48,73 @@ export function ProgramProvider({
   user: UserWithPreferences | null | undefined;
 }) {
   const program = useProgramHook(isAuthenticated, authLoading, user);
-  const {
-    workout,
-    workoutCompletedToday,
-    startWorkout,
-    togglePauseWorkout,
-    stopWorkout,
-    completeWorkoutSet,
-    skipWorkoutRest,
-    undoLastWorkoutSet,
-    jumpToWorkoutExercise,
-    extendWorkoutRest,
-  } = useWorkout(program.programRows, program.programLabel);
+  const w = useWorkout(program.programRows, program.programLabel);
 
-  return (
-    <ProgramContext.Provider
-      value={{
-        programs: program.programs,
-        selectedProgramId: program.selectedProgramId,
-        selectedProgramDayId: program.selectedProgramDayId,
-        programDetail: program.programDetail,
-        selectedProgramDay: program.selectedProgramDay,
-        programRows: program.programRows,
-        programLabel: program.programLabel,
-        trainingDayActive: program.trainingDayActive,
-        shouldShowProgramSetup: program.shouldShowProgramSetup,
-        programGoal: program.programDetail?.goal,
-        handleSelectProgram: program.handleSelectProgram,
-        setSelectedProgramDayId: program.setSelectedProgramDayId,
-        setProgramSetupDismissed: program.setProgramSetupDismissed,
-        resetProgram: program.resetProgram,
-        refreshPrograms: program.refreshPrograms,
+  // Mutators get a permanent identity; the value only changes with data.
+  const handlers = useStableHandlers({
+    handleSelectProgram: program.handleSelectProgram,
+    setSelectedProgramDayId: program.setSelectedProgramDayId,
+    setProgramSetupDismissed: program.setProgramSetupDismissed,
+    resetProgram: program.resetProgram,
+    refreshPrograms: program.refreshPrograms,
+    startWorkout: w.startWorkout,
+    togglePauseWorkout: w.togglePauseWorkout,
+    stopWorkout: w.stopWorkout,
+    completeWorkoutSet: w.completeWorkoutSet,
+    skipWorkoutRest: w.skipWorkoutRest,
+    undoLastWorkoutSet: w.undoLastWorkoutSet,
+    jumpToWorkoutExercise: w.jumpToWorkoutExercise,
+    extendWorkoutRest: w.extendWorkoutRest,
+  });
+
+  const {
+    programs,
+    selectedProgramId,
+    selectedProgramDayId,
+    programDetail,
+    selectedProgramDay,
+    programRows,
+    programLabel,
+    trainingDayActive,
+    shouldShowProgramSetup,
+  } = program;
+  const { workout, workoutCompletedToday } = w;
+
+  // NOTE: `workout` changes on every timer tick while a session runs; splitting
+  // it into its own context belongs to the workout-timer work (useWorkout owner).
+  const value = useMemo<ProgramContextType>(
+    () =>
+      Object.assign({}, handlers, {
+        programs,
+        selectedProgramId,
+        selectedProgramDayId,
+        programDetail,
+        selectedProgramDay,
+        programRows,
+        programLabel,
+        trainingDayActive,
+        shouldShowProgramSetup,
+        programGoal: programDetail?.goal,
         workout,
         workoutCompletedToday,
-        startWorkout,
-        togglePauseWorkout,
-        stopWorkout,
-        completeWorkoutSet,
-        skipWorkoutRest,
-        undoLastWorkoutSet,
-        jumpToWorkoutExercise,
-        extendWorkoutRest,
-      }}
-    >
-      {children}
-    </ProgramContext.Provider>
+      }),
+    [
+      handlers,
+      programs,
+      selectedProgramId,
+      selectedProgramDayId,
+      programDetail,
+      selectedProgramDay,
+      programRows,
+      programLabel,
+      trainingDayActive,
+      shouldShowProgramSetup,
+      workout,
+      workoutCompletedToday,
+    ]
   );
+
+  return <ProgramContext.Provider value={value}>{children}</ProgramContext.Provider>;
 }
 
 export function useProgram() {

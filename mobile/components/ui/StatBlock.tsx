@@ -36,7 +36,9 @@ export default function StatBlock({
       >
         {value}
       </Text>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} maxFontSizeMultiplier={1.4}>
+        {label}
+      </Text>
     </View>
   );
 }

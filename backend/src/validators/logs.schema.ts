@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { clientId, hlc, isoDate } from './common.schema.js';
+import { intQuery, isoDate } from './common.js';
+import { clientId, hlc } from './common.schema.js';
 
 // Field-level writes: a field that is absent is left untouched (it used to be
 // overwritten with "" — docs/audit/02-sync-offline.md §2.7). Send "" to clear.
@@ -28,3 +29,14 @@ export const patchLogSchema = z.object(
 
 export type CreateOrUpdateLogInput = z.infer<typeof createOrUpdateLogSchema>;
 export type PatchLogInput = z.infer<typeof patchLogSchema>;
+
+export const logsQuerySchema = z.object({
+  startDate: isoDate.optional(),
+  endDate: isoDate.optional(),
+  limit: intQuery(1, 200, 50),
+  offset: intQuery(0, 100000, 0),
+});
+
+export const logStatsQuerySchema = z.object({
+  days: intQuery(1, 365, 30),
+});

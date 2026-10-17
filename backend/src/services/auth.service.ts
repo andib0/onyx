@@ -1,19 +1,53 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { prisma } from '../config/database.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import {
   generateAccessToken,
   generateRefreshToken,
+  verifyAccessToken,
   verifyRefreshToken,
   getRefreshTokenExpiry,
 } from '../utils/jwt.js';
-import bcrypt from 'bcryptjs';
 import { AppError } from '../utils/errors.js';
 
+/**
+ * Refresh tokens are high-entropy (random jti + signature), so a fast hash is
+ * enough and lets us look the row up directly. bcrypt was wrong here twice
+ * over: it is slow (O(n) compares per refresh) and only hashes the first 72
+ * bytes, which every refresh JWT of a user shares (audit F1).
+ */
+export function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 export class AuthService {
+  /** Issues an access + refresh pair in `familyId` (a new family when omitted). */
+  private async issueTokens(user: { id: string; email: string }, familyId?: string) {
+    const fam = familyId ?? randomUUID();
+    const accessToken = generateAccessToken(user.id, user.email, fam);
+    const refreshToken = generateRefreshToken(user.id, user.email, fam);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashRefreshToken(refreshToken),
+        familyId: fam,
+        expiresAt: getRefreshTokenExpiry(),
+      },
+    });
+    return { accessToken, refreshToken };
+  }
+
   async register(
     email: string,
     password: string,
-    profile?: { username?: string; age?: number; weight?: number; timezone?: string }
+    profile?: {
+      username?: string;
+      age?: number;
+      weight?: number;
+      heightCm?: number | null;
+      sex?: string | null;
+      timezone?: string;
+    }
   ) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -29,6 +63,8 @@ export class AuthService {
         username: profile?.username || null,
         age: profile?.age || null,
         weight: profile?.weight || null,
+        heightCm: profile?.heightCm ?? null,
+        sex: profile?.sex ?? null,
         preferences: {
           // Use the device timezone when the client sends one; otherwise the
           // schema default applies.
@@ -43,20 +79,8 @@ export class AuthService {
       },
     });
 
-    const accessToken = generateAccessToken(user.id, user.email);
-    const refreshToken = generateRefreshToken(user.id, user.email);
-
-    // Store refresh token hash
-    const tokenHash = await bcrypt.hash(refreshToken, 10);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: getRefreshTokenExpiry(),
-      },
-    });
-
-    return { user, accessToken, refreshToken };
+    const tokens = await this.issueTokens(user);
+    return { user, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
   async login(email: string, password: string) {
@@ -70,24 +94,13 @@ export class AuthService {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
-    const accessToken = generateAccessToken(user.id, user.email);
-    const refreshToken = generateRefreshToken(user.id, user.email);
-
     // Expired tokens are never read again — clear them so the table doesn't
-    // grow unbounded and refresh() doesn't bcrypt-compare against dead rows.
+    // grow unbounded.
     await prisma.refreshToken.deleteMany({
       where: { userId: user.id, expiresAt: { lte: new Date() } },
     });
 
-    // Store refresh token hash
-    const tokenHash = await bcrypt.hash(refreshToken, 10);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: getRefreshTokenExpiry(),
-      },
-    });
+    const tokens = await this.issueTokens(user);
 
     return {
       user: {
@@ -96,8 +109,8 @@ export class AuthService {
         username: user.username,
         createdAt: user.createdAt,
       },
-      accessToken,
-      refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   }
 
@@ -107,27 +120,25 @@ export class AuthService {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
     }
 
-    // Find and validate stored token
-    const storedTokens = await prisma.refreshToken.findMany({
+    // Consume the token atomically: of N concurrent requests presenting the
+    // same token, exactly one deletes the row and may rotate.
+    const consumed = await prisma.refreshToken.deleteMany({
       where: {
+        tokenHash: hashRefreshToken(refreshToken),
         userId: payload.sub,
         expiresAt: { gt: new Date() },
       },
     });
 
-    let validToken = null;
-    for (const token of storedTokens) {
-      const isMatch = await bcrypt.compare(refreshToken, token.tokenHash);
-      if (isMatch) {
-        validToken = token;
-        break;
+    if (consumed.count !== 1) {
+      // A validly signed token with no live row was already rotated, logged
+      // out, or revoked. Treat it as reuse: kill the whole family so whoever
+      // holds the newer token (attacker or victim) must log in again.
+      if (payload.fam) {
+        await prisma.refreshToken.deleteMany({
+          where: { userId: payload.sub, familyId: payload.fam },
+        });
       }
-    }
-
-    if (!validToken) {
-      // Possible replay attack — a rotated token was reused.
-      // Invalidate all refresh tokens for this user as a precaution.
-      await prisma.refreshToken.deleteMany({ where: { userId: payload.sub } });
       throw new AppError('Refresh token not found or expired', 401, 'INVALID_TOKEN');
     }
 
@@ -140,52 +151,42 @@ export class AuthService {
       throw new AppError('User not found', 401, 'INVALID_TOKEN');
     }
 
-    // Rotate: delete old token (and any expired leftovers), issue new pair
     await prisma.refreshToken.deleteMany({
-      where: {
-        userId: user.id,
-        OR: [{ id: validToken.id }, { expiresAt: { lte: new Date() } }],
-      },
+      where: { userId: user.id, expiresAt: { lte: new Date() } },
     });
 
-    const newAccessToken = generateAccessToken(user.id, user.email);
-    const newRefreshToken = generateRefreshToken(user.id, user.email);
-
-    const tokenHash = await bcrypt.hash(newRefreshToken, 10);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: getRefreshTokenExpiry(),
-      },
-    });
-
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken, user };
+    const tokens = await this.issueTokens(user, payload.fam);
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
   }
 
-  async logout(userId: string, refreshToken?: string) {
+  /**
+   * Revokes only the session family of this device: taken from the presented
+   * refresh token when there is one, otherwise from the access token's `fam`.
+   * Other devices stay logged in.
+   */
+  async logout(userId: string, accessToken?: string, refreshToken?: string) {
+    let familyId: string | undefined;
     if (refreshToken) {
-      // Delete specific token
-      const storedTokens = await prisma.refreshToken.findMany({
-        where: { userId },
-      });
-
-      for (const token of storedTokens) {
-        const isMatch = await bcrypt.compare(refreshToken, token.tokenHash);
-        if (isMatch) {
-          await prisma.refreshToken.delete({ where: { id: token.id } });
-          break;
-        }
-      }
-    } else {
-      // Delete all refresh tokens for user (logout from all devices)
-      await prisma.refreshToken.deleteMany({ where: { userId } });
+      const payload = verifyRefreshToken(refreshToken);
+      if (payload && payload.sub === userId) familyId = payload.fam;
     }
+    if (!familyId && accessToken) {
+      const payload = verifyAccessToken(accessToken);
+      if (payload && payload.sub === userId) familyId = payload.fam;
+    }
+    if (!familyId) return;
+    await prisma.refreshToken.deleteMany({ where: { userId, familyId } });
   }
 
   async updateProfile(
     userId: string,
-    data: { username?: string; age?: number; weight?: number }
+    data: {
+      username?: string;
+      age?: number;
+      weight?: number;
+      heightCm?: number | null;
+      sex?: string | null;
+    }
   ) {
     return prisma.user.update({
       where: { id: userId },
@@ -196,6 +197,8 @@ export class AuthService {
         username: true,
         age: true,
         weight: true,
+        heightCm: true,
+        sex: true,
         createdAt: true,
         preferences: true,
       },
@@ -211,6 +214,8 @@ export class AuthService {
         username: true,
         age: true,
         weight: true,
+        heightCm: true,
+        sex: true,
         createdAt: true,
         preferences: true,
       },

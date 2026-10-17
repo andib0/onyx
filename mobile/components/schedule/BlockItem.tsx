@@ -5,7 +5,14 @@ import Checkbox from "../shared/Checkbox";
 import IconButton from "../ui/IconButton";
 import type { ScheduleBlock } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, fonts, TAG_COLORS, type Palette } from "../../theme";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  fonts,
+  tagColor as tagColorFor,
+  type Palette,
+} from "../../theme";
 
 interface BlockItemProps {
   block: ScheduleBlock;
@@ -24,7 +31,7 @@ export default function BlockItem({
 }: BlockItemProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
+  const tagColor = tagColorFor(block.tag, colors);
   const isReadonly = block.readonly;
 
   const handleToggle = () => {
@@ -49,7 +56,12 @@ export default function BlockItem({
       <View style={styles.blockContent}>
         <View style={styles.mainRow}>
           {!isReadonly ? (
-            <Checkbox checked={isCompleted} onToggle={handleToggle} size={22} />
+            <Checkbox
+              checked={isCompleted}
+              onToggle={handleToggle}
+              size={22}
+              decorative
+            />
           ) : (
             <View style={styles.readonlyDot} />
           )}

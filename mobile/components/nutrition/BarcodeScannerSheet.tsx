@@ -101,7 +101,8 @@ const makeStyles = (colors: Palette) =>
     },
     hint: {
       fontSize: fontSizes.md,
-      color: colors.onFill,
+      // Always white: sits on the live camera feed, not on a theme surface
+      color: "#ffffff",
       fontWeight: "600",
       textShadowColor: "rgba(0,0,0,0.6)",
       textShadowRadius: 4,

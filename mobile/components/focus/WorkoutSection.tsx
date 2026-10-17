@@ -305,6 +305,7 @@ export default function WorkoutSection({
           const canJump = Boolean(onJumpExercise) && !current;
           return (
             <Pressable
+              accessibilityRole="button"
               key={`ex-${idx}`}
               onPress={canJump ? () => onJumpExercise!(idx) : undefined}
               disabled={!canJump}
@@ -330,6 +331,7 @@ export default function WorkoutSection({
         })}
         {programRows.length > 3 ? (
           <Pressable
+            accessibilityRole="button"
             onPress={() => setShowFullList((prev) => !prev)}
             style={styles.listToggle}
             hitSlop={8}

@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { clientId, clientTimestamp, hlc, isoDate } from './common.schema.js';
+import { clientId, clientTimestamp, hlc } from './common.schema.js';
+
+import { intQuery, isoDate, recordId } from './common.js';
 
 export const startSessionSchema = z.object({
   id: clientId.optional(),
@@ -27,3 +29,18 @@ export const finishSessionSchema = z.object({
 export type StartSessionInput = z.infer<typeof startSessionSchema>;
 export type LogSetInput = z.infer<typeof logSetSchema>;
 export type FinishSessionInput = z.infer<typeof finishSessionSchema>;
+
+export const sessionsQuerySchema = z.object({
+  limit: intQuery(1, 100, 30),
+  offset: intQuery(0, 100000, 0),
+});
+
+export const exerciseSessionsQuerySchema = z.object({
+  name: z.string().max(200).optional(),
+  limit: intQuery(1, 100, 30),
+});
+
+export const exerciseHistoryQuerySchema = z.object({
+  names: z.string().max(10000).optional(),
+  excludeSessionId: recordId.optional(),
+});
