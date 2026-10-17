@@ -1,11 +1,13 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import useMealsHook from "../hooks/useMeals";
+import useStableHandlers from "../hooks/useStableHandlers";
 import { getMealTemplatesForDay, MEAL_DAYS } from "../utils/normalize";
 import type { AppState, MealTemplate } from "../types/appTypes";
 
@@ -28,6 +30,7 @@ interface MealsContextType {
 }
 
 const MealsContext = createContext<MealsContextType | null>(null);
+const EMPTY_CHECKS: Record<string, boolean> = {};
 
 export function MealsProvider({
   children,
@@ -43,29 +46,45 @@ export function MealsProvider({
   showToast: (message: string) => void;
 }) {
   const meals = useMealsHook(appState, setAppState, todayKeyValue, showToast);
-  const mealTemplatesForDay = getMealTemplatesForDay(meals.selectedMealDay, appState);
-  const mealTemplatesForToday = getMealTemplatesForDay(meals.weekdayName, appState);
-  const mealCheckMap = appState.mealLog[todayKeyValue] || {};
+  const { weekdayName, selectedMealDay } = meals;
+  const handlers = useStableHandlers({
+    setSelectedMealDay: meals.setSelectedMealDay,
+    setMealChecked: meals.setMealChecked,
+    updateMealTemplateForDay: meals.updateMealTemplateForDay,
+    addMealTemplateForDay: meals.addMealTemplateForDay,
+    removeMealTemplateForDay: meals.removeMealTemplateForDay,
+  });
+  const mealTemplatesForDay = useMemo(
+    () => getMealTemplatesForDay(selectedMealDay, appState),
+    [selectedMealDay, appState]
+  );
+  const mealTemplatesForToday = useMemo(
+    () => getMealTemplatesForDay(weekdayName, appState),
+    [weekdayName, appState]
+  );
+  const mealCheckMap = appState.mealLog[todayKeyValue] || EMPTY_CHECKS;
 
-  return (
-    <MealsContext.Provider
-      value={{
-        weekdayName: meals.weekdayName,
-        selectedMealDay: meals.selectedMealDay,
-        setSelectedMealDay: meals.setSelectedMealDay,
+  const value = useMemo<MealsContextType>(
+    () =>
+      Object.assign({}, handlers, {
+        weekdayName,
+        selectedMealDay,
         mealTemplatesForDay,
         mealTemplatesForToday,
         mealDayOptions: MEAL_DAYS,
         mealCheckMap,
-        setMealChecked: meals.setMealChecked,
-        updateMealTemplateForDay: meals.updateMealTemplateForDay,
-        addMealTemplateForDay: meals.addMealTemplateForDay,
-        removeMealTemplateForDay: meals.removeMealTemplateForDay,
-      }}
-    >
-      {children}
-    </MealsContext.Provider>
+      }),
+    [
+      handlers,
+      weekdayName,
+      selectedMealDay,
+      mealTemplatesForDay,
+      mealTemplatesForToday,
+      mealCheckMap,
+    ]
   );
+
+  return <MealsContext.Provider value={value}>{children}</MealsContext.Provider>;
 }
 
 export function useMeals() {

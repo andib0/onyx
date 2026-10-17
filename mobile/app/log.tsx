@@ -7,7 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { useAppState } from "../contexts/AppStateContext";
+import { useData } from "../contexts/DataContext";
+import { useToastContext } from "../contexts/ToastContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Header from "../components/layout/Header";
 import Card from "../components/ui/Card";
@@ -93,9 +94,9 @@ export default function LogScreen() {
     addLogEntry,
     clearLogEntries,
     deleteLogEntry,
-    showToast,
     todayKeyValue,
-  } = useAppState();
+  } = useData();
+  const { showToast } = useToastContext();
 
   const [form, setForm] = useState<LogEntry>(Object.assign({}, DEFAULT_FORM));
   const [showClearConfirm, setShowClearConfirm] = useState(false);

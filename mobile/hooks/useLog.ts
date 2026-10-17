@@ -4,12 +4,14 @@ import { ensureState } from "../utils/storage";
 import type { AppState, LogEntry } from "../types/appTypes";
 import * as logsApi from "../api/logs";
 
+const EMPTY_LOG: LogEntry[] = [];
+
 function useLog(
   appState: AppState,
   setAppState: Dispatch<SetStateAction<AppState>>,
   showToast: (message: string) => void
 ) {
-  const logEntries = appState.log || [];
+  const logEntries = appState.log || EMPTY_LOG;
 
   const addLogEntry = async (entry: LogEntry) => {
     const payload = Object.assign({}, entry);
