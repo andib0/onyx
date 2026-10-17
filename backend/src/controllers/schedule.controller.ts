@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { scheduleService } from '../services/schedule.service.js';
-import { sendSuccess, sendCreated, sendError } from '../utils/response.js';
+import { sendSuccess, sendIdempotent, sendError } from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -16,8 +16,8 @@ export async function getBlocks(req: AuthenticatedRequest, res: Response) {
 
 export async function createBlock(req: AuthenticatedRequest, res: Response) {
   try {
-    const block = await scheduleService.createBlock(req.userId!, req.body);
-    return sendCreated(res, block);
+    const result = await scheduleService.createBlock(req.userId!, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);
@@ -60,12 +60,13 @@ export async function getCompletions(req: AuthenticatedRequest, res: Response) {
 
 export async function toggleCompletion(req: AuthenticatedRequest, res: Response) {
   try {
-    const { blockId, date, isComplete } = req.body;
+    const { blockId, date, isComplete, hlc, id } = req.body;
     const completion = await scheduleService.toggleCompletion(
       req.userId!,
       blockId,
       date,
-      isComplete
+      isComplete,
+      { hlc, id }
     );
     return sendSuccess(res, completion);
   } catch (error) {

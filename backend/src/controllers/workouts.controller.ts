@@ -1,13 +1,18 @@
 import type { Response } from 'express';
 import { workoutsService } from '../services/workouts.service.js';
-import { sendSuccess, sendCreated, sendError, sendNotFound } from '../utils/response.js';
+import {
+  sendSuccess,
+  sendIdempotent,
+  sendError,
+  sendNotFound,
+} from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function startSession(req: AuthenticatedRequest, res: Response) {
   try {
-    const session = await workoutsService.startSession(req.userId!, req.body);
-    return sendCreated(res, session);
+    const result = await workoutsService.startSession(req.userId!, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);
@@ -16,11 +21,11 @@ export async function startSession(req: AuthenticatedRequest, res: Response) {
 
 export async function logSet(req: AuthenticatedRequest, res: Response) {
   try {
-    const set = await workoutsService.logSet(req.userId!, req.params.id, req.body);
-    if (!set) {
+    const result = await workoutsService.logSet(req.userId!, req.params.id, req.body);
+    if (!result) {
       return sendNotFound(res, 'Workout session not found');
     }
-    return sendCreated(res, set);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);

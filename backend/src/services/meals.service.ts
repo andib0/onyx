@@ -1,5 +1,10 @@
 import { AppError } from '../utils/errors.js';
 import { prisma } from '../config/database.js';
+import { createIdempotent } from '../utils/idempotent.js';
+import { applyToggle } from './sync/toggle.js';
+import { scoreService } from './score/score.service.js';
+
+type Tag = { label: string; value: string };
 
 export class MealsService {
   async getTemplates(userId: string, dayOfWeek?: string) {
@@ -13,31 +18,37 @@ export class MealsService {
     });
   }
 
+  /** Idempotent when the client sends its own `id`. */
   async createTemplate(
     userId: string,
     data: {
+      id?: string;
       dayOfWeek: string;
       name: string;
       examples?: string;
-      grams?: number;
-      foodId?: string;
+      grams?: number | null;
+      foodId?: string | null;
       sortOrder?: number;
-      tags?: Array<{ label: string; value: string }>;
+      tags?: Tag[];
     }
   ) {
     const { tags, ...templateData } = data;
-    return prisma.mealTemplate.create({
-      data: {
-        userId,
-        ...templateData,
-        tags: tags
-          ? {
-              create: tags,
-            }
-          : undefined,
-      },
-      include: { tags: true },
-    });
+    const result = await createIdempotent(
+      userId,
+      data.id,
+      (id) => prisma.mealTemplate.findUnique({ where: { id }, include: { tags: true } }),
+      () =>
+        prisma.mealTemplate.create({
+          data: {
+            ...templateData,
+            userId,
+            tags: tags ? { create: tags } : undefined,
+          },
+          include: { tags: true },
+        })
+    );
+    if (result.created) await scoreService.afterCatalogChange(userId);
+    return result;
   }
 
   async getTemplateById(userId: string, templateId: string) {
@@ -56,16 +67,18 @@ export class MealsService {
     const carbs = food.carbsPer100g ? Number(food.carbsPer100g) * factor : null;
     const calories = food.caloriesPer100g ? Number(food.caloriesPer100g) * factor : null;
 
-    await prisma.mealTemplateTag.deleteMany({ where: { mealTemplateId: templateId } });
+    await prisma.mealTemplateTag.deleteMany({
+      where: { mealTemplateId: templateId, mealTemplate: { userId } },
+    });
 
-    const newTags: Array<{ label: string; value: string }> = [];
+    const newTags: Tag[] = [];
     if (protein !== null)
       newTags.push({ label: 'Protein', value: `${Math.round(protein)}` });
     if (carbs !== null) newTags.push({ label: 'Carbs', value: `${Math.round(carbs)}` });
     if (calories !== null)
       newTags.push({ label: 'Calories', value: `${Math.round(calories)}` });
 
-    return prisma.mealTemplate.update({
+    const updated = await prisma.mealTemplate.update({
       where: { id: templateId, userId },
       data: {
         grams,
@@ -73,6 +86,8 @@ export class MealsService {
       },
       include: { tags: true },
     });
+    await scoreService.afterCatalogChange(userId);
+    return updated;
   }
 
   async updateTemplate(
@@ -82,9 +97,10 @@ export class MealsService {
       dayOfWeek?: string;
       name?: string;
       examples?: string;
-      grams?: number;
+      grams?: number | null;
+      foodId?: string | null;
       sortOrder?: number;
-      tags?: Array<{ label: string; value: string }>;
+      tags?: Tag[];
     }
   ) {
     const { tags, ...templateData } = data;
@@ -92,28 +108,28 @@ export class MealsService {
     // If tags are provided, replace them
     if (tags) {
       await prisma.mealTemplateTag.deleteMany({
-        where: { mealTemplateId: templateId },
+        where: { mealTemplateId: templateId, mealTemplate: { userId } },
       });
     }
 
-    return prisma.mealTemplate.update({
+    const updated = await prisma.mealTemplate.update({
       where: { id: templateId, userId },
       data: {
         ...templateData,
-        tags: tags
-          ? {
-              create: tags,
-            }
-          : undefined,
+        tags: tags ? { create: tags } : undefined,
       },
       include: { tags: true },
     });
+    await scoreService.afterCatalogChange(userId);
+    return updated;
   }
 
   async deleteTemplate(userId: string, templateId: string) {
-    return prisma.mealTemplate.delete({
+    const deleted = await prisma.mealTemplate.delete({
       where: { id: templateId, userId },
     });
+    await scoreService.afterCatalogChange(userId);
+    return deleted;
   }
 
   // Logs
@@ -128,28 +144,25 @@ export class MealsService {
     });
   }
 
+  /** Last-writer-wins by `hlc`; 404 when the template is missing or another user's. */
   async toggleLog(
     userId: string,
     mealTemplateId: string,
     date: string,
-    isEaten: boolean
+    isEaten: boolean,
+    opts: { hlc?: string; id?: string } = {}
   ) {
-    return prisma.mealLog.upsert({
-      where: {
-        userId_mealTemplateId_date: { userId, mealTemplateId, date },
-      },
-      create: {
-        userId,
-        mealTemplateId,
-        date,
-        isEaten,
-        eatenAt: isEaten ? new Date() : null,
-      },
-      update: {
-        isEaten,
-        eatenAt: isEaten ? new Date() : null,
-      },
+    const outcome = await applyToggle('meal', {
+      userId,
+      targetId: mealTemplateId,
+      date,
+      value: isEaten,
+      hlc: opts.hlc,
+      id: opts.id,
     });
+    if (outcome.applied) await scoreService.afterWrite(userId, date);
+    const row = await prisma.mealLog.findUniqueOrThrow({ where: { id: outcome.id } });
+    return Object.assign(row, { applied: outcome.applied });
   }
 }
 

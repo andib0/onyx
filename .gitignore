@@ -7,3 +7,6 @@ dist-ssr
 .env
 # local agent settings
 .claude/settings.local.json
+
+# test evidence written by API tests
+backend/test-results/

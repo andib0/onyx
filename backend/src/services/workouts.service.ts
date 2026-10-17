@@ -1,4 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
+import { hlcWins } from '../utils/hlc.js';
+import { createIdempotent } from '../utils/idempotent.js';
+import { scoreService } from './score/score.service.js';
 import type {
   StartSessionInput,
   LogSetInput,
@@ -6,57 +11,130 @@ import type {
 } from '../validators/workouts.schema.js';
 
 export class WorkoutsService {
+  /** Idempotent when the client sends its own `id` (a retried start returns the same session). */
   async startSession(userId: string, data: StartSessionInput) {
-    return prisma.workoutSession.create({
-      data: {
-        userId,
-        date: data.date,
-        programDayName: data.programDayName,
-      },
-    });
+    const result = await createIdempotent(
+      userId,
+      data.id,
+      (id) => prisma.workoutSession.findUnique({ where: { id } }),
+      () =>
+        prisma.workoutSession.create({
+          data: {
+            id: data.id,
+            userId,
+            date: data.date,
+            programDayName: data.programDayName,
+            startedAt: data.startedAt ? new Date(data.startedAt) : undefined,
+          },
+        })
+    );
+    if (result.created) await scoreService.afterWrite(userId, data.date);
+    return result;
   }
 
+  /**
+   * One row per (session, exercise, set number): a repeated POST updates that
+   * set instead of inserting a duplicate (docs/audit/02 §2.1). With an `hlc`,
+   * the values are replaced only by a newer stamp. A client `id` is used for a
+   * new row; posting an existing id updates that row. Returns null if the
+   * session is missing or not the user's.
+   */
   async logSet(userId: string, sessionId: string, data: LogSetInput) {
-    // Ensure the session belongs to the user
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, userId },
-      select: { id: true },
+      select: { id: true, date: true },
     });
     if (!session) return null;
 
-    return prisma.workoutSetLog.create({
-      data: {
-        userId,
-        sessionId,
-        exerciseName: data.exerciseName,
-        setNumber: data.setNumber,
-        weightKg: data.weightKg ?? null,
-        reps: data.reps ?? null,
-        rir: data.rir ?? null,
-      },
-    });
+    const values = {
+      weightKg: data.weightKg ?? null,
+      reps: data.reps ?? null,
+      rir: data.rir ?? null,
+    };
+
+    if (data.id) {
+      const byId = await prisma.workoutSetLog.findUnique({ where: { id: data.id } });
+      if (byId) {
+        if (byId.userId !== userId || byId.sessionId !== sessionId) {
+          throw new AppError('id already in use', 409, 'ID_CONFLICT');
+        }
+        if (data.hlc && !hlcWins(data.hlc, byId.hlc))
+          return { row: byId, created: false };
+        const row = await prisma.workoutSetLog.update({
+          where: { id: byId.id },
+          data: Object.assign(
+            {
+              exerciseName: data.exerciseName,
+              setNumber: data.setNumber,
+              hlc: data.hlc ?? byId.hlc,
+            },
+            values
+          ),
+        });
+        await scoreService.afterWrite(userId, session.date);
+        return { row, created: false };
+      }
+    }
+
+    const rows = await prisma.$queryRaw<Array<{ id: string; inserted: boolean }>>`
+      INSERT INTO "WorkoutSetLog"
+        ("id", "userId", "sessionId", "exerciseName", "setNumber", "weightKg", "reps", "rir", "hlc", "createdAt")
+      VALUES (${data.id ?? randomUUID()}, ${userId}, ${sessionId}, ${data.exerciseName},
+              ${data.setNumber}, ${values.weightKg}::numeric, ${values.reps}::int, ${values.rir},
+              ${data.hlc ?? null}, (now() AT TIME ZONE 'UTC'))
+      ON CONFLICT ("sessionId", "exerciseName", "setNumber") DO UPDATE
+        SET "weightKg" = EXCLUDED."weightKg",
+            "reps" = EXCLUDED."reps",
+            "rir" = EXCLUDED."rir",
+            "hlc" = COALESCE(EXCLUDED."hlc", "WorkoutSetLog"."hlc")
+        WHERE EXCLUDED."hlc" IS NULL
+           OR "WorkoutSetLog"."hlc" IS NULL
+           OR "WorkoutSetLog"."hlc" COLLATE "C" < EXCLUDED."hlc" COLLATE "C"
+      RETURNING "id", (xmax = 0) AS "inserted"`;
+    if (rows.length > 0) await scoreService.afterWrite(userId, session.date);
+    const row =
+      rows.length > 0
+        ? await prisma.workoutSetLog.findUniqueOrThrow({ where: { id: rows[0].id } })
+        : await prisma.workoutSetLog.findUniqueOrThrow({
+            where: {
+              sessionId_exerciseName_setNumber: {
+                sessionId,
+                exerciseName: data.exerciseName,
+                setNumber: data.setNumber,
+              },
+            },
+          });
+    return { row, created: rows.length > 0 && rows[0].inserted };
   }
 
+  /** Idempotent: a repeated finish keeps the first endedAt unless a new one is sent. */
   async finishSession(userId: string, sessionId: string, data: FinishSessionInput) {
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, userId },
-      select: { id: true },
+      select: { id: true, date: true, endedAt: true },
     });
     if (!session) return null;
 
-    return prisma.workoutSession.update({
+    const updated = await prisma.workoutSession.update({
       where: { id: sessionId },
       data: {
-        endedAt: new Date(),
+        endedAt: data.endedAt ? new Date(data.endedAt) : (session.endedAt ?? new Date()),
         durationSeconds: data.durationSeconds,
       },
     });
+    await scoreService.afterWrite(userId, session.date);
+    return updated;
   }
 
   async deleteSet(userId: string, setId: string) {
+    const set = await prisma.workoutSetLog.findFirst({
+      where: { id: setId, userId },
+      select: { session: { select: { date: true } } },
+    });
     const result = await prisma.workoutSetLog.deleteMany({
       where: { id: setId, userId },
     });
+    if (set) await scoreService.afterWrite(userId, set.session.date);
     return result.count > 0;
   }
 

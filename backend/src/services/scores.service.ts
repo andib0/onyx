@@ -1,50 +1,39 @@
 import { prisma } from '../config/database.js';
-
-export interface ScoreInput {
-  date: string;
-  score: number;
-  tasksDone?: number;
-  tasksTotal?: number;
-  suppDone?: number;
-  suppTotal?: number;
-  mealsDone?: number;
-  mealsTotal?: number;
-  workoutDone?: boolean;
-  protein?: number;
-  calories?: number;
-}
+import { addDays } from '../utils/dates.js';
+import { presentScore, scoreService } from './score/score.service.js';
 
 export class ScoresService {
-  // Upsert one day's score snapshot. Today's row updates as the day progresses;
-  // past rows freeze once the day rolls over (client stops sending them).
-  async upsertScore(userId: string, data: ScoreInput) {
-    const payload = {
-      score: Math.max(0, Math.min(100, Math.round(data.score))),
-      tasksDone: data.tasksDone ?? 0,
-      tasksTotal: data.tasksTotal ?? 0,
-      suppDone: data.suppDone ?? 0,
-      suppTotal: data.suppTotal ?? 0,
-      mealsDone: data.mealsDone ?? 0,
-      mealsTotal: data.mealsTotal ?? 0,
-      workoutDone: data.workoutDone ?? false,
-      protein: Math.max(0, Math.round(data.protein ?? 0)),
-      calories: Math.max(0, Math.round(data.calories ?? 0)),
-    };
-    return prisma.dailyScore.upsert({
-      where: { userId_date: { userId, date: data.date } },
-      create: { userId, date: data.date, ...payload },
-      update: payload,
+  /**
+   * Legacy POST /scores. The day's score is computed by the server from the
+   * underlying data (Bet 5); the client payload is ignored, so a stale device
+   * can no longer overwrite it with zeros (docs/audit/02 §2.6). The request
+   * still triggers a recompute and returns the server row.
+   */
+  async upsertScore(userId: string, date: string) {
+    await scoreService.recomputeRange(userId, date, date);
+    const row = await prisma.dailyScore.findUnique({
+      where: { userId_date: { userId, date } },
     });
+    return row ?? { date, score: 0, outcomeScore: null, kept: false };
   }
 
+  /** Last `days` days ending today (user timezone), oldest first. */
   async getScores(userId: string, days = 30) {
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    const startStr = start.toISOString().split('T')[0];
-    return prisma.dailyScore.findMany({
-      where: { userId, date: { gte: startStr } },
-      orderBy: { date: 'asc' },
-    });
+    const today = await scoreService.todayFor(userId);
+    const from = addDays(today, -(days - 1));
+    return { today, rows: await scoreService.getRange(userId, from, today) };
+  }
+
+  /** GET /scores?v=2: history plus today's score and the streak. */
+  async getScoresV2(userId: string, days = 30) {
+    const { today, rows } = await this.getScores(userId, days);
+    const streak = await scoreService.streak(userId, today);
+    return {
+      today,
+      todayScore: presentScore(rows.find((r) => r.date === today)),
+      streak,
+      days: rows.map(presentScore),
+    };
   }
 }
 

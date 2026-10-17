@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { clientId, hlc, isoDate } from './common.schema.js';
 
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const createSupplementSchema = z.object({
+  id: clientId.optional(),
   item: z.string().min(1, 'Item name is required').max(200),
   goal: z.string().max(500).optional().default(''),
   dose: z.string().max(200).optional().default(''),
@@ -14,16 +15,19 @@ export const createSupplementSchema = z.object({
     .regex(timePattern, 'Invalid time format (HH:MM)')
     .optional()
     .default('08:00'),
+  sortOrder: z.number().int().optional(),
   category: z.string().max(100).optional(),
   typicalDose: z.string().max(200).optional(),
   timingRecommendation: z.string().max(500).optional(),
 });
 
-export const updateSupplementSchema = createSupplementSchema.partial();
+export const updateSupplementSchema = createSupplementSchema.omit({ id: true }).partial();
 
 export const toggleSupplementLogSchema = z.object({
-  date: z.string().regex(datePattern, 'Invalid date format (YYYY-MM-DD)'),
+  date: isoDate,
   isTaken: z.boolean(),
+  hlc: hlc.optional(),
+  id: clientId.optional(),
 });
 
 export type CreateSupplementInput = z.infer<typeof createSupplementSchema>;

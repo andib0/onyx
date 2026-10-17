@@ -22,6 +22,11 @@ export function sendCreated<T>(res: Response, data: T, message?: string) {
   return sendSuccess(res, data, message, 201);
 }
 
+/** 201 when the row was created, 200 when an idempotent create found it already. */
+export function sendIdempotent<T>(res: Response, result: { row: T; created: boolean }) {
+  return sendSuccess(res, result.row, undefined, result.created ? 201 : 200);
+}
+
 export function sendUnauthorized(res: Response, message = 'Unauthorized') {
   return sendError(res, message, 401);
 }

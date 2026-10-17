@@ -9,11 +9,12 @@ export class UserFoodsService {
     });
   }
 
-  async add(userId: string, foodId: string) {
+  /** Idempotent on (user, food); a client `id` is used when the row is new. */
+  async add(userId: string, foodId: string, id?: string) {
     return prisma.userFood.upsert({
       where: { userId_foodId: { userId, foodId } },
       update: {},
-      create: { userId, foodId },
+      create: { id, userId, foodId },
       include: { food: true },
     });
   }

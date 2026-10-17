@@ -1,26 +1,21 @@
 import { prisma } from '../config/database.js';
+import type { UpdatePreferencesInput } from '../validators/preferences.schema.js';
+import { scoreService } from './score/score.service.js';
 
 export class PreferencesService {
   async getPreferences(userId: string) {
     return prisma.userPreferences.findUnique({ where: { userId } });
   }
 
-  async updatePreferences(
-    userId: string,
-    data: {
-      timezone?: string;
-      caffeineCutoff?: string;
-      sleepTarget?: string;
-      proteinTarget?: string;
-      hydrationTarget?: string;
-      selectedProgramId?: string | null;
-      selectedProgramDayId?: string | null;
-    }
-  ) {
-    return prisma.userPreferences.update({
+  async updatePreferences(userId: string, data: UpdatePreferencesInput) {
+    const prefs = await prisma.userPreferences.upsert({
       where: { userId },
-      data,
+      update: data,
+      create: Object.assign({ userId }, data),
     });
+    // Targets, timezone and the selected program all feed today's score.
+    await scoreService.afterCatalogChange(userId);
+    return prefs;
   }
 }
 

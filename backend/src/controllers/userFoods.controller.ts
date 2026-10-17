@@ -17,7 +17,7 @@ export async function addUserFood(req: AuthenticatedRequest, res: Response) {
   try {
     const { foodId } = req.body || {};
     if (!foodId) return sendError(res, 'foodId is required');
-    const item = await userFoodsService.add(req.userId!, String(foodId));
+    const item = await userFoodsService.add(req.userId!, String(foodId), req.body.id);
     return sendSuccess(res, item);
   } catch (error) {
     console.error('Add user food error:', error);

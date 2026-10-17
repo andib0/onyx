@@ -32,6 +32,8 @@ export interface MealTemplate {
   id?: string;
   name: string;
   examples: string;
+  grams?: number | null;
+  foodId?: string | null;
   tags: MealTag[];
 }
 

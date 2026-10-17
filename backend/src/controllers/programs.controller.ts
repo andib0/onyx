@@ -1,6 +1,11 @@
 import type { Response } from 'express';
 import { programsService } from '../services/programs.service.js';
-import { sendCreated, sendError, sendNotFound, sendSuccess } from '../utils/response.js';
+import {
+  sendIdempotent,
+  sendError,
+  sendNotFound,
+  sendSuccess,
+} from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -27,8 +32,8 @@ export async function getProgram(req: AuthenticatedRequest, res: Response) {
 
 export async function createProgram(req: AuthenticatedRequest, res: Response) {
   try {
-    const program = await programsService.createProgram(req.userId!, req.body);
-    return sendCreated(res, program);
+    const result = await programsService.createProgram(req.userId!, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);

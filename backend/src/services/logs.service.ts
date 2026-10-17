@@ -1,4 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../config/database.js';
+import { hlcWins } from '../utils/hlc.js';
+import { LOG_FIELDS, type LogField } from '../validators/logs.schema.js';
+import { scoreService } from './score/score.service.js';
 
 export class LogsService {
   async getLogs(
@@ -31,36 +35,79 @@ export class LogsService {
     });
   }
 
+  /**
+   * Field-level write of one day's log (Bet 2). Only fields present in `input`
+   * are written. With an `hlc`, each field is applied only if the hlc is newer
+   * than that field's stored clock (`fieldClock`), so two devices editing
+   * different — or the same — fields of a day converge regardless of delivery
+   * order. Without an `hlc` (legacy client) present fields are applied as-is.
+   */
+  async patchLog(
+    userId: string,
+    date: string,
+    input: Partial<Record<LogField, string>> & { hlc?: string; id?: string }
+  ) {
+    const result = await prisma.$transaction(async (tx) => {
+      const inserted = await tx.$executeRaw`
+        INSERT INTO "DailyLog" ("id", "userId", "date", "updatedAt")
+        VALUES (${input.id ?? randomUUID()}, ${userId}, ${date}, (now() AT TIME ZONE 'UTC'))
+        ON CONFLICT ("userId", "date") DO NOTHING`;
+      const [current] = await tx.$queryRaw<Array<{ id: string; fieldClock: unknown }>>`
+        SELECT "id", "fieldClock" FROM "DailyLog"
+        WHERE "userId" = ${userId} AND "date" = ${date}
+        FOR UPDATE`;
+      const clock: Record<string, string> =
+        current.fieldClock && typeof current.fieldClock === 'object'
+          ? Object.assign({}, current.fieldClock as Record<string, string>)
+          : {};
+      const data: Partial<Record<LogField, string>> = {};
+      const appliedFields: LogField[] = [];
+      const staleFields: LogField[] = [];
+      for (const field of LOG_FIELDS) {
+        const value = input[field];
+        if (value === undefined) continue;
+        if (!input.hlc || hlcWins(input.hlc, clock[field])) {
+          data[field] = value;
+          if (input.hlc) clock[field] = input.hlc;
+          appliedFields.push(field);
+        } else {
+          staleFields.push(field);
+        }
+      }
+      const row = await tx.dailyLog.update({
+        where: { id: current.id },
+        data: Object.assign(data, { fieldClock: clock }),
+      });
+      return { row, created: inserted > 0, appliedFields, staleFields };
+    });
+    if (result.appliedFields.some((f) => f === 'bw' || f === 'day')) {
+      // A weigh-in moves the 14-weigh-in trend of the following days too.
+      await scoreService.afterWrite(userId, date, 13);
+    }
+    return {
+      row: Object.assign(result.row, {
+        appliedFields: result.appliedFields,
+        staleFields: result.staleFields,
+      }),
+      created: result.created,
+    };
+  }
+
+  /** Legacy POST /logs: same field-level semantics as patchLog. */
   async createOrUpdateLog(
     userId: string,
-    data: {
-      date: string;
-      day?: string;
-      bw?: string;
-      sleep?: string;
-      steps?: string;
-      top?: string;
-      notes?: string;
-    }
+    data: Partial<Record<LogField, string>> & { date: string; hlc?: string; id?: string }
   ) {
-    const { date, ...logData } = data;
-    return prisma.dailyLog.upsert({
-      where: {
-        userId_date: { userId, date },
-      },
-      create: {
-        userId,
-        date,
-        ...logData,
-      },
-      update: logData,
-    });
+    const { date, ...rest } = data;
+    return (await this.patchLog(userId, date, rest)).row;
   }
 
   async deleteLog(userId: string, logId: string) {
-    return prisma.dailyLog.delete({
+    const deleted = await prisma.dailyLog.delete({
       where: { id: logId, userId },
     });
+    await scoreService.afterWrite(userId, deleted.date, 13);
+    return deleted;
   }
 
   async getStats(userId: string, days = 30) {
