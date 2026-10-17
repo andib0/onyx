@@ -102,8 +102,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderTopWidth: 1,
     // Web has no home indicator: the iOS bottom inset clipped the labels there
-    height: Platform.OS === "web" ? 64 : 84,
-    paddingBottom: Platform.OS === "web" ? 8 : 24,
+    height: Platform.OS === "web" ? 76 : 84,
+    paddingBottom: Platform.OS === "web" ? 12 : 24,
     paddingTop: 10,
     elevation: 0,
   },

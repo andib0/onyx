@@ -58,9 +58,12 @@ export default function ProgressScreen() {
       <Header title="Progress" />
 
       <Card>
-        <Text style={styles.big}>{streak.count}</Text>
+        {/* Never a bare "0": a lapsed streak reads as a fresh start, not a loss */}
+        <Text style={styles.big}>{streak.count > 0 ? streak.count : "–"}</Text>
         <Text style={styles.bigLabel}>
-          day streak · {streak.state === "kept" ? "today kept" : "today still open"}
+          {streak.count > 0
+            ? `day streak · ${streak.state === "kept" ? "today kept" : "today still open"}`
+            : "no streak yet · today can start one"}
         </Text>
         <Text style={styles.note}>{streak.label}</Text>
       </Card>

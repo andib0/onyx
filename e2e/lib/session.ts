@@ -12,6 +12,8 @@ export interface OpenFocusOptions {
   ready?: string | RegExp;
   /** Steady-state user: the Getting-started card was dismissed long ago. Default true. */
   dismissGettingStarted?: boolean;
+  /** Days after the fixed Monday (e.g. 1 = Tuesday, a planned rest day). */
+  dayOffset?: number;
 }
 
 /**
@@ -34,15 +36,16 @@ export async function installRefreshShim(page: Page) {
   });
 }
 
-export function fixedTime(at: { h: number; m: number }): Date {
+export function fixedTime(at: { h: number; m: number }, dayOffset = 0): Date {
   const d = e2eNow();
+  d.setDate(d.getDate() + dayOffset);
   d.setHours(at.h, at.m, 0, 0);
   return d;
 }
 
 /** Fresh user → seed → sign in through the UI → Focus with data visible. */
 export async function openFocus(page: Page, o: OpenFocusOptions): Promise<Session> {
-  if (o.at) await page.clock.setFixedTime(fixedTime(o.at));
+  if (o.at) await page.clock.setFixedTime(fixedTime(o.at, o.dayOffset));
   else await page.clock.install({ time: e2eNow() });
   const s = await newUser(o.tag);
   if (o.seed) await o.seed(s);
@@ -77,7 +80,9 @@ export async function openFocus(page: Page, o: OpenFocusOptions): Promise<Sessio
   // The Day ring shows "Day"; "Day score …" is its accessibility label (stable hook).
   await expect(page.getByLabel(/^Day score/).first()).toBeVisible();
   if (o.ready)
-    await expect(page.getByText(o.ready).or(page.getByLabel(o.ready)).first()).toBeVisible();
+    await expect(
+      page.getByText(o.ready).or(page.getByLabel(o.ready)).first()
+    ).toBeVisible();
   // Let entrance animations settle so the first measured tap is not racing them.
   await page.waitForTimeout(600);
   return s;
