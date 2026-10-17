@@ -52,6 +52,7 @@ const JUDGES = {
     { id: "eslint", cmd: "npx eslint ." },
     { id: "prettier", cmd: "npx prettier --check ." },
     { id: "unit", cmd: "npx vitest run" },
+    { id: "config", cmd: "npm run test:config" },
     { id: "bundle", cmd: "npm run perf:bundle" },
     { id: "e2e", cmd: "npm run e2e:smoke" },
   ],
