@@ -5,6 +5,7 @@ import useWorkout from "../hooks/useWorkout";
 import type { WorkoutState, LoggedSetValues } from "../hooks/useWorkout";
 import type { ProgramRow, UserWithPreferences } from "../types/appTypes";
 import type { ProgramSummary, ProgramDetail, ProgramDay } from "../api/programs";
+import type { DayPlan } from "../utils/programSchedule";
 
 interface ProgramContextType {
   programs: ProgramSummary[];
@@ -15,6 +16,9 @@ interface ProgramContextType {
   programRows: ProgramRow[];
   programLabel: string;
   trainingDayActive: boolean;
+  todayPlan: DayPlan | null; // null = no program selected
+  planFor: (date: string) => DayPlan | null;
+  trainAnyway: () => void;
   shouldShowProgramSetup: boolean;
   programGoal: string | undefined;
   handleSelectProgram: (id: string) => void;
@@ -48,7 +52,11 @@ export function ProgramProvider({
   user: UserWithPreferences | null | undefined;
 }) {
   const program = useProgramHook(isAuthenticated, authLoading, user);
-  const w = useWorkout(program.programRows, program.programLabel);
+  const w = useWorkout(
+    program.programRows,
+    program.programLabel,
+    program.markProgramDayCompleted
+  );
 
   // Mutators get a permanent identity; the value only changes with data.
   const handlers = useStableHandlers({
@@ -57,6 +65,8 @@ export function ProgramProvider({
     setProgramSetupDismissed: program.setProgramSetupDismissed,
     resetProgram: program.resetProgram,
     refreshPrograms: program.refreshPrograms,
+    planFor: program.planFor,
+    trainAnyway: program.trainAnyway,
     startWorkout: w.startWorkout,
     togglePauseWorkout: w.togglePauseWorkout,
     stopWorkout: w.stopWorkout,
@@ -75,13 +85,15 @@ export function ProgramProvider({
     selectedProgramDay,
     programRows,
     programLabel,
-    trainingDayActive,
+    todayPlan,
     shouldShowProgramSetup,
   } = program;
   const { workout, workoutCompletedToday } = w;
+  // A session started (or finished) on a planned rest day stays visible
+  const trainingDayActive =
+    program.trainingDayActive ||
+    (!!selectedProgramDay && (workout.isActive || workoutCompletedToday));
 
-  // NOTE: `workout` changes on every timer tick while a session runs; splitting
-  // it into its own context belongs to the workout-timer work (useWorkout owner).
   const value = useMemo<ProgramContextType>(
     () =>
       Object.assign({}, handlers, {
@@ -93,6 +105,7 @@ export function ProgramProvider({
         programRows,
         programLabel,
         trainingDayActive,
+        todayPlan,
         shouldShowProgramSetup,
         programGoal: programDetail?.goal,
         workout,
@@ -108,6 +121,7 @@ export function ProgramProvider({
       programRows,
       programLabel,
       trainingDayActive,
+      todayPlan,
       shouldShowProgramSetup,
       workout,
       workoutCompletedToday,

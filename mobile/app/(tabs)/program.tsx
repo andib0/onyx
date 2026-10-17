@@ -6,6 +6,7 @@ import * as Clipboard from "expo-clipboard";
 import { deleteProgram } from "../../api/programs";
 import { getExerciseHistory, type ExerciseHistory } from "../../api/workouts";
 import { suggestProgression } from "../../utils/progression";
+import { aliasQueryNames, mergeHistoryByCanonical } from "../../utils/workoutHistory";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -116,9 +117,10 @@ export default function ProgramScreen() {
       return;
     }
     let cancelled = false;
-    getExerciseHistory(names).then((result) => {
+    // Ask for every known spelling and fold onto canonical names (migrate on read)
+    getExerciseHistory(aliasQueryNames(names)).then((result) => {
       if (cancelled) return;
-      setHistory(result.success && result.data ? result.data : {});
+      setHistory(mergeHistoryByCanonical(result.success ? result.data : null));
     });
     return () => {
       cancelled = true;

@@ -16,7 +16,17 @@ import { useTimeline } from "../../contexts/TimelineContext";
 import useActiveContext from "../../hooks/useActiveContext";
 import type { FocusPanelBlock } from "../../types/appTypes";
 import { toMinutes } from "../../utils/time";
-import { computeConsumedMacros } from "../../utils/nutrition";
+import {
+  computeConsumedMacros,
+  computeMacroTargets,
+  getGoalRateKgPerWeek,
+} from "../../utils/nutrition";
+import {
+  computeTodayOutcome,
+  dayOutcomesFromSnapshots,
+  plannedSetCount,
+} from "../../utils/dayOutcome";
+import { computeStreak } from "../../utils/outcomeScore";
 import Card from "../../components/ui/Card";
 import Ring from "../../components/ui/Ring";
 import Glow from "../../components/ui/Glow";
@@ -46,7 +56,11 @@ import WeeklyRecapCard, {
   WEEKLY_DISMISS_KEY,
   weekKey,
 } from "../../components/focus/WeeklyRecapCard";
-import { buildYesterdayRecap, scoreStreak } from "../../utils/trends";
+import {
+  buildYesterdayRecap,
+  scoreStreak,
+  weightSlopeKgPerWeek,
+} from "../../utils/trends";
 import { postScore } from "../../api/scores";
 import {
   buildAchievementCtx,
@@ -98,6 +112,10 @@ export default function FocusScreen() {
     programLabel,
     trainingDayActive,
     selectedProgramId,
+    programGoal,
+    todayPlan,
+    planFor,
+    trainAnyway,
     workout,
     workoutCompletedToday,
     startWorkout,
@@ -212,7 +230,58 @@ export default function FocusScreen() {
   const tasksDone = scheduleBlocks.filter((b) => completionByBlockId[b.id || ""]).length;
 
   const recap = buildYesterdayRecap(appState, supplementsList);
-  const streak = scoreStreak(scoreHistory, todayKeyValue, timelineProgressPercent);
+
+  // Outcome Score (contracts/README.md): training vs plan, protein, calories,
+  // bodyweight trend. The tick ratio stays visible as the secondary "Routine".
+  // Planned rest day = full training credit (rest from the program's frequency)
+  const plan = todayPlan;
+  const outcome = useMemo(() => {
+    const anyMealLogged = mealTemplatesForToday.some((m) => mealCheckMap[m.id || ""]);
+    const consumed = computeConsumedMacros(mealTemplatesForToday, mealCheckMap);
+    const targets = computeMacroTargets(nutritionTargets);
+    const setsPlanned = plannedSetCount(programRows);
+    const setsLogged = Object.values(workout.setsThisSession).reduce(
+      (total, list) => total + list.length,
+      0
+    );
+    return computeTodayOutcome({
+      plan,
+      setsDone: workoutCompletedToday ? Math.max(setsLogged, setsPlanned) : setsLogged,
+      setsPlanned,
+      consumed: anyMealLogged ? consumed : null,
+      proteinTarget: targets.protein,
+      calorieTarget: targets.calories,
+      bwSlope: weightSlopeKgPerWeek(logEntries),
+      goalRate: getGoalRateKgPerWeek(programGoal),
+    });
+  }, [
+    plan,
+    mealTemplatesForToday,
+    mealCheckMap,
+    nutritionTargets,
+    programRows,
+    workout.setsThisSession,
+    workoutCompletedToday,
+    logEntries,
+    programGoal,
+  ]);
+  const streakInfo = useMemo(() => {
+    const targets = computeMacroTargets(nutritionTargets);
+    const past = dayOutcomesFromSnapshots(
+      scoreHistory.filter((row) => row.date !== todayKeyValue),
+      {
+        proteinTarget: targets.protein,
+        calorieTarget: targets.calories,
+        planFor,
+      }
+    );
+    return computeStreak(
+      past.concat([{ date: todayKeyValue, score: outcome.score, kept: outcome.kept }]),
+      todayKeyValue
+    );
+  }, [scoreHistory, todayKeyValue, nutritionTargets, planFor, outcome]);
+  const streak = streakInfo.count;
+  const dayScore = outcome.score;
 
   const anythingChecked =
     Object.values(mealCheckMap).some(Boolean) ||
@@ -420,32 +489,33 @@ export default function FocusScreen() {
               <Ring
                 size={72}
                 strokeWidth={7}
-                progress={timelineProgressPercent}
+                progress={dayScore ?? 0}
                 color={colors.good}
-                value={`${timelineProgressPercent}%`}
+                value={dayScore === null ? "–" : `${dayScore}`}
               />
               <View style={styles.dayRowInfo}>
                 <Text
-                  style={[
-                    styles.dayRowTitle,
-                    timelineProgressPercent >= 100 &&
-                      timelineBlocks.length > 0 &&
-                      styles.dayRowPerfect,
-                  ]}
+                  style={[styles.dayRowTitle, dayScore === 100 && styles.dayRowPerfect]}
+                  accessibilityLabel={
+                    dayScore === null
+                      ? "Day score: not scored yet, log a meal"
+                      : `Day score ${dayScore} of 100`
+                  }
                 >
-                  {timelineProgressPercent >= 100 && timelineBlocks.length > 0
-                    ? "Perfect day ✨"
-                    : "Day score"}
+                  {dayScore === 100 ? "Perfect day ✨" : "Day"}
                 </Text>
                 <Text style={styles.dayRowText}>
-                  <Text style={styles.dayRowStrong}>
-                    {timelineBlocks.length - timelineRemainingCount}/
-                    {timelineBlocks.length}
-                  </Text>{" "}
+                  Routine{" "}
+                  <Text style={styles.dayRowStrong}>{timelineProgressPercent}%</Text>
+                  {" · "}
+                  {timelineBlocks.length - timelineRemainingCount}/{timelineBlocks.length}{" "}
                   done
                 </Text>
                 {streak > 0 ? (
-                  <Text style={styles.dayRowStreak}>🔥 {streak}-day streak</Text>
+                  <Text style={styles.dayRowStreak}>
+                    🔥 {streak}-day streak
+                    {streakInfo.state === "pending" ? " · keep it today" : ""}
+                  </Text>
                 ) : null}
               </View>
             </View>
@@ -464,6 +534,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
+          onTrainAnyway={selectedProgramId ? trainAnyway : undefined}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}
@@ -529,6 +600,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
+          onTrainAnyway={selectedProgramId ? trainAnyway : undefined}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}

@@ -7,9 +7,10 @@ import Stepper from "../ui/Stepper";
 import Burst from "../ui/Burst";
 import type { ProgramRow } from "../../types/appTypes";
 import type { WorkoutState, LoggedSetValues } from "../../hooks/useWorkout";
-import { suggestProgression, isCompound } from "../../utils/progression";
+import { suggestNext, usesPlates } from "../../utils/progression";
 import { plateBreakdown, warmupRamp } from "../../utils/plates";
-import { formatSeconds, formatLastSession } from "./workout/format";
+import { formatLastSession } from "./workout/format";
+import SessionClock from "./workout/SessionClock";
 import SetPills from "./workout/SetPills";
 import IdleView from "./workout/IdleView";
 import RestView from "./workout/RestView";
@@ -38,6 +39,8 @@ interface WorkoutSectionProps {
   onUndoSet?: () => void;
   onJumpExercise?: (index: number) => void;
   onExtendRest?: () => void;
+  // Planned rest day: optional escape hatch to start the session anyway
+  onTrainAnyway?: () => void;
   // Idle state hides the full exercise preview (used on Focus)
   compact?: boolean;
 }
@@ -56,12 +59,14 @@ export default function WorkoutSection({
   onUndoSet,
   onJumpExercise,
   onExtendRest,
+  onTrainAnyway,
   compact = false,
 }: WorkoutSectionProps) {
   const { colors, tints } = useTheme();
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
+  const [rirInput, setRirInput] = useState("");
   const [showFullList, setShowFullList] = useState(false);
 
   const currentRow = programRows[workout.exerciseIndex];
@@ -69,10 +74,19 @@ export default function WorkoutSection({
   const history = workout.historyByExercise[exerciseName];
   const sessionSets = workout.setsThisSession[exerciseName] || [];
 
+  // Stall/deload needs the session sequence; fall back to the last session.
+  const pastSessions =
+    workout.sessionsByExercise[exerciseName] ?? (history ? [{ sets: history.sets }] : []);
   const suggestion = currentRow
-    ? suggestProgression(exerciseName, history?.sets ?? [], currentRow.reps)
+    ? suggestNext({
+        exerciseName,
+        reps: currentRow.reps,
+        sessions: pastSessions,
+        programText: `${currentRow.notes || ""} ${currentRow.prog || ""}`,
+      })
     : null;
   const suggestedWeight = suggestion?.suggestedWeightKg ?? null;
+  const suggestedReps = suggestion?.targetReps ?? null;
 
   // Prefill: last set this session, else progression suggestion, else last match.
   useEffect(() => {
@@ -92,9 +106,15 @@ export default function WorkoutSection({
     } else {
       setWeightInput("");
     }
-    setRepsInput(
-      fromHistory && fromHistory.reps !== null ? String(fromHistory.reps) : ""
-    );
+    // After "add weight"/deload the target resets to the range bottom (audit 05 §1)
+    if (!prevThisSession && suggestedReps !== null) {
+      setRepsInput(String(suggestedReps));
+    } else {
+      setRepsInput(
+        fromHistory && fromHistory.reps !== null ? String(fromHistory.reps) : ""
+      );
+    }
+    setRirInput("");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-prefill when position changes
   }, [workout.exerciseIndex, workout.currentSet, workout.isActive]);
 
@@ -105,6 +125,14 @@ export default function WorkoutSection({
         <Typo variant="meta" style={styles.restDayText}>
           Recovery is training too. Eat well, walk, sleep.
         </Typo>
+        {onTrainAnyway ? (
+          <Button
+            label="Train anyway"
+            variant="ghost"
+            size="sm"
+            onPress={onTrainAnyway}
+          />
+        ) : null}
       </Card>
     );
   }
@@ -112,9 +140,11 @@ export default function WorkoutSection({
   const handleSetDone = () => {
     const weight = parseFloat(weightInput.replace(",", "."));
     const reps = parseInt(repsInput, 10);
+    const rir = parseInt(rirInput, 10);
     onCompleteSet({
       weightKg: isNaN(weight) ? null : weight,
       reps: isNaN(reps) ? null : reps,
+      rir: isNaN(rir) ? null : rir,
     });
   };
 
@@ -224,7 +254,8 @@ export default function WorkoutSection({
           ) : null}
 
           {(() => {
-            if (!isCompound(exerciseName)) return null;
+            // Plates + warm-up ramp only for barbell lifts (library equipment)
+            if (!usesPlates(exerciseName)) return null;
             const weight = parseFloat(weightInput.replace(",", "."));
             const ramp =
               workout.currentSet === 1 && sessionSets.length === 0
@@ -266,6 +297,15 @@ export default function WorkoutSection({
               min={0}
               max={100}
             />
+            {/* Optional: what you actually had left. Blank = not reported. */}
+            <Stepper
+              label="RIR"
+              value={rirInput}
+              onChangeText={setRirInput}
+              step={1}
+              min={0}
+              max={10}
+            />
           </View>
 
           <Button
@@ -285,7 +325,11 @@ export default function WorkoutSection({
           onPress={onTogglePause}
           style={styles.controlBtn}
         />
-        <Text style={styles.sessionTime}>{formatSeconds(workout.sessionSeconds)}</Text>
+        <SessionClock
+          timing={workout.timing}
+          ticking={workout.isActive && !workout.isPaused && !workout.isFinished}
+          style={styles.sessionTime}
+        />
         <Button
           label="End"
           variant="danger"

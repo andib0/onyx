@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getProgram, listPrograms } from "../api/programs";
 import { updatePreferences } from "../api/preferences";
 import type { ProgramDetail, ProgramSummary } from "../api/programs";
 import type { UserWithPreferences } from "../types/appTypes";
+import { canonicalExerciseName } from "../utils/exerciseNames";
+import {
+  planForDate,
+  resolveProgramCursor,
+  sessionsPerWeek,
+  type DayPlan,
+  type LastCompletion,
+} from "../utils/programSchedule";
+import { todayKey } from "../utils/storage";
+
+const LAST_COMPLETION_KEY = "onyx_program_last_completion_v1";
 
 export default function useProgram(
   isAuthenticated: boolean,
@@ -15,6 +27,25 @@ export default function useProgram(
   const [programDetail, setProgramDetail] = useState<ProgramDetail | null>(null);
   const [prefsReady, setPrefsReady] = useState(false);
   const [programSetupDismissed, setProgramSetupDismissed] = useState(false);
+  const [lastCompletion, setLastCompletion] = useState<LastCompletion>(null);
+  const [trainAnywayDate, setTrainAnywayDate] = useState("");
+  const today = todayKey();
+
+  // Last completed program day (drives the cursor advance on the next day)
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(LAST_COMPLETION_KEY)
+      .then((raw) => {
+        if (cancelled || !raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.date === "string" && typeof parsed.dayId === "string")
+          setLastCompletion(parsed);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load programs list
   useEffect(() => {
@@ -93,9 +124,42 @@ export default function useProgram(
   const selectedProgramDay =
     programDetail?.days.find((day) => day.id === selectedProgramDayId) || null;
 
+  // Advance the cursor the day after a completed workout (audit 05 #7)
+  useEffect(() => {
+    if (!programDetail || !selectedProgramDayId) return;
+    const next = resolveProgramCursor({
+      days: programDetail.days,
+      selectedDayId: selectedProgramDayId,
+      lastCompletion,
+      today,
+    });
+    if (next && next !== selectedProgramDayId) setSelectedProgramDayId(next);
+  }, [programDetail, selectedProgramDayId, lastCompletion, today]);
+
+  const markProgramDayCompleted = useCallback(
+    (date: string) => {
+      if (!selectedProgramDayId) return;
+      const record = { date, dayId: selectedProgramDayId };
+      setLastCompletion(record);
+      AsyncStorage.setItem(LAST_COMPLETION_KEY, JSON.stringify(record)).catch(() => {});
+    },
+    [selectedProgramDayId]
+  );
+
+  // Planned rest days from the program's weekly frequency
+  const perWeek = programDetail ? sessionsPerWeek(programDetail) : 0;
+  const planFor = useCallback(
+    (date: string): DayPlan | null =>
+      programDetail && perWeek > 0 ? planForDate(date, perWeek) : null,
+    [programDetail, perWeek]
+  );
+  const todayPlan = planFor(today);
+  const trainAnyway = useCallback(() => setTrainAnywayDate(todayKey()), []);
+
+  // Program names fold onto canonical library names so history never splits
   const programRows = selectedProgramDay
     ? selectedProgramDay.exercises.map((exercise) => ({
-        ex: exercise.exerciseName,
+        ex: canonicalExerciseName(exercise.exerciseName),
         sets: exercise.sets,
         reps: exercise.reps,
         rir: exercise.rir || "",
@@ -110,7 +174,8 @@ export default function useProgram(
       ? `${programDetail.name} - ${selectedProgramDay.name}`
       : "No program selected";
 
-  const trainingDayActive = !!selectedProgramDay;
+  const trainingDayActive =
+    !!selectedProgramDay && (todayPlan !== "rest" || trainAnywayDate === today);
 
   const shouldShowProgramSetup =
     isAuthenticated &&
@@ -155,6 +220,10 @@ export default function useProgram(
     programRows,
     programLabel,
     trainingDayActive,
+    todayPlan,
+    planFor,
+    trainAnyway,
+    markProgramDayCompleted,
     shouldShowProgramSetup,
     handleSelectProgram,
     setSelectedProgramDayId,

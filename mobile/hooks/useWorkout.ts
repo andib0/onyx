@@ -10,12 +10,23 @@ import {
   scheduleRestEndNotification,
   cancelNotification,
 } from "../utils/notifications";
+import { canonicalExerciseName } from "../utils/exerciseNames";
+import { createPrTracker, registerSet, type PrTracker } from "../utils/e1rm";
+import { buildExerciseTimeline } from "../utils/workoutHistory";
+import {
+  EMPTY_TIMING,
+  restSecondsRemainingAt,
+  sessionSecondsAt,
+  workoutCountsAsDone,
+  type WorkoutTiming,
+} from "../utils/workoutClock";
+import type { SessionLog } from "../utils/progression";
 import {
   startWorkoutSession,
   logWorkoutSet,
   deleteWorkoutSet,
   finishWorkoutSession,
-  getExerciseHistory,
+  getWorkoutSessions,
   type ExerciseHistory,
 } from "../api/workouts";
 
@@ -24,6 +35,7 @@ export type WorkoutMode = "lifting" | "rest";
 export type LoggedSetValues = {
   weightKg: number | null;
   reps: number | null;
+  rir?: number | null; // reps in reserve as reported by the lifter (not the target)
 };
 
 export type WorkoutState = {
@@ -34,11 +46,12 @@ export type WorkoutState = {
   exerciseIndex: number;
   currentSet: number;
   totalSets: number;
-  restSecondsRemaining: number;
   restTotalSeconds: number;
-  sessionSeconds: number;
+  // Timestamps only — tick locally with useWorkoutClock() in leaf components
+  timing: WorkoutTiming;
   completedExercises: Set<number>;
   historyByExercise: ExerciseHistory;
+  sessionsByExercise: Record<string, SessionLog[]>;
   setsThisSession: Record<string, LoggedSetValues[]>;
   prCount: number;
   lastPrExercise: string | null;
@@ -47,8 +60,9 @@ export type WorkoutState = {
 
 const DEFAULT_REST_SECONDS = 90;
 const WORKOUT_DONE_KEY = "onyx_workout_done";
+const HISTORY_SESSIONS = 100;
 
-function parseSetsCount(sets: string): number {
+export function parseSetsCount(sets: string): number {
   const match = String(sets || "").match(/\d+/);
   if (!match) return 3;
   const num = Number(match[0]);
@@ -67,31 +81,37 @@ export function parseRestSeconds(rest: string): number {
   return Math.min(Math.max(Math.round(value), 15), 600);
 }
 
+// Leaf-level ticker: re-renders only the component that shows the clock.
+export function useWorkoutClock(
+  timing: WorkoutTiming,
+  ticking: boolean,
+  intervalMs = 500
+): { sessionSeconds: number; restSecondsRemaining: number } {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!ticking) return undefined;
+    const id = setInterval(() => setTick((n) => n + 1), intervalMs);
+    return () => clearInterval(id);
+  }, [ticking, intervalMs]);
+  // Derived from the wall clock on every render (event or tick), so a timing
+  // change shows immediately rather than on the next tick.
+  const now = Date.now();
+  return {
+    sessionSeconds: sessionSecondsAt(timing, now),
+    restSecondsRemaining: restSecondsRemainingAt(timing, now),
+  };
+}
+
 type PendingNext = {
   exerciseIndex: number;
   currentSet: number;
 };
 
-// PR when weight beats the best previous weight, or matches it with more reps
-function isPersonalRecord(
-  history: ExerciseHistory[string] | undefined,
-  values: LoggedSetValues
-): boolean {
-  if (!history || values.weightKg === null) return false;
-  const prevSets = history.sets.filter((s) => s.weightKg !== null);
-  if (!prevSets.length) return false;
-  const bestWeight = prevSets.reduce((max, s) => Math.max(max, s.weightKg as number), 0);
-  if (values.weightKg > bestWeight) return true;
-  if (values.weightKg === bestWeight && values.reps !== null) {
-    const bestRepsAtWeight = prevSets
-      .filter((s) => s.weightKg === bestWeight)
-      .reduce((max, s) => Math.max(max, s.reps ?? 0), 0);
-    return values.reps > bestRepsAtWeight;
-  }
-  return false;
-}
-
-export default function useWorkout(programRows: ProgramRow[], programLabel?: string) {
+export default function useWorkout(
+  programRows: ProgramRow[],
+  programLabel?: string,
+  onWorkoutCompleted?: (date: string) => void
+) {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -103,12 +123,15 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     () => new Set()
   );
   const [historyByExercise, setHistoryByExercise] = useState<ExerciseHistory>({});
+  const [sessionsByExercise, setSessionsByExercise] = useState<
+    Record<string, SessionLog[]>
+  >({});
   const [setsThisSession, setSetsThisSession] = useState<
     Record<string, LoggedSetValues[]>
   >({});
   const [prCount, setPrCount] = useState(0);
   const [lastPrExercise, setLastPrExercise] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [timing, setTiming] = useState<WorkoutTiming>(EMPTY_TIMING);
   const [completedToday, setCompletedToday] = useState(false);
 
   // Restore "workout done today" flag (persists across restarts, resets next day)
@@ -124,16 +147,23 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     };
   }, []);
 
-  // Timestamp-based timers: survive backgrounding and app suspension.
+  // Timestamp-based timers: survive backgrounding and app suspension. Refs are
+  // the source of truth for logic; `timing` state mirrors them on events only.
   const restEndsAtRef = useRef<number | null>(null);
   const pausedRestRemainingMsRef = useRef<number | null>(null);
   const pendingNextRef = useRef<PendingNext | null>(null);
   const sessionStartRef = useRef<number | null>(null);
   const pausedAccumMsRef = useRef(0);
   const pauseStartedAtRef = useRef<number | null>(null);
+  const finishedAtRef = useRef<number | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const restNotificationRef = useRef<string | null>(null);
   const restNotifyEnabledRef = useRef(false);
+  const prTrackerRef = useRef<PrTracker>(createPrTracker({}));
+  const onCompletedRef = useRef(onWorkoutCompleted);
+  useEffect(() => {
+    onCompletedRef.current = onWorkoutCompleted;
+  }, [onWorkoutCompleted]);
   // One-level undo snapshot of the last completed set
   const lastSetRef = useRef<{
     exerciseIndex: number;
@@ -141,10 +171,38 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     exerciseName: string;
     serverId: string | null;
     wasPr: boolean;
+    prTrackerBefore: PrTracker;
     completedExercise: boolean;
     finishedWorkout: boolean;
   } | null>(null);
   const [canUndo, setCanUndo] = useState(false);
+
+  const syncTiming = useCallback(() => {
+    setTiming({
+      sessionStartedAt: sessionStartRef.current,
+      pausedAccumMs: pausedAccumMsRef.current,
+      pauseStartedAt: pauseStartedAtRef.current,
+      restEndsAt: restEndsAtRef.current,
+      pausedRestRemainingMs: pausedRestRemainingMsRef.current,
+      finishedAt: finishedAtRef.current,
+    });
+  }, []);
+
+  const currentSessionSeconds = useCallback(
+    () =>
+      sessionSecondsAt(
+        {
+          sessionStartedAt: sessionStartRef.current,
+          pausedAccumMs: pausedAccumMsRef.current,
+          pauseStartedAt: pauseStartedAtRef.current,
+          restEndsAt: null,
+          pausedRestRemainingMs: null,
+          finishedAt: finishedAtRef.current,
+        },
+        Date.now()
+      ),
+    []
+  );
 
   // Load rest-notification preference once
   useEffect(() => {
@@ -156,6 +214,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   const rowCount = programRows.length;
   const currentRow = programRows[exerciseIndex];
   const totalSets = parseSetsCount(currentRow ? currentRow.sets : "");
+  const plannedSets = programRows.reduce((sum, row) => sum + parseSetsCount(row.sets), 0);
 
   // Keep the screen on during an active workout
   useEffect(() => {
@@ -166,59 +225,47 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     };
   }, [isActive, isFinished]);
 
-  // Tick while active; recompute clock immediately when app returns to foreground.
-  useEffect(() => {
-    if (!isActive || isFinished) return undefined;
-    const intervalId = setInterval(() => setNow(Date.now()), 500);
-    const subscription = RNAppState.addEventListener("change", (state) => {
-      if (state === "active") setNow(Date.now());
-    });
-    return () => {
-      clearInterval(intervalId);
-      subscription.remove();
-    };
-  }, [isActive, isFinished]);
-
   const applyPendingNext = useCallback(() => {
     const next = pendingNextRef.current;
     pendingNextRef.current = null;
     restEndsAtRef.current = null;
     cancelNotification(restNotificationRef.current);
     restNotificationRef.current = null;
+    syncTiming();
     if (!next) return;
     setExerciseIndex(next.exerciseIndex);
     setCurrentSet(next.currentSet);
     setMode("lifting");
-  }, []);
+  }, [syncTiming]);
 
-  // Rest countdown completion
+  // Rest completion: one timeout at the rest end (no polling), re-checked when
+  // the app returns to the foreground.
   useEffect(() => {
-    if (!isActive || isPaused || isFinished || mode !== "rest") return;
-    const endsAt = restEndsAtRef.current;
-    if (endsAt !== null && now >= endsAt) {
+    if (!isActive || isPaused || isFinished || mode !== "rest") return undefined;
+    const endsAt = timing.restEndsAt;
+    if (endsAt === null) return undefined;
+    const finish = () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       applyPendingNext();
-    }
-  }, [now, isActive, isPaused, isFinished, mode, applyPendingNext]);
+    };
+    const id = setTimeout(finish, Math.max(endsAt - Date.now(), 0));
+    const subscription = RNAppState.addEventListener("change", (state) => {
+      if (state === "active" && restEndsAtRef.current !== null) {
+        if (Date.now() >= restEndsAtRef.current) finish();
+      }
+    });
+    return () => {
+      clearTimeout(id);
+      subscription.remove();
+    };
+  }, [isActive, isPaused, isFinished, mode, timing.restEndsAt, applyPendingNext]);
 
-  const sessionSeconds = (() => {
-    const startedAt = sessionStartRef.current;
-    if (!startedAt) return 0;
-    const pausedMs =
-      pausedAccumMsRef.current +
-      (pauseStartedAtRef.current ? now - pauseStartedAtRef.current : 0);
-    return Math.max(Math.floor((now - startedAt - pausedMs) / 1000), 0);
-  })();
-
-  const restSecondsRemaining = (() => {
-    if (mode !== "rest") return 0;
-    if (isPaused && pausedRestRemainingMsRef.current !== null) {
-      return Math.max(Math.ceil(pausedRestRemainingMsRef.current / 1000), 0);
-    }
-    const endsAt = restEndsAtRef.current;
-    if (endsAt === null) return 0;
-    return Math.max(Math.ceil((endsAt - now) / 1000), 0);
-  })();
+  const markCompleted = useCallback(() => {
+    const date = todayKey();
+    setCompletedToday(true);
+    AsyncStorage.setItem(WORKOUT_DONE_KEY, date).catch(() => {});
+    if (onCompletedRef.current) onCompletedRef.current(date);
+  }, []);
 
   const resetAll = useCallback(() => {
     cancelNotification(restNotificationRef.current);
@@ -242,7 +289,10 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     sessionStartRef.current = null;
     pausedAccumMsRef.current = 0;
     pauseStartedAtRef.current = null;
+    finishedAtRef.current = null;
     sessionIdRef.current = null;
+    prTrackerRef.current = createPrTracker({});
+    setTiming(EMPTY_TIMING);
   }, []);
 
   const start = useCallback(() => {
@@ -253,12 +303,21 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     AsyncStorage.removeItem(WORKOUT_DONE_KEY).catch(() => {});
     setIsActive(true);
     sessionStartRef.current = Date.now();
-    setNow(Date.now());
+    syncTiming();
 
-    const names = programRows.map((row) => row.ex).filter(Boolean);
-    getExerciseHistory(names)
+    // Full recent history (one request): last session per lift for prefill,
+    // the session sequence for stall detection, all sets for all-time PRs.
+    // Names fold onto canonical library names (legacy rows migrate on read).
+    getWorkoutSessions(HISTORY_SESSIONS)
       .then((result) => {
-        if (result.success && result.data) setHistoryByExercise(result.data);
+        if (!result.success || !result.data) return;
+        const timeline = buildExerciseTimeline(result.data, sessionIdRef.current);
+        setHistoryByExercise(timeline.last);
+        setSessionsByExercise(timeline.sessions);
+        // Keep PRs already flagged this session if history arrives late
+        const fresh = createPrTracker(timeline.allSets);
+        fresh.prThisSession = prTrackerRef.current.prThisSession;
+        prTrackerRef.current = fresh;
       })
       .catch(() => {});
     startWorkoutSession(todayKey(), programLabel)
@@ -266,7 +325,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         if (result.success && result.data) sessionIdRef.current = result.data.id;
       })
       .catch(() => {});
-  }, [programRows, programLabel, resetAll]);
+  }, [programRows, programLabel, resetAll, syncTiming]);
 
   const finishSession = useCallback((durationSeconds: number) => {
     const sessionId = sessionIdRef.current;
@@ -275,25 +334,31 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     }
   }, []);
 
+  const loggedSetCount = (sets: Record<string, LoggedSetValues[]>) =>
+    Object.values(sets).reduce((sum, list) => sum + list.length, 0);
+
   const completeSet = useCallback(
     (values?: LoggedSetValues) => {
       if (!isActive || isFinished || mode !== "lifting") return;
       const row = programRows[exerciseIndex];
       if (!row) return;
+      const exercise = canonicalExerciseName(row.ex);
 
       const setValues: LoggedSetValues = {
         weightKg: values && values.weightKg !== undefined ? values.weightKg : null,
         reps: values && values.reps !== undefined ? values.reps : null,
+        rir: values && values.rir !== undefined ? values.rir : null,
       };
 
-      setSetsThisSession((prev) => {
-        const next = Object.assign({}, prev);
-        const list = (next[row.ex] || []).concat([setValues]);
-        next[row.ex] = list;
-        return next;
+      const nextSets = Object.assign({}, setsThisSession, {
+        [row.ex]: (setsThisSession[row.ex] || []).concat([setValues]),
       });
+      setSetsThisSession(nextSets);
 
-      const wasPr = isPersonalRecord(historyByExercise[row.ex], setValues);
+      const prTrackerBefore = prTrackerRef.current;
+      const pr = registerSet(prTrackerBefore, exercise, setValues);
+      prTrackerRef.current = pr.tracker;
+      const wasPr = pr.isPr;
       if (wasPr) {
         setPrCount((prev) => prev + 1);
         setLastPrExercise(row.ex);
@@ -313,6 +378,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         exerciseName: row.ex,
         serverId: null,
         wasPr,
+        prTrackerBefore,
         completedExercise: isLastSetOfExercise,
         finishedWorkout: isLastSetOfExercise && isLastExercise,
       };
@@ -322,11 +388,15 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       if (sessionId) {
         const setNumber = currentSet;
         logWorkoutSet(sessionId, {
-          exerciseName: row.ex,
+          exerciseName: exercise,
           setNumber,
           weightKg: setValues.weightKg,
           reps: setValues.reps,
-          rir: row.rir || null,
+          // Only what the lifter reported — the program's target RIR is not data
+          rir:
+            setValues.rir !== null && setValues.rir !== undefined
+              ? String(setValues.rir)
+              : null,
         })
           .then((result) => {
             const snap = lastSetRef.current;
@@ -355,9 +425,10 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         setIsFinished(true);
         restEndsAtRef.current = null;
         pendingNextRef.current = null;
-        finishSession(sessionSeconds);
-        setCompletedToday(true);
-        AsyncStorage.setItem(WORKOUT_DONE_KEY, todayKey()).catch(() => {});
+        finishedAtRef.current = Date.now();
+        syncTiming();
+        finishSession(currentSessionSeconds());
+        if (workoutCountsAsDone(loggedSetCount(nextSets), plannedSets)) markCompleted();
         return;
       }
 
@@ -369,7 +440,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       setRestTotalSeconds(restSeconds);
       restEndsAtRef.current = Date.now() + restSeconds * 1000;
       setMode("rest");
-      setNow(Date.now());
+      syncTiming();
 
       // Notify when rest ends if the phone is locked/backgrounded
       if (restNotifyEnabledRef.current) {
@@ -392,9 +463,12 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       exerciseIndex,
       currentSet,
       rowCount,
-      sessionSeconds,
+      plannedSets,
+      setsThisSession,
       finishSession,
-      historyByExercise,
+      currentSessionSeconds,
+      markCompleted,
+      syncTiming,
     ]
   );
 
@@ -409,6 +483,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     pendingNextRef.current = null;
     restEndsAtRef.current = null;
     pausedRestRemainingMsRef.current = null;
+    finishedAtRef.current = null;
     setIsPaused(false);
     setIsFinished(false);
     if (snap.finishedWorkout) {
@@ -427,6 +502,7 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
       next[snap.exerciseName] = (next[snap.exerciseName] || []).slice(0, -1);
       return next;
     });
+    prTrackerRef.current = snap.prTrackerBefore;
     if (snap.wasPr) {
       setPrCount((prev) => Math.max(prev - 1, 0));
       setLastPrExercise(null);
@@ -435,8 +511,8 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     setExerciseIndex(snap.exerciseIndex);
     setCurrentSet(snap.setNumber);
     if (snap.serverId) deleteWorkoutSet(snap.serverId).catch(() => {});
-    setNow(Date.now());
-  }, []);
+    syncTiming();
+  }, [syncTiming]);
 
   // Jump to any exercise mid-workout (machine taken, supersets, etc.)
   const jumpToExercise = useCallback(
@@ -460,9 +536,9 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         next.delete(index);
         return next;
       });
-      setNow(Date.now());
+      syncTiming();
     },
-    [isActive, isFinished, programRows, setsThisSession]
+    [isActive, isFinished, programRows, setsThisSession, syncTiming]
   );
 
   const extendRest = useCallback(
@@ -483,9 +559,9 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
         }
       }
       setRestTotalSeconds((prev) => prev + seconds);
-      setNow(Date.now());
+      syncTiming();
     },
-    [mode, isPaused, currentSet]
+    [mode, isPaused, currentSet, syncTiming]
   );
 
   const skipRest = useCallback(() => {
@@ -496,46 +572,61 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
   }, [mode, isPaused, applyPendingNext]);
 
   const togglePause = useCallback(() => {
-    setIsPaused((prev) => {
-      const next = !prev;
-      const nowMs = Date.now();
-      if (next) {
-        pauseStartedAtRef.current = nowMs;
-        if (mode === "rest" && restEndsAtRef.current !== null) {
-          pausedRestRemainingMsRef.current = Math.max(restEndsAtRef.current - nowMs, 0);
-        }
-        cancelNotification(restNotificationRef.current);
-        restNotificationRef.current = null;
-      } else {
-        if (pauseStartedAtRef.current !== null) {
-          pausedAccumMsRef.current += nowMs - pauseStartedAtRef.current;
-          pauseStartedAtRef.current = null;
-        }
-        if (mode === "rest" && pausedRestRemainingMsRef.current !== null) {
-          restEndsAtRef.current = nowMs + pausedRestRemainingMsRef.current;
-          if (restNotifyEnabledRef.current) {
-            scheduleRestEndNotification(
-              "Next set",
-              currentSet,
-              pausedRestRemainingMsRef.current / 1000
-            ).then((identifier) => {
-              restNotificationRef.current = identifier;
-            });
-          }
-          pausedRestRemainingMsRef.current = null;
-        }
+    const next = !isPaused;
+    const nowMs = Date.now();
+    if (next) {
+      pauseStartedAtRef.current = nowMs;
+      if (mode === "rest" && restEndsAtRef.current !== null) {
+        pausedRestRemainingMsRef.current = Math.max(restEndsAtRef.current - nowMs, 0);
       }
-      return next;
-    });
-    setNow(Date.now());
-  }, [mode, currentSet]);
+      cancelNotification(restNotificationRef.current);
+      restNotificationRef.current = null;
+    } else {
+      if (pauseStartedAtRef.current !== null) {
+        pausedAccumMsRef.current += nowMs - pauseStartedAtRef.current;
+        pauseStartedAtRef.current = null;
+      }
+      if (mode === "rest" && pausedRestRemainingMsRef.current !== null) {
+        restEndsAtRef.current = nowMs + pausedRestRemainingMsRef.current;
+        if (restNotifyEnabledRef.current) {
+          scheduleRestEndNotification(
+            "Next set",
+            currentSet,
+            pausedRestRemainingMsRef.current / 1000
+          ).then((identifier) => {
+            restNotificationRef.current = identifier;
+          });
+        }
+        pausedRestRemainingMsRef.current = null;
+      }
+    }
+    setIsPaused(next);
+    syncTiming();
+  }, [isPaused, mode, currentSet, syncTiming]);
 
+  // End: a session with ≥ 80 % of planned sets logged still counts as done.
   const stop = useCallback(() => {
     if (isActive && sessionIdRef.current) {
-      finishSession(sessionSeconds);
+      finishSession(currentSessionSeconds());
+    }
+    if (
+      isActive &&
+      !isFinished &&
+      workoutCountsAsDone(loggedSetCount(setsThisSession), plannedSets)
+    ) {
+      markCompleted();
     }
     resetAll();
-  }, [isActive, sessionSeconds, finishSession, resetAll]);
+  }, [
+    isActive,
+    isFinished,
+    setsThisSession,
+    plannedSets,
+    finishSession,
+    currentSessionSeconds,
+    markCompleted,
+    resetAll,
+  ]);
 
   const state: WorkoutState = {
     isActive,
@@ -545,11 +636,11 @@ export default function useWorkout(programRows: ProgramRow[], programLabel?: str
     exerciseIndex,
     currentSet,
     totalSets,
-    restSecondsRemaining,
     restTotalSeconds,
-    sessionSeconds,
+    timing,
     completedExercises,
     historyByExercise,
+    sessionsByExercise,
     setsThisSession,
     prCount,
     lastPrExercise,

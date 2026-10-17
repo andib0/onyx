@@ -7,3 +7,4 @@ dist-ssr
 .env
 # local agent settings
 .claude/settings.local.json
+.claude/worktrees/

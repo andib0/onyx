@@ -6,13 +6,11 @@ import Card from "../../components/ui/Card";
 import StatBlock from "../../components/ui/StatBlock";
 import BarChart, { type Bar } from "../../components/ui/BarChart";
 import { getExerciseSessions, type ExerciseSession } from "../../api/workouts";
+import { bestE1rm } from "../../utils/e1rm";
+import { canonicalExerciseName } from "../../utils/exerciseNames";
+import { aliasQueryNames } from "../../utils/workoutHistory";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, fontSizes, fonts, type Palette } from "../../theme";
-
-// Epley estimated 1RM
-function est1RM(weight: number, reps: number): number {
-  return Math.round(weight * (1 + reps / 30));
-}
 
 function sessionVolume(session: ExerciseSession): number {
   return session.sets.reduce((sum, s) => sum + (s.weightKg || 0) * (s.reps || 0), 0);
@@ -22,11 +20,29 @@ function topWeight(session: ExerciseSession): number {
   return session.sets.reduce((max, s) => Math.max(max, s.weightKg || 0), 0);
 }
 
+// Epley, capped at 10 reps; a single is its own 1RM (utils/e1rm.ts)
 function bestE1RM(session: ExerciseSession): number {
-  return session.sets.reduce(
-    (max, s) => Math.max(max, s.weightKg && s.reps ? est1RM(s.weightKg, s.reps) : 0),
-    0
+  return Math.round(bestE1rm(session.sets) ?? 0);
+}
+
+// One lift may be stored under legacy spellings — fetch all, merge by session.
+async function loadSessions(name: string): Promise<ExerciseSession[]> {
+  const results = await Promise.all(
+    aliasQueryNames([canonicalExerciseName(name)]).map((n) => getExerciseSessions(n, 30))
   );
+  const bySession = new Map<string, ExerciseSession>();
+  for (const result of results) {
+    for (const s of result.success && result.data ? result.data : []) {
+      const prev = bySession.get(s.sessionId);
+      bySession.set(
+        s.sessionId,
+        prev ? Object.assign({}, prev, { sets: prev.sets.concat(s.sets) }) : s
+      );
+    }
+  }
+  return Array.from(bySession.values())
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, 30);
 }
 
 const shortDate = (date: string) => {
@@ -43,10 +59,13 @@ export default function ExerciseDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    getExerciseSessions(name, 30).then((result) => {
-      if (cancelled) return;
-      setSessions(result.success && result.data ? result.data : []);
-    });
+    loadSessions(name)
+      .then((list) => {
+        if (!cancelled) setSessions(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSessions([]);
+      });
     return () => {
       cancelled = true;
     };

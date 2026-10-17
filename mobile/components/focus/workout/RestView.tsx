@@ -4,7 +4,7 @@ import Button from "../../ui/Button";
 import Ring from "../../ui/Ring";
 import Glow from "../../ui/Glow";
 import type { ProgramRow } from "../../../types/appTypes";
-import type { WorkoutState } from "../../../hooks/useWorkout";
+import { useWorkoutClock, type WorkoutState } from "../../../hooks/useWorkout";
 import { formatSeconds } from "./format";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette } from "../../../theme";
@@ -27,6 +27,11 @@ export default function RestView({
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Ticks locally — the rest of the tree doesn't re-render every 500 ms
+  const { restSecondsRemaining } = useWorkoutClock(
+    workout.timing,
+    workout.mode === "rest" && !workout.isPaused
+  );
 
   return (
     <View style={styles.restBox}>
@@ -37,13 +42,13 @@ export default function RestView({
           strokeWidth={9}
           progress={
             workout.restTotalSeconds > 0
-              ? ((workout.restTotalSeconds - workout.restSecondsRemaining) /
+              ? ((workout.restTotalSeconds - restSecondsRemaining) /
                   workout.restTotalSeconds) *
                 100
               : 0
           }
           color={colors.good}
-          value={formatSeconds(workout.restSecondsRemaining)}
+          value={formatSeconds(restSecondsRemaining)}
           label="rest"
         />
       </View>

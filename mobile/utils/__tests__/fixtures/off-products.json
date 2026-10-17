@@ -1,0 +1,261 @@
+{
+  "_source": "Shaped after Open Food Facts API v2 /api/v2/product/{code}.json responses (fields=product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,serving_quantity_unit). Values are realistic label values; energy_100g is kJ per OFF docs.",
+  "fixtures": [
+    {
+      "label": "hazelnut spread — kcal + kJ, 15 g serving",
+      "barcode": "3017620422003",
+      "http": 200,
+      "body": {
+        "code": "3017620422003",
+        "status": 1,
+        "status_verbose": "product found",
+        "product": {
+          "product_name": "Nutella",
+          "brands": "Nutella,Ferrero",
+          "serving_size": "15 g",
+          "serving_quantity": 15,
+          "serving_quantity_unit": "g",
+          "nutriments": {
+            "energy-kcal_100g": 539,
+            "energy-kj_100g": 2252,
+            "energy_100g": 2252,
+            "fat_100g": 30.9,
+            "carbohydrates_100g": 57.5,
+            "sugars_100g": 56.3,
+            "proteins_100g": 6.3,
+            "sodium_100g": 0.0428
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 539, "grams": 15, "energySource": "kcal" }
+    },
+    {
+      "label": "cola can — per 100 ml, 330 ml serving",
+      "barcode": "5449000000996",
+      "http": 200,
+      "body": {
+        "code": "5449000000996",
+        "status": 1,
+        "product": {
+          "product_name": "Coca-Cola Original Taste",
+          "brands": "Coca-Cola",
+          "serving_size": "330 ml",
+          "serving_quantity": "330",
+          "serving_quantity_unit": "ml",
+          "nutriments": {
+            "energy-kcal_100g": 42,
+            "energy-kj_100g": 180,
+            "fat_100g": 0,
+            "carbohydrates_100g": 10.6,
+            "sugars_100g": 10.6,
+            "proteins_100g": 0
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 42, "grams": 330, "energySource": "kcal" }
+    },
+    {
+      "label": "crispbread — kJ only (energy-kj_100g)",
+      "barcode": "7300400481588",
+      "http": 200,
+      "body": {
+        "code": "7300400481588",
+        "status": 1,
+        "product": {
+          "product_name": "Knäckebröd Råg",
+          "brands": "Wasa",
+          "serving_size": "1 slice (11 g)",
+          "serving_quantity": 11,
+          "nutriments": {
+            "energy-kj_100g": 1418,
+            "fat_100g": 1.5,
+            "carbohydrates_100g": 64,
+            "proteins_100g": 9,
+            "fiber_100g": 17
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 338.9, "grams": 11, "energySource": "kj" }
+    },
+    {
+      "label": "oat drink — legacy energy_100g (kJ) only",
+      "barcode": "7394376616037",
+      "http": 200,
+      "body": {
+        "code": "7394376616037",
+        "status": 1,
+        "product": {
+          "product_name": "Oat Drink Barista",
+          "brands": "Oatly",
+          "nutriments": {
+            "energy_100g": 245,
+            "fat_100g": 3,
+            "carbohydrates_100g": 6.6,
+            "proteins_100g": 1.1
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 58.6, "grams": null, "energySource": "kj" }
+    },
+    {
+      "label": "chicken breast pack — no serving → 100 g default",
+      "barcode": "20123456",
+      "http": 200,
+      "body": {
+        "code": "20123456",
+        "status": 1,
+        "product": {
+          "product_name": "Chicken Breast Fillets",
+          "brands": "Lidl",
+          "nutriments": {
+            "energy-kcal_100g": 106,
+            "fat_100g": 1.2,
+            "carbohydrates_100g": 0,
+            "proteins_100g": 24
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 106, "grams": null, "energySource": "kcal" }
+    },
+    {
+      "label": "protein bar — serving_quantity as a string",
+      "barcode": "5060088702534",
+      "http": 200,
+      "body": {
+        "code": "5060088702534",
+        "status": 1,
+        "product": {
+          "product_name": "Protein Bar Chocolate Peanut",
+          "brands": "Grenade",
+          "serving_size": "1 bar (60 g)",
+          "serving_quantity": "60",
+          "nutriments": {
+            "energy-kcal_100g": 353,
+            "fat_100g": 13,
+            "carbohydrates_100g": 33,
+            "proteins_100g": 35
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 353, "grams": 60, "energySource": "kcal" }
+    },
+    {
+      "label": "greek yogurt — 150 g serving, comma decimals",
+      "barcode": "5201054017227",
+      "http": 200,
+      "body": {
+        "code": "5201054017227",
+        "status": 1,
+        "product": {
+          "product_name": "Total 0% Greek Yoghurt",
+          "brands": "Fage",
+          "serving_size": "150 g",
+          "serving_quantity": 150,
+          "nutriments": {
+            "energy-kcal_100g": 54,
+            "fat_100g": "0",
+            "carbohydrates_100g": "3,0",
+            "proteins_100g": "10,3"
+          }
+        }
+      },
+      "expect": {
+        "status": "found",
+        "kcal": 54,
+        "grams": 150,
+        "energySource": "kcal",
+        "protein": 10.3
+      }
+    },
+    {
+      "label": "partial nutriments — fat missing (unknown, flagged)",
+      "barcode": "8000500310427",
+      "http": 200,
+      "body": {
+        "code": "8000500310427",
+        "status": 1,
+        "product": {
+          "product_name": "Rice Cakes",
+          "brands": "Sondey",
+          "serving_quantity": 7.5,
+          "nutriments": {
+            "energy-kcal_100g": 387,
+            "carbohydrates_100g": 81,
+            "proteins_100g": 8
+          }
+        }
+      },
+      "expect": {
+        "status": "found",
+        "kcal": 387,
+        "grams": 7.5,
+        "energySource": "kcal",
+        "missing": ["fat"]
+      }
+    },
+    {
+      "label": "no energy at all — Atwater 4/4/9 from macros",
+      "barcode": "4056489123456",
+      "http": 200,
+      "body": {
+        "code": "4056489123456",
+        "status": 1,
+        "product": {
+          "product_name_en": "Peanut Butter Smooth",
+          "brands": "Crownfield",
+          "serving_quantity": 20,
+          "nutriments": {
+            "fat_100g": 49,
+            "carbohydrates_100g": 12,
+            "proteins_100g": 26
+          }
+        }
+      },
+      "expect": { "status": "found", "kcal": 593, "grams": 20, "energySource": "macros" }
+    },
+    {
+      "label": "product without nutrition facts",
+      "barcode": "3560070123456",
+      "http": 200,
+      "body": {
+        "code": "3560070123456",
+        "status": 1,
+        "product": {
+          "product_name": "Tea bags Earl Grey",
+          "brands": "Carrefour",
+          "nutriments": {}
+        }
+      },
+      "expect": { "status": "no_nutrition", "prefillName": "Tea bags Earl Grey" }
+    },
+    {
+      "label": "unknown barcode — HTTP 404 status 0",
+      "barcode": "0000000000000",
+      "http": 404,
+      "body": {
+        "code": "0000000000000",
+        "status": 0,
+        "status_verbose": "product not found"
+      },
+      "expect": { "status": "not_found" }
+    },
+    {
+      "label": "unknown barcode — HTTP 200 with status 0 (older API behaviour)",
+      "barcode": "1111111111111",
+      "http": 200,
+      "body": {
+        "code": "1111111111111",
+        "status": 0,
+        "status_verbose": "product not found"
+      },
+      "expect": { "status": "not_found" }
+    },
+    {
+      "label": "server error",
+      "barcode": "2222222222222",
+      "http": 503,
+      "body": { "error": "Service Unavailable" },
+      "expect": { "status": "error" }
+    }
+  ]
+}

@@ -61,7 +61,7 @@ export default function NutritionScreen() {
     useData();
   const { waterMl, addWater } = useWater(todayKeyValue);
   const { showToast } = useToastContext();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const { programGoal } = useProgram();
   const { supplementsList, supplementChecksForToday, addSupplementItem } =
     useSupplements();
@@ -139,13 +139,17 @@ export default function NutritionScreen() {
   const [recentFoods, setRecentFoods] = useState<Food[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const handleBarcodeScanned = async (barcode: string) => {
-    const food = await lookupBarcode(barcode);
+    const result = await lookupBarcode(barcode);
     setShowScanner(false);
-    if (!food) {
-      showToast("No nutrition data found for that barcode");
+    if (result.status !== "found") {
+      // Offline/timeout vs not-found get different messages; a known product
+      // name is prefilled into food search as the manual-entry starting point.
+      showToast(result.message);
+      if (result.prefill.name) setFoodQuery(result.prefill.name);
       return;
     }
-    await handleAddFoodToDay(food);
+    // Defaults to the product's serving (servingGrams) instead of 100 g
+    await handleAddFoodToDay(result.food);
   };
   useEffect(() => {
     getRecentFoods()
@@ -190,7 +194,7 @@ export default function NutritionScreen() {
     });
   }, [myFoodsLoaded]);
 
-  const handleAddFoodToDay = async (food: Food) => {
+  const handleAddFoodToDay = async (food: Food & { servingGrams?: number | null }) => {
     try {
       await addMealTemplateForDay(selectedMealDay, foodToMealTemplate(food));
       showToast(`Added ${food.name}`);
@@ -231,7 +235,15 @@ export default function NutritionScreen() {
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
   const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
-  const proteinSuggestion = suggestProteinTarget(scoreHistory, macroTargets.protein || 0);
+  // Completed days only; never suggests below 1.6 g/kg of bodyweight
+  const proteinSuggestion = suggestProteinTarget(
+    scoreHistory,
+    macroTargets.protein || 0,
+    {
+      todayKey: todayKeyValue,
+      weightKg: Number(user?.weight) || null,
+    }
+  );
   // Apply the suggested target to preferences; nutritionTargets derive from
   // user prefs, so refreshUser propagates the change everywhere.
   const handleApplyProteinTarget = async (grams: number) => {

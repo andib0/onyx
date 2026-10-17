@@ -21,7 +21,7 @@ import { getScores, type DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
-import { buildNutritionTargets } from "../utils/nutrition";
+import { resolveNutritionTargets } from "../utils/adaptiveTargets";
 import { flushMutationQueue } from "../utils/mutationQueue";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
 
@@ -186,15 +186,30 @@ export function DataProvider({
 
   // Derived
   const meta = user?.preferences || DATA.meta;
+  // Goal-aware targets: trend weight, MSJ when known, adaptive TDEE from logs
+  const scoreRows = scoresQuery.data;
   const nutritionTargets = useMemo(
     () =>
-      buildNutritionTargets(
-        user?.weight,
-        meta.proteinTarget,
-        meta.hydrationTarget,
-        programGoal
-      ),
-    [user?.weight, meta.proteinTarget, meta.hydrationTarget, programGoal]
+      resolveNutritionTargets({
+        profileWeightKg: user?.weight,
+        proteinPreference: meta.proteinTarget,
+        hydrationTarget: meta.hydrationTarget,
+        goal: programGoal,
+        logEntries,
+        scoreHistory: scoreRows ?? [],
+        todayKey: todayKeyValue,
+        ageYears: user?.age ?? null,
+      }),
+    [
+      user?.weight,
+      user?.age,
+      meta.proteinTarget,
+      meta.hydrationTarget,
+      programGoal,
+      logEntries,
+      scoreRows,
+      todayKeyValue,
+    ]
   );
   const stateLoading = stateQuery.isLoading;
   const loadError = stateQuery.isError;

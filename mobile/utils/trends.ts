@@ -147,6 +147,56 @@ export function buildWeightTrend(logEntries: LogEntry[], windowDays = 28): Weigh
   return { points, currentKg, weeklyRateKg: slopePerDay * 7 };
 }
 
+// Valid weigh-ins, oldest → newest.
+function weighIns(logEntries: LogEntry[]): WeightPoint[] {
+  return logEntries
+    .map((entry) => ({
+      date: entry.date,
+      weightKg: parseFloat(String(entry.bw).replace(",", ".")),
+    }))
+    .filter((p) => !isNaN(p.weightKg) && p.weightKg > 0)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+// Ordinary least squares y = a + b·x over (day index, kg).
+function olsFit(points: WeightPoint[]): { slopePerDay: number; fitAtLast: number } {
+  const dayOf = (date: string) => Math.floor(Date.parse(date + "T00:00:00Z") / 86400000);
+  const xs = points.map((p) => dayOf(p.date));
+  const ys = points.map((p) => p.weightKg);
+  const n = points.length;
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    den += (xs[i] - meanX) * (xs[i] - meanX);
+  }
+  const slopePerDay = den === 0 ? 0 : num / den;
+  return { slopePerDay, fitAtLast: meanY + slopePerDay * (xs[n - 1] - meanX) };
+}
+
+// Bodyweight slope (kg/week) from an OLS fit over the last `lastN` weigh-ins —
+// the Outcome Score's Bw input (contracts/README.md). Null with < 3 weigh-ins.
+export function weightSlopeKgPerWeek(logEntries: LogEntry[], lastN = 14): number | null {
+  const points = weighIns(logEntries).slice(-lastN);
+  if (points.length < 3) return null;
+  return olsFit(points).slopePerDay * 7;
+}
+
+// Trend weight for targets: the regression line's value at the latest weigh-in
+// over the last `lastN` weigh-ins, once there are ≥ `minPoints` (one noisy
+// morning doesn't move targets). Null → caller falls back to profile weight.
+export function trendWeightKg(
+  logEntries: LogEntry[],
+  minPoints = 7,
+  lastN = 14
+): number | null {
+  const points = weighIns(logEntries).slice(-lastN);
+  if (points.length < minPoints) return null;
+  return Math.round(olsFit(points).fitAtLast * 10) / 10;
+}
+
 // -- Yesterday recap --
 
 export type YesterdayRecap = {
