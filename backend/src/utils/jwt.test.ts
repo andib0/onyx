@@ -16,15 +16,23 @@ describe('jwt utils', () => {
   });
 
   it('round-trips a refresh token', () => {
-    const token = generateRefreshToken('user-1', 'a@b.com');
+    const token = generateRefreshToken('user-1', 'a@b.com', 'fam-1');
     expect(verifyRefreshToken(token)?.sub).toBe('user-1');
   });
 
   it('rejects tokens signed with the other secret', () => {
     const access = generateAccessToken('user-1', 'a@b.com');
-    const refresh = generateRefreshToken('user-1', 'a@b.com');
+    const refresh = generateRefreshToken('user-1', 'a@b.com', 'fam-1');
     expect(verifyRefreshToken(access)).toBeNull();
     expect(verifyAccessToken(refresh)).toBeNull();
+  });
+
+  it('gives every refresh token a unique jti and carries the family', () => {
+    const a = generateRefreshToken('user-1', 'a@b.com', 'fam-1');
+    const b = generateRefreshToken('user-1', 'a@b.com', 'fam-1');
+    expect(a).not.toBe(b);
+    expect(verifyRefreshToken(a)?.jti).not.toBe(verifyRefreshToken(b)?.jti);
+    expect(verifyRefreshToken(a)?.fam).toBe('fam-1');
   });
 
   it('rejects garbage tokens', () => {

@@ -29,4 +29,19 @@ export async function registerUser(): Promise<TestUser> {
   };
 }
 
+/** A second session ("device") for an existing user. */
+export async function loginUser(u: TestUser): Promise<TestUser> {
+  const res = await http()
+    .post('/api/auth/login')
+    .send({ email: u.email, password: u.password });
+  if (res.status !== 200)
+    throw new Error(`login failed ${res.status} ${JSON.stringify(res.body)}`);
+  return {
+    email: u.email,
+    password: u.password,
+    accessToken: res.body.data.accessToken,
+    refreshToken: res.body.data.refreshToken,
+  };
+}
+
 export const auth = (u: TestUser) => ({ Authorization: `Bearer ${u.accessToken}` });

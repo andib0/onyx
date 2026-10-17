@@ -20,6 +20,16 @@ const COOKIE_OPTIONS = {
   path: '/',
 };
 
+/** The mobile app sends the refresh token in the body; browsers use the cookie. */
+function presentedRefreshToken(req: Request): string | undefined {
+  const fromBody = (req.body as { refreshToken?: unknown } | undefined)?.refreshToken;
+  if (typeof fromBody === 'string' && fromBody) return fromBody;
+  const fromCookie = (req.cookies as Record<string, unknown> | undefined)?.[
+    REFRESH_TOKEN_COOKIE
+  ];
+  return typeof fromCookie === 'string' && fromCookie ? fromCookie : undefined;
+}
+
 export async function register(req: Request, res: Response) {
   try {
     const parsed = registerSchema.safeParse(req.body);
@@ -84,7 +94,7 @@ export async function login(req: Request, res: Response) {
 
 export async function refresh(req: Request, res: Response) {
   try {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE] || req.body.refreshToken;
+    const refreshToken = presentedRefreshToken(req);
 
     if (!refreshToken) {
       return sendUnauthorized(res, 'No refresh token provided');
@@ -109,10 +119,9 @@ export async function refresh(req: Request, res: Response) {
 
 export async function logout(req: AuthenticatedRequest, res: Response) {
   try {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE];
-
     if (req.userId) {
-      await authService.logout(req.userId, refreshToken);
+      const accessToken = req.headers.authorization?.slice(7);
+      await authService.logout(req.userId, accessToken, presentedRefreshToken(req));
     }
 
     res.clearCookie(REFRESH_TOKEN_COOKIE);
