@@ -23,6 +23,7 @@ interface TimelineContextType {
 }
 
 const TimelineContext = createContext<TimelineContextType | null>(null);
+const EMPTY_CHECKS: Record<string, boolean> = {};
 
 export function TimelineProvider({
   children,
@@ -33,8 +34,8 @@ export function TimelineProvider({
   trainingDayActive,
   completionByBlockId,
   workoutCompletedToday = false,
-  supplementChecks = {},
-  mealCheckMap = {},
+  supplementChecks = EMPTY_CHECKS,
+  mealCheckMap = EMPTY_CHECKS,
 }: {
   children: ReactNode;
   scheduleBlocks: ScheduleBlock[];
@@ -96,43 +97,62 @@ export function TimelineProvider({
   const timelineTotalBlocks = timelineBlocks.length;
   // Each source completes through its own flow: program via workout,
   // supplements via daily checks, meals via meal log, schedule via completion API.
-  const timelineDoneCount = timelineBlocks.reduce((count, block) => {
-    const blockId = block.id || "";
-    let done = false;
-    if (block.source === "program") {
-      done = workoutCompletedToday;
-    } else if (block.source === "supplement") {
-      done = Boolean(supplementChecks[blockId.replace("supp_block_", "")]);
-    } else if (block.source === "nutrition") {
-      done = Boolean(mealCheckMap[blockId.replace("nutrition_", "")]);
-    } else {
-      done = Boolean(completionByBlockId[blockId]);
-    }
-    return done ? count + 1 : count;
-  }, 0);
+  const timelineDoneCount = useMemo(
+    () =>
+      timelineBlocks.reduce((count, block) => {
+        const blockId = block.id || "";
+        let done = false;
+        if (block.source === "program") {
+          done = workoutCompletedToday;
+        } else if (block.source === "supplement") {
+          done = Boolean(supplementChecks[blockId.replace("supp_block_", "")]);
+        } else if (block.source === "nutrition") {
+          done = Boolean(mealCheckMap[blockId.replace("nutrition_", "")]);
+        } else {
+          done = Boolean(completionByBlockId[blockId]);
+        }
+        return done ? count + 1 : count;
+      }, 0),
+    [
+      timelineBlocks,
+      workoutCompletedToday,
+      supplementChecks,
+      mealCheckMap,
+      completionByBlockId,
+    ]
+  );
   const timelineProgressPercent = timelineTotalBlocks
     ? Math.round((timelineDoneCount / timelineTotalBlocks) * 100)
     : 0;
   const timelineRemainingCount = timelineTotalBlocks - timelineDoneCount;
 
-  return (
-    <TimelineContext.Provider
-      value={{
-        timelineBlocks,
-        visibleBlocks,
-        nextStartBlock,
-        nextStartInMinutes,
-        showAllTimeline,
-        setShowAllTimeline,
-        timelineTotalBlocks,
-        timelineDoneCount,
-        timelineProgressPercent,
-        timelineRemainingCount,
-      }}
-    >
-      {children}
-    </TimelineContext.Provider>
+  const value = useMemo<TimelineContextType>(
+    () => ({
+      timelineBlocks,
+      visibleBlocks,
+      nextStartBlock,
+      nextStartInMinutes,
+      showAllTimeline,
+      setShowAllTimeline,
+      timelineTotalBlocks,
+      timelineDoneCount,
+      timelineProgressPercent,
+      timelineRemainingCount,
+    }),
+    [
+      timelineBlocks,
+      visibleBlocks,
+      nextStartBlock,
+      nextStartInMinutes,
+      showAllTimeline,
+      timelineTotalBlocks,
+      timelineDoneCount,
+      timelineProgressPercent,
+      timelineRemainingCount,
+    ]
   );
+
+  return <TimelineContext.Provider value={value}>{children}</TimelineContext.Provider>;
 }
 
 export function useTimeline() {

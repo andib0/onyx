@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, ZoomIn, useReducedMotion } from "react-native-reanimated";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToastContext } from "../../contexts/ToastContext";
 import { useData } from "../../contexts/DataContext";
@@ -70,6 +70,7 @@ export default function FocusScreen() {
   const { colors, tints } = useTheme();
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const {
     stateLoading,
     nutritionTargets,
@@ -337,7 +338,7 @@ export default function FocusScreen() {
 
       {/* Sync failure banner */}
       {loadError ? (
-        <Pressable onPress={handleRefresh}>
+        <Pressable accessibilityRole="button" onPress={handleRefresh}>
           <View style={styles.errorBanner}>
             <Text style={styles.errorBannerText}>
               Couldn't sync with server — tap to retry
@@ -347,7 +348,10 @@ export default function FocusScreen() {
       ) : null}
       {/* Header: greeting + date, no clock (status bar has one) */}
       <View style={styles.headerRow}>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.headerText}>
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.duration(400)}
+          style={styles.headerText}
+        >
           <Text style={styles.greeting}>
             {greeting}
             {displayName ? `, ${displayName}` : ""}
@@ -355,11 +359,13 @@ export default function FocusScreen() {
           <Text style={styles.dateLine}>{formatToday()}</Text>
           <SyncStatusPill />
         </Animated.View>
-        <Animated.View entering={ZoomIn.delay(150).duration(450)}>
+        <Animated.View
+          entering={reduceMotion ? undefined : ZoomIn.delay(150).duration(450)}
+        >
           <Ionicons
-            name={getGreetingIcon(nowMinutes).name}
+            name={getGreetingIcon(nowMinutes, colors).name}
             size={34}
-            color={getGreetingIcon(nowMinutes).color}
+            color={getGreetingIcon(nowMinutes, colors).color}
           />
         </Animated.View>
       </View>
@@ -400,8 +406,14 @@ export default function FocusScreen() {
       {slot === "recap" ? <RecapCard recap={recap} streak={streak} /> : null}
 
       {/* Day Score — the anchor, links to Schedule */}
-      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-        <Pressable onPress={() => router.push("/(tabs)/schedule")}>
+      <Animated.View
+        entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(400)}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityHint="Opens your schedule"
+          onPress={() => router.push("/(tabs)/schedule")}
+        >
           <Card>
             <Glow color={colors.good} size={150} x={52} y={52} opacity={0.1} />
             <View style={styles.dayRow}>

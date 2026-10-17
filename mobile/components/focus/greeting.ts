@@ -1,5 +1,5 @@
-import type { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme";
+import type Ionicons from "@expo/vector-icons/Ionicons";
+import type { Palette } from "../../theme";
 
 // Time-of-day copy and atmosphere for the Focus header.
 
@@ -13,7 +13,8 @@ export const getGreeting = (minutes: number): string => {
 };
 
 export const getGreetingIcon = (
-  minutes: number
+  minutes: number,
+  colors: Pick<Palette, "timeSun" | "timeMoon">
 ): { name: keyof typeof Ionicons.glyphMap; color: string } => {
   const hour = Math.floor(minutes / 60);
   if (hour >= 5 && hour < 8) return { name: "partly-sunny", color: colors.timeSun };

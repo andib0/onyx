@@ -15,9 +15,26 @@ interface CheckboxProps {
   onToggle: () => void;
   color?: string;
   size?: number;
+  /** What is being checked ("Breakfast"). Required when the box stands alone. */
+  label?: string;
+  /**
+   * Set when the checkbox sits inside a row that is itself the accessible
+   * checkbox — the box then becomes decorative so the row is the single focus stop.
+   */
+  decorative?: boolean;
 }
 
-export default function Checkbox({ checked, onToggle, color, size = 24 }: CheckboxProps) {
+// Minimum touch target (iOS HIG 44 pt / Material 48 dp).
+const MIN_TARGET = 44;
+
+export default function Checkbox({
+  checked,
+  onToggle,
+  color,
+  size = 24,
+  label,
+  decorative = false,
+}: CheckboxProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const reduceMotion = useReducedMotion();
@@ -35,7 +52,7 @@ export default function Checkbox({ checked, onToggle, color, size = 24 }: Checkb
 
   const boxStyle = useAnimatedStyle(() => ({
     backgroundColor: progress.value > 0.01 ? fill : "transparent",
-    borderColor: progress.value > 0.01 ? fill : colors.border,
+    borderColor: progress.value > 0.01 ? fill : colors.controlBorder,
   }));
   const markStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
@@ -45,8 +62,12 @@ export default function Checkbox({ checked, onToggle, color, size = 24 }: Checkb
   return (
     <Pressable
       onPress={onToggle}
-      hitSlop={8}
+      hitSlop={Math.max(8, Math.ceil((MIN_TARGET - size) / 2))}
+      accessible={!decorative}
+      importantForAccessibility={decorative ? "no-hide-descendants" : "auto"}
+      accessibilityElementsHidden={decorative}
       accessibilityRole="checkbox"
+      accessibilityLabel={label}
       accessibilityState={{ checked }}
     >
       <Animated.View style={[styles.box, { width: size, height: size }, boxStyle]}>
@@ -63,7 +84,7 @@ const makeStyles = (colors: Palette) =>
     box: {
       borderRadius: radii.sm,
       borderWidth: 2,
-      borderColor: colors.border,
+      borderColor: colors.controlBorder,
       alignItems: "center",
       justifyContent: "center",
     },

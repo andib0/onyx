@@ -36,14 +36,20 @@ export default function Stepper({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} maxFontSizeMultiplier={1.4}>
+        {label}
+      </Text>
       <View style={styles.row}>
         <Pressable
           style={({ pressed }) => [styles.bumpBtn, pressed && styles.pressed]}
           onPress={() => bump(-1)}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${label}`}
         >
-          <Text style={styles.bumpText}>−</Text>
+          <Text style={styles.bumpText} maxFontSizeMultiplier={1.2}>
+            −
+          </Text>
         </Pressable>
         <TextInput
           style={[styles.input, focused && { borderColor: colors.accent }]}
@@ -53,6 +59,8 @@ export default function Stepper({
           placeholder="0"
           placeholderTextColor={colors.muted}
           textAlign="center"
+          accessibilityLabel={label}
+          maxFontSizeMultiplier={1.4}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
@@ -60,8 +68,12 @@ export default function Stepper({
           style={({ pressed }) => [styles.bumpBtn, pressed && styles.pressed]}
           onPress={() => bump(1)}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${label}`}
         >
-          <Text style={styles.bumpText}>+</Text>
+          <Text style={styles.bumpText} maxFontSizeMultiplier={1.2}>
+            +
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -92,13 +104,13 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radii.sm,
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.controlBorder,
       alignItems: "center",
       justifyContent: "center",
     },
     pressed: {
       backgroundColor: colors.surfaceHover,
-      borderColor: colors.accentDim,
+      borderColor: colors.focusRing,
       transform: [{ scale: 0.94 }],
     },
     bumpText: {
@@ -112,7 +124,7 @@ const makeStyles = (colors: Palette) =>
       height: 52,
       backgroundColor: colors.bg,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.controlBorder,
       borderRadius: radii.sm,
       color: colors.text,
       fontSize: fontSizes.xl,

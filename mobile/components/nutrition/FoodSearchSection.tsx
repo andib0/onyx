@@ -11,7 +11,7 @@ import Card from "../ui/Card";
 import type { Food } from "../../api/foods";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, fontSizes, type Palette } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
+import { getSharedStyles } from "../../theme/sharedStyles";
 
 interface FoodSearchSectionProps {
   query: string;
@@ -35,6 +35,7 @@ export default function FoodSearchSection({
   recentFoods = [],
 }: FoodSearchSectionProps) {
   const { colors } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   // Before typing, show the user's repeat foods — most logging is repeats.
   const showRecents = !query.trim() && recentFoods.length > 0;
@@ -77,15 +78,19 @@ export default function FoodSearchSection({
           </View>
           <View style={styles.foodActions}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${food.name}`}
               onPress={() => onAddFood(food)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.foodActionBtn}
             >
               <Text style={styles.foodActionText}>Add</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Save ${food.name} to My Foods`}
               onPress={() => onSaveFood(food.id)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.foodActionBtn}
             >
               <Text style={[styles.foodActionText, { color: colors.good }]}>Save</Text>

@@ -16,8 +16,12 @@ export default function Pill({ label, value, color, dot }: PillProps) {
   return (
     <View style={styles.pill}>
       {dot ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
-      <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, color ? { color } : null]}>{value}</Text>
+      <Text style={styles.label} maxFontSizeMultiplier={1.4}>
+        {label}
+      </Text>
+      <Text style={[styles.value, color ? { color } : null]} maxFontSizeMultiplier={1.4}>
+        {value}
+      </Text>
     </View>
   );
 }

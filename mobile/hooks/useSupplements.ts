@@ -5,18 +5,23 @@ import { enqueueToggle } from "../utils/mutationQueue";
 import type { AppState, SupplementItem } from "../types/appTypes";
 import * as supplementsApi from "../api/supplements";
 
+// Shared empty defaults keep identities stable when the slice is missing.
+const EMPTY_MAP: Record<string, boolean> = {};
+const EMPTY_LIST: SupplementItem[] = [];
+const EMPTY_LOG: Record<string, Record<string, boolean>> = {};
+
 function useSupplements(
   appState: AppState,
   setAppState: Dispatch<SetStateAction<AppState>>,
   todayKeyValue: string,
   showToast: (message: string) => void
 ) {
-  const supplementsList = appState.supplementsList || [];
+  const supplementsList = appState.supplementsList || EMPTY_LIST;
   const supplementChecksForToday =
     appState.suppLog && appState.suppLog[todayKeyValue]
       ? appState.suppLog[todayKeyValue]
-      : appState.supp || {};
-  const supplementLogByDate = appState.suppLog || {};
+      : appState.supp || EMPTY_MAP;
+  const supplementLogByDate = appState.suppLog || EMPTY_LOG;
 
   const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
     // Optimistic: reflect the toggle immediately; the server call follows.

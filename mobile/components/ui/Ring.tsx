@@ -90,8 +90,17 @@ export default function Ring({
         />
       </Svg>
       <View style={styles.center}>
-        <Text style={[styles.value, { fontSize: size * 0.2 }]}>{value}</Text>
-        {label ? <Text style={styles.label}>{label}</Text> : null}
+        <Text
+          style={[styles.value, { fontSize: size * 0.2 }]}
+          maxFontSizeMultiplier={1.2}
+        >
+          {value}
+        </Text>
+        {label ? (
+          <Text style={styles.label} maxFontSizeMultiplier={1.2}>
+            {label}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

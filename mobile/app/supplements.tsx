@@ -1,6 +1,8 @@
 ﻿import { useState, useMemo, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
-import { useAppState } from "../contexts/AppStateContext";
+import { useData } from "../contexts/DataContext";
+import { useSupplements } from "../contexts/SupplementsContext";
+import { useToastContext } from "../contexts/ToastContext";
 import ScreenContainer from "../components/layout/ScreenContainer";
 import Input from "../components/ui/Input";
 import Card from "../components/ui/Card";
@@ -27,8 +29,8 @@ const EMPTY_SUPPLEMENT: SupplementItem = {
 export default function SupplementsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { stateLoading } = useData();
   const {
-    stateLoading,
     supplementsList,
     supplementChecksForToday,
     setSupplementChecked,
@@ -36,8 +38,8 @@ export default function SupplementsScreen() {
     updateSupplementItem,
     removeSupplementItem,
     clearSupplementChecks,
-    showToast,
-  } = useAppState();
+  } = useSupplements();
+  const { showToast } = useToastContext();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -174,6 +176,8 @@ export default function SupplementsScreen() {
           color={colors.supplement}
         />
         <Pressable
+          accessibilityRole="button"
+          hitSlop={6}
           style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
           onPress={() => setShowClearConfirm(true)}
         >
@@ -253,8 +257,10 @@ export default function SupplementsScreen() {
               ) : null}
             </View>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${item.name}`}
               onPress={() => handleAddFromLibrary(item)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.libAddBtn}
             >
               <Text style={styles.libAddText}>Add</Text>
@@ -276,6 +282,7 @@ export default function SupplementsScreen() {
         />
       ) : (
         <Pressable
+          accessibilityRole="button"
           style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
           onPress={() => setShowAddForm(true)}
         >

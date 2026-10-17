@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
   type Dispatch,
@@ -13,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { useToastContext } from "./ToastContext";
 import useLog from "../hooks/useLog";
+import useStableHandlers from "../hooks/useStableHandlers";
 import useImportExport from "../hooks/useImportExport";
 import { exportUserData } from "../api/sync";
 import { getScores, type DailyScore } from "../api/scores";
@@ -51,6 +53,7 @@ const DataContext = createContext<DataContextType | null>(null);
 const APP_STATE_KEY = ["appState"];
 const SCORES_KEY = ["scores"];
 const EMPTY_STATE = normalizeState({});
+const EMPTY_SCORES: DailyScore[] = [];
 
 export function DataProvider({
   children,
@@ -148,20 +151,20 @@ export function DataProvider({
     [queryClient]
   );
 
+  // refetch is stable per observer, so these keep their identity.
+  const refetchState = stateQuery.refetch;
+  const refetchScores = scoresQuery.refetch;
   const reloadState = useCallback(async () => {
-    await Promise.allSettled([stateQuery.refetch(), scoresQuery.refetch()]);
-  }, [stateQuery, scoresQuery]);
+    await Promise.allSettled([refetchState(), refetchScores()]);
+  }, [refetchState, refetchScores]);
 
   const refreshScores = useCallback(async () => {
-    await scoresQuery.refetch();
-  }, [scoresQuery]);
+    await refetchScores();
+  }, [refetchScores]);
 
   // Log
-  const { logEntries, addLogEntry, clearLogEntries, deleteLogEntry } = useLog(
-    appState,
-    setAppState,
-    showToast
-  );
+  const log = useLog(appState, setAppState, showToast);
+  const { logEntries } = log;
 
   // Import/Export
   const importExport = useImportExport(
@@ -169,43 +172,68 @@ export function DataProvider({
     showToast
   );
 
+  const { showImportModal } = importExport;
+  const handlers = useStableHandlers({
+    addLogEntry: log.addLogEntry,
+    clearLogEntries: log.clearLogEntries,
+    deleteLogEntry: log.deleteLogEntry,
+    handleImportClick: importExport.handleImportClick,
+    exportJson: importExport.exportJson,
+    cancelImport: importExport.cancelImport,
+    confirmImport: importExport.confirmImport,
+    resetProgram,
+  });
+
   // Derived
   const meta = user?.preferences || DATA.meta;
-  const nutritionTargets = buildNutritionTargets(
-    user?.weight,
-    meta.proteinTarget,
-    meta.hydrationTarget,
-    programGoal
+  const nutritionTargets = useMemo(
+    () =>
+      buildNutritionTargets(
+        user?.weight,
+        meta.proteinTarget,
+        meta.hydrationTarget,
+        programGoal
+      ),
+    [user?.weight, meta.proteinTarget, meta.hydrationTarget, programGoal]
   );
+  const stateLoading = stateQuery.isLoading;
+  const loadError = stateQuery.isError;
+  const scoreHistory = scoresQuery.data ?? EMPTY_SCORES;
 
-  return (
-    <DataContext.Provider
-      value={{
-        stateLoading: stateQuery.isLoading,
+  const value = useMemo<DataContextType>(
+    () =>
+      Object.assign({}, handlers, {
+        stateLoading,
         appState,
         setAppState,
         todayKeyValue,
         meta,
         nutritionTargets,
         logEntries,
-        addLogEntry,
-        clearLogEntries,
-        deleteLogEntry,
-        showImportModal: importExport.showImportModal,
-        handleImportClick: importExport.handleImportClick,
-        exportJson: importExport.exportJson,
-        cancelImport: importExport.cancelImport,
-        confirmImport: importExport.confirmImport,
-        resetProgram,
-        loadError: stateQuery.isError,
+        showImportModal,
+        loadError,
         reloadState,
-        scoreHistory: scoresQuery.data ?? [],
+        scoreHistory,
         refreshScores,
-      }}
-    >
-      {children}
-    </DataContext.Provider>
+      }),
+    [
+      handlers,
+      stateLoading,
+      appState,
+      setAppState,
+      todayKeyValue,
+      meta,
+      nutritionTargets,
+      logEntries,
+      showImportModal,
+      loadError,
+      reloadState,
+      scoreHistory,
+      refreshScores,
+    ]
   );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 export function useData() {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -163,6 +163,7 @@ export default function MacroDashboard({
           <View style={styles.waterChips}>
             {[250, 500].map((amount) => (
               <Pressable
+                accessibilityRole="button"
                 key={`water-${amount}`}
                 onPress={() => onAddWater(amount)}
                 style={({ pressed }) => [

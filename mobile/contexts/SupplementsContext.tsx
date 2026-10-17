@@ -7,6 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import useSupplementsHook from "../hooks/useSupplements";
+import useStableHandlers from "../hooks/useStableHandlers";
 import { useAuth } from "./AuthContext";
 import { toMinutes } from "../utils/time";
 import type { AppState, SupplementItem } from "../types/appTypes";
@@ -54,12 +55,13 @@ export function SupplementsProvider({
   const { user } = useAuth();
   const caffeineCutoff = user?.preferences?.caffeineCutoff || "";
 
-  // Warn when a caffeinated supplement is checked after the cutoff time
-  const value = useMemo(() => {
-    const baseSetChecked = supplements.setSupplementChecked;
-    const setSupplementChecked = async (supplementId: string, isChecked: boolean) => {
+  const { supplementsList, supplementChecksForToday, supplementLogByDate } = supplements;
+
+  const handlers = useStableHandlers({
+    // Warn when a caffeinated supplement is checked after the cutoff time
+    setSupplementChecked: async (supplementId: string, isChecked: boolean) => {
       if (isChecked && caffeineCutoff) {
-        const supplement = supplements.supplementsList.find((s) => s.id === supplementId);
+        const supplement = supplementsList.find((s) => s.id === supplementId);
         const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
         if (
           supplement &&
@@ -69,10 +71,23 @@ export function SupplementsProvider({
           showToast(`Heads up: past your ${caffeineCutoff} caffeine cutoff`);
         }
       }
-      return baseSetChecked(supplementId, isChecked);
-    };
-    return Object.assign({}, supplements, { setSupplementChecked });
-  }, [supplements, caffeineCutoff, showToast]);
+      return supplements.setSupplementChecked(supplementId, isChecked);
+    },
+    addSupplementItem: supplements.addSupplementItem,
+    updateSupplementItem: supplements.updateSupplementItem,
+    removeSupplementItem: supplements.removeSupplementItem,
+    clearSupplementChecks: supplements.clearSupplementChecks,
+  });
+
+  const value = useMemo<SupplementsContextType>(
+    () =>
+      Object.assign({}, handlers, {
+        supplementsList,
+        supplementChecksForToday,
+        supplementLogByDate,
+      }),
+    [handlers, supplementsList, supplementChecksForToday, supplementLogByDate]
+  );
 
   return (
     <SupplementsContext.Provider value={value}>{children}</SupplementsContext.Provider>

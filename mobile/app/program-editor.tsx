@@ -22,7 +22,7 @@ import { searchExercises, type ExerciseLibraryItem } from "../api/exercises";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useTheme } from "../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette } from "../theme";
-import { sharedStyles } from "../theme/sharedStyles";
+import { getSharedStyles } from "../theme/sharedStyles";
 
 const GOALS = ["bulk", "cut", "recomp", "strength", "general"];
 
@@ -42,6 +42,7 @@ const emptyDay = (index: number): ProgramDayInput => ({
 
 export default function ProgramEditorScreen() {
   const { colors } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { showToast } = useToastContext();
@@ -279,6 +280,7 @@ export default function ProgramEditorScreen() {
                   <View style={styles.suggestList}>
                     {suggestions.slice(0, 6).map((s) => (
                       <Pressable
+                        accessibilityRole="button"
                         key={s.id}
                         style={({ pressed }) => [
                           styles.suggestItem,

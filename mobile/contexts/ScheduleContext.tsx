@@ -1,11 +1,13 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import useCompletion from "../hooks/useCompletion";
+import useStableHandlers from "../hooks/useStableHandlers";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
 
 interface ScheduleContextType {
@@ -32,29 +34,20 @@ export function ScheduleProvider({
   todayKeyValue: string;
   showToast: (message: string) => void;
 }) {
-  const {
-    completionByBlockId,
-    scheduleBlocks,
-    setBlockCompletion,
-    updateScheduleBlock,
-    removeScheduleBlock,
-    addScheduleBlock,
-  } = useCompletion(appState, setAppState, todayKeyValue, showToast);
-
-  return (
-    <ScheduleContext.Provider
-      value={{
-        scheduleBlocks,
-        completionByBlockId,
-        setBlockCompletion,
-        updateScheduleBlock,
-        removeScheduleBlock,
-        addScheduleBlock,
-      }}
-    >
-      {children}
-    </ScheduleContext.Provider>
+  const completion = useCompletion(appState, setAppState, todayKeyValue, showToast);
+  const { completionByBlockId, scheduleBlocks } = completion;
+  const handlers = useStableHandlers({
+    setBlockCompletion: completion.setBlockCompletion,
+    updateScheduleBlock: completion.updateScheduleBlock,
+    removeScheduleBlock: completion.removeScheduleBlock,
+    addScheduleBlock: completion.addScheduleBlock,
+  });
+  const value = useMemo<ScheduleContextType>(
+    () => Object.assign({}, handlers, { scheduleBlocks, completionByBlockId }),
+    [handlers, scheduleBlocks, completionByBlockId]
   );
+
+  return <ScheduleContext.Provider value={value}>{children}</ScheduleContext.Provider>;
 }
 
 export function useSchedule() {

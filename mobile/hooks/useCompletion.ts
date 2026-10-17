@@ -5,6 +5,10 @@ import { enqueueToggle } from "../utils/mutationQueue";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
 import * as scheduleApi from "../api/schedule";
 
+// Shared empty defaults keep identities stable when the slice is missing.
+const EMPTY_MAP: Record<string, boolean> = {};
+const EMPTY_BLOCKS: ScheduleBlock[] = [];
+
 function useCompletion(
   appState: AppState,
   setAppState: Dispatch<SetStateAction<AppState>>,
@@ -14,8 +18,8 @@ function useCompletion(
   const completionByBlockId =
     appState.completion && appState.completion[todayKeyValue]
       ? appState.completion[todayKeyValue]
-      : {};
-  const scheduleBlocks = appState.schedule || [];
+      : EMPTY_MAP;
+  const scheduleBlocks = appState.schedule || EMPTY_BLOCKS;
 
   const setBlockCompletion = async (blockId: string, isComplete: boolean) => {
     // Optimistic: reflect the toggle immediately; the server call follows.

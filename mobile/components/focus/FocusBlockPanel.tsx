@@ -4,7 +4,13 @@ import ProgressBar from "../ui/ProgressBar";
 import Button from "../ui/Button";
 import type { FocusPanelBlock } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, TAG_COLORS, type Palette } from "../../theme";
+import {
+  spacing,
+  radii,
+  fontSizes,
+  tagColor as tagColorFor,
+  type Palette,
+} from "../../theme";
 
 export interface FocusPanelAction {
   label: string;
@@ -21,7 +27,7 @@ export default function FocusBlockPanel({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const block = focusBlock.block;
-  const tagColor = TAG_COLORS[block.tag] || TAG_COLORS.Default;
+  const tagColor = tagColorFor(block.tag, colors);
 
   return (
     <View style={[styles.focusPanel, !focusBlock.isUpcoming && styles.focusPanelActive]}>

@@ -35,6 +35,8 @@ export default function Typo({
       style={[styles[variant], color ? { color } : null, style]}
       numberOfLines={numberOfLines}
       accessibilityRole={accessibilityRole}
+      // Dense tabular numerals clip in fixed rows past ~1.4x; prose scales freely
+      maxFontSizeMultiplier={variant === "mono" ? 1.4 : undefined}
     >
       {children}
     </Text>

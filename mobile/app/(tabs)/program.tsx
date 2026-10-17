@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { deleteProgram } from "../../api/programs";
@@ -27,7 +27,7 @@ import {
   type Palette,
   type TintSet,
 } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
+import { getSharedStyles } from "../../theme/sharedStyles";
 
 const GOAL_LABELS: Record<string, string> = {
   bulk: "Lean bulk",
@@ -47,9 +47,12 @@ function ProgramCard({
   onSelect: () => void;
 }) {
   const { colors, tints } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   return (
     <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
       onPress={onSelect}
       style={({ pressed }) => [
         styles.programCard,
@@ -82,6 +85,7 @@ function ProgramCard({
 
 export default function ProgramScreen() {
   const { colors, tints } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
@@ -183,7 +187,11 @@ export default function ProgramScreen() {
           )}
         </>
       ) : (
-        <Pressable onPress={() => setShowPicker(true)}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityHint="Choose a different program"
+          onPress={() => setShowPicker(true)}
+        >
           <Card>
             <View style={styles.selectedRow}>
               <View style={styles.selectedInfo}>
@@ -307,6 +315,8 @@ export default function ProgramScreen() {
                 : null;
               return (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityHint="Opens exercise details"
                   key={`row-${idx}`}
                   onPress={() =>
                     router.push({
