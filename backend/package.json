@@ -16,7 +16,9 @@
     "format": "prettier src/ --check",
     "format:write": "prettier src/ --write",
     "test": "vitest run",
-    "test:api": "vitest run --config vitest.api.config.ts"
+    "test:api": "vitest run --config vitest.api.config.ts",
+    "perf:seed": "node scripts/perf/seed_bench.mjs",
+    "perf:bench": "node scripts/perf/bench.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
