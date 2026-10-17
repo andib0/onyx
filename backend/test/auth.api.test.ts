@@ -126,6 +126,15 @@ describe('refresh token rotation (audit F1)', () => {
     expect(results.filter((r) => r.status === 401)).toHaveLength(4);
   });
 
+  it('token types cannot be swapped (audit F13)', async () => {
+    const u = await registerUser();
+    expect((await refresh(u.accessToken)).status).toBe(401);
+    const asBearer = await http()
+      .get('/api/auth/me')
+      .set({ Authorization: `Bearer ${u.refreshToken}` });
+    expect(asBearer.status).toBe(401);
+  });
+
   it('rejects a garbage refresh token and a missing one', async () => {
     expect((await refresh('not-a-jwt')).status).toBe(401);
     expect((await http().post('/api/auth/refresh').send({})).status).toBe(401);
