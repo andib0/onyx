@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { deleteProgram } from "../../api/programs";

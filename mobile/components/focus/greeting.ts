@@ -1,4 +1,4 @@
-import type { Ionicons } from "@expo/vector-icons";
+import type Ionicons from "@expo/vector-icons/Ionicons";
 import type { Palette } from "../../theme";
 
 // Time-of-day copy and atmosphere for the Focus header.

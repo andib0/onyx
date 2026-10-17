@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useAuth } from "../contexts/AuthContext";
 import { useProgram } from "../contexts/ProgramContext";

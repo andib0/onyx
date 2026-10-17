@@ -3,15 +3,12 @@ import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import {
-  useFonts,
-  Archivo_700Bold,
-  Archivo_800ExtraBold,
-} from "@expo-google-fonts/archivo";
-import {
-  JetBrainsMono_500Medium,
-  JetBrainsMono_700Bold,
-} from "@expo-google-fonts/jetbrains-mono";
+import { useFonts } from "expo-font";
+// Deep imports: the package roots require every weight (34 TTFs); we ship the 4 we use.
+import { Archivo_700Bold } from "@expo-google-fonts/archivo/700Bold";
+import { Archivo_800ExtraBold } from "@expo-google-fonts/archivo/800ExtraBold";
+import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Medium";
+import { JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono/700Bold";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 

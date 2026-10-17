@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { subscribePendingCount } from "../../utils/mutationQueue";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette } from "../../theme";

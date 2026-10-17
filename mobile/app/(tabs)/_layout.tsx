@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import NotificationResponder from "../../components/NotificationResponder";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useMeals } from "../../contexts/MealsContext";

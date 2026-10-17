@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import Card from "../ui/Card";
 import ProgressBar from "../ui/ProgressBar";

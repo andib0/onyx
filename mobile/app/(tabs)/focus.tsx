@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, ZoomIn, useReducedMotion } from "react-native-reanimated";
 import { useAuth } from "../../contexts/AuthContext";

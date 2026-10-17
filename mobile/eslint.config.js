@@ -23,6 +23,27 @@ export default defineConfig([
     },
     rules: {
       "no-undef": "off",
+      // Barrels evaluate every icon set / font weight and ship their assets (Bet 11).
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@expo/vector-icons",
+              message: "Import the family directly: @expo/vector-icons/Ionicons",
+            },
+            {
+              name: "@expo-google-fonts/archivo",
+              message: "Import the weight directly: @expo-google-fonts/archivo/700Bold",
+            },
+            {
+              name: "@expo-google-fonts/jetbrains-mono",
+              message:
+                "Import the weight directly: @expo-google-fonts/jetbrains-mono/500Medium",
+            },
+          ],
+        },
+      ],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
