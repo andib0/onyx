@@ -28,6 +28,7 @@ export default function SupplementCard({
         onToggle={onToggle}
         color={colors.supplement}
         size={22}
+        label={supplement.item}
       />
       <View style={styles.suppInfo}>
         <Text style={[styles.suppName, isChecked && styles.suppNameDone]}>

@@ -78,6 +78,8 @@ export default function Button({
         scale.value = withSpring(1, { damping: 14, stiffness: 300 });
       }}
       disabled={isDisabled}
+      // sm keeps its compact 36 pt look but gets a 44 pt hit area
+      hitSlop={size === "sm" ? SM_HIT_SLOP : undefined}
       style={[
         styles.base,
         sizeStyles[size],
@@ -130,6 +132,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+const SM_HIT_SLOP = { top: 4, bottom: 4, left: 0, right: 0 };
 
 const sizeStyles = StyleSheet.create({
   sm: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 36 },

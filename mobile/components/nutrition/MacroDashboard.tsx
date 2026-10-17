@@ -163,6 +163,7 @@ export default function MacroDashboard({
           <View style={styles.waterChips}>
             {[250, 500].map((amount) => (
               <Pressable
+                accessibilityRole="button"
                 key={`water-${amount}`}
                 onPress={() => onAddWater(amount)}
                 style={({ pressed }) => [

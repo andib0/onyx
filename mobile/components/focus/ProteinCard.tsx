@@ -28,7 +28,11 @@ export default function ProteinCard({
   if (!targets.protein) return null;
   const pct = Math.min((consumed.protein / targets.protein) * 100, 100);
   return (
-    <Pressable onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityHint="Opens nutrition"
+      onPress={onPress}
+    >
       <Card>
         <View style={styles.proteinHeader}>
           <Typo variant="label">Protein</Typo>

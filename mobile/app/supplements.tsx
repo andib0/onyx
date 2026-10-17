@@ -174,6 +174,8 @@ export default function SupplementsScreen() {
           color={colors.supplement}
         />
         <Pressable
+          accessibilityRole="button"
+          hitSlop={6}
           style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
           onPress={() => setShowClearConfirm(true)}
         >
@@ -253,8 +255,10 @@ export default function SupplementsScreen() {
               ) : null}
             </View>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${item.name}`}
               onPress={() => handleAddFromLibrary(item)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.libAddBtn}
             >
               <Text style={styles.libAddText}>Add</Text>
@@ -276,6 +280,7 @@ export default function SupplementsScreen() {
         />
       ) : (
         <Pressable
+          accessibilityRole="button"
           style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
           onPress={() => setShowAddForm(true)}
         >

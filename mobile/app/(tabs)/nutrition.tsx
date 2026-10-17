@@ -49,10 +49,11 @@ import { suggestProteinTarget } from "../../utils/adaptiveTargets";
 import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, fontSizes, motion, type Palette } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
+import { getSharedStyles } from "../../theme/sharedStyles";
 
 export default function NutritionScreen() {
   const { colors } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const reduceMotion = useReducedMotion();
   const router = useRouter();

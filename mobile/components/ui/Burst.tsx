@@ -8,16 +8,23 @@ import Animated, {
   useReducedMotion,
   type SharedValue,
 } from "react-native-reanimated";
-import { colors } from "../../theme";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const PARTICLE_COUNT = 12;
-const PARTICLE_COLORS = [colors.warning, colors.good, colors.accent, colors.accent2];
 
-function Particle({ index, progress }: { index: number; progress: SharedValue<number> }) {
+function Particle({
+  index,
+  progress,
+  palette,
+}: {
+  index: number;
+  progress: SharedValue<number>;
+  palette: string[];
+}) {
   const angle = (index / PARTICLE_COUNT) * Math.PI * 2;
   const distance = 46 + (index % 3) * 16;
   const size = 5 + (index % 3) * 2;
-  const color = PARTICLE_COLORS[index % PARTICLE_COLORS.length];
+  const color = palette[index % palette.length];
 
   const style = useAnimatedStyle(() => ({
     opacity: 1 - progress.value,
@@ -41,6 +48,8 @@ function Particle({ index, progress }: { index: number; progress: SharedValue<nu
 
 // One-shot celebratory particle burst. Remount (change key) to replay.
 export default function Burst() {
+  const { colors } = useTheme();
+  const palette = [colors.warning, colors.good, colors.accent, colors.accent2];
   const progress = useSharedValue(0);
   const reduceMotion = useReducedMotion();
 
@@ -60,7 +69,12 @@ export default function Burst() {
   return (
     <View pointerEvents="none" style={styles.wrap}>
       {Array.from({ length: PARTICLE_COUNT }).map((_, index) => (
-        <Particle key={`p-${index}`} index={index} progress={progress} />
+        <Particle
+          key={`p-${index}`}
+          index={index}
+          progress={progress}
+          palette={palette}
+        />
       ))}
     </View>
   );

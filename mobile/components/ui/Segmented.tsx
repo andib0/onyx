@@ -71,7 +71,11 @@ export default function Segmented<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
-            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+            <Text
+              style={[styles.label, active && styles.labelActive]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.4}
+            >
               {getLabel ? getLabel(option) : option}
             </Text>
           </Pressable>
@@ -105,7 +109,7 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radii.sm,
       alignItems: "center",
       justifyContent: "center",
-      minHeight: 40,
+      minHeight: 44,
     },
     label: {
       fontSize: fontSizes.sm,

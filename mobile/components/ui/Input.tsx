@@ -65,7 +65,11 @@ export default function Input({
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(true);
 
-  const borderColor = error ? colors.danger : focused ? colors.accent : colors.border;
+  const borderColor = error
+    ? colors.danger
+    : focused
+      ? colors.accent
+      : colors.controlBorder;
 
   return (
     <View style={styles.wrap}>
@@ -91,6 +95,7 @@ export default function Input({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.faint}
+          accessibilityLabel={label || placeholder}
           keyboardType={keyboardType}
           maxLength={maxLength}
           autoFocus={autoFocus}
@@ -143,7 +148,7 @@ const makeStyles = (colors: Palette) =>
       gap: spacing.sm,
       backgroundColor: colors.bg,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.controlBorder,
       borderRadius: radii.sm,
       paddingHorizontal: spacing.md,
       minHeight: 48,

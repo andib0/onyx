@@ -41,7 +41,12 @@ function LogEntryCard({ entry, onDelete }: { entry: LogEntry; onDelete: () => vo
       <View style={styles.entryHeader}>
         <Text style={styles.entryDate}>{entry.date}</Text>
         <Text style={styles.entryDay}>{entry.day}</Text>
-        <Pressable onPress={onDelete} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Delete entry"
+          onPress={onDelete}
+          hitSlop={8}
+        >
           <Text style={styles.deleteText}>x</Text>
         </Pressable>
       </View>
@@ -179,6 +184,8 @@ export default function LogScreen() {
             <View style={styles.dayRow}>
               {DAY_OPTIONS.map((day) => (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: form.day === day }}
                   key={day}
                   style={[styles.dayChip, form.day === day && styles.dayChipSelected]}
                   onPress={() => updateField("day", day)}
@@ -265,12 +272,14 @@ export default function LogScreen() {
           {/* Buttons */}
           <View style={styles.formButtons}>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}
               onPress={handleAdd}
             >
               <Text style={styles.addBtnText}>Add Entry</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
               onPress={() => setShowClearConfirm(true)}
             >
@@ -300,6 +309,7 @@ export default function LogScreen() {
         )}
         {sorted.length > historyLimit ? (
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [styles.showMoreBtn, pressed && styles.pressed]}
             onPress={() => setHistoryLimit((prev) => prev + HISTORY_PAGE_SIZE)}
             accessibilityLabel="Show more log entries"

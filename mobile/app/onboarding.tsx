@@ -28,13 +28,14 @@ import {
   type Palette,
   type TintSet,
 } from "../theme";
-import { sharedStyles } from "../theme/sharedStyles";
+import { getSharedStyles } from "../theme/sharedStyles";
 
 const TOTAL_STEPS = 3;
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { colors, tints } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors, tints), [colors, tints]);
   const reduceMotion = useReducedMotion();
   const { refreshUser } = useAuth();

@@ -37,15 +37,19 @@ export default function MyFoodsSection({
           </View>
           <View style={styles.foodActions}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${uf.food.name}`}
               onPress={() => onAddFood(uf.food)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.foodActionBtn}
             >
               <Text style={styles.foodActionText}>Add</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${uf.food.name} from My Foods`}
               onPress={() => onRemoveFood(uf.id)}
-              hitSlop={8}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               style={styles.foodActionBtn}
             >
               <Text style={[styles.foodActionText, { color: colors.danger }]}>x</Text>

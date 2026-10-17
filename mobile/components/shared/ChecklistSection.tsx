@@ -77,6 +77,7 @@ export default function ChecklistSection({
               onToggle={() => handleToggle(item.id)}
               color={checkFill}
               size={22}
+              decorative
             />
             <View style={styles.textContainer}>
               <Text
@@ -96,6 +97,8 @@ export default function ChecklistSection({
       })}
       {hidden > 0 ? (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Show ${hidden} more`}
           style={({ pressed }) => [styles.moreRow, pressed && styles.rowPressed]}
           onPress={onShowMore}
         >

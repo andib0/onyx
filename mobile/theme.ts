@@ -9,26 +9,30 @@ const darkColors = {
   edgeHighlight: "rgba(255, 255, 255, 0.08)",
   text: "rgba(255, 255, 255, 0.94)",
   muted: "rgba(255, 255, 255, 0.60)",
-  faint: "rgba(255, 255, 255, 0.40)",
+  faint: "rgba(255, 255, 255, 0.50)",
   border: "rgba(255, 255, 255, 0.08)",
   borderLight: "rgba(255, 255, 255, 0.16)",
+  controlBorder: "rgba(255, 255, 255, 0.36)",
+  focusRing: "#6b93ff",
   shadow: "rgba(0, 0, 0, 0.45)",
   // Single jewel accent — deeper, more saturated than the old #7aa2ff
-  accent: "#4d7cff",
-  accentDim: "rgba(77, 124, 255, 0.4)",
+  accent: "#6b93ff",
+  accentDim: "rgba(107, 147, 255, 0.4)",
   accent2: "#7fb0ff",
   // Semantics held slightly muted so the accent always wins attention
   good: "#34c98a",
   warning: "#e8a838",
-  danger: "#e2554b",
+  danger: "#ec6f66",
   supplement: "#2dd4bf",
   // On-color inks: dark ink for accent-filled controls, white for saturated
   // fills (danger buttons, toasts, checked boxes)
   onAccent: "#0b0f14",
-  onFill: "#ffffff",
+  onFill: "#0b0f14",
   // Time-of-day glyph colors (Focus greeting icon)
   timeSun: "#fbbf24",
   timeMoon: "#a78bfa",
+  tagSleep: "#a78bfa",
+  tagRecovery: "#f472b6",
 };
 
 // Light palette — cool near-whites, slate text, accent deepened for white-bg contrast
@@ -40,22 +44,26 @@ const lightColors: typeof darkColors = {
   edgeHighlight: "rgba(17, 24, 39, 0.05)",
   text: "rgba(17, 24, 39, 0.96)",
   // Bumped from 0.55 → ~0.64 so secondary text clears ~4.5:1 on white
-  muted: "rgba(17, 24, 39, 0.64)",
-  faint: "rgba(17, 24, 39, 0.45)",
+  muted: "rgba(17, 24, 39, 0.70)",
+  faint: "rgba(17, 24, 39, 0.62)",
   border: "rgba(17, 24, 39, 0.10)",
   borderLight: "rgba(17, 24, 39, 0.16)",
+  controlBorder: "rgba(17, 24, 39, 0.48)",
+  focusRing: "#2f5bd8",
   shadow: "rgba(17, 24, 39, 0.12)",
-  accent: "#3b66e0",
-  accentDim: "rgba(59, 102, 224, 0.35)",
-  accent2: "#5a86f5",
-  good: "#15a06b",
-  warning: "#c6841a",
-  danger: "#d23f37",
-  supplement: "#0fae9b",
+  accent: "#2f5bd8",
+  accentDim: "rgba(47, 91, 216, 0.35)",
+  accent2: "#2457e6",
+  good: "#0b734b",
+  warning: "#8c5a00",
+  danger: "#bf312a",
+  supplement: "#077166",
   onAccent: "#ffffff",
   onFill: "#ffffff",
-  timeSun: "#d97706",
+  timeSun: "#b86304",
   timeMoon: "#7c3aed",
+  tagSleep: "#7c4ff0",
+  tagRecovery: "#d8317f",
 };
 
 // Resolved once at module load from the OS appearance. Switching the phone's
@@ -172,16 +180,16 @@ export const elevation = {
 
 // Soft tints for colored chips/fills, per scheme
 const darkTints = {
-  accent: "rgba(77, 124, 255, 0.16)",
+  accent: "rgba(107, 147, 255, 0.16)",
   good: "rgba(52, 201, 138, 0.14)",
   warning: "rgba(232, 168, 56, 0.14)",
-  danger: "rgba(226, 85, 75, 0.12)",
+  danger: "rgba(236, 111, 102, 0.12)",
 };
 const lightTints: typeof darkTints = {
-  accent: "rgba(59, 102, 224, 0.10)",
-  good: "rgba(21, 160, 107, 0.11)",
-  warning: "rgba(198, 132, 26, 0.13)",
-  danger: "rgba(210, 63, 55, 0.10)",
+  accent: "rgba(47, 91, 216, 0.10)",
+  good: "rgba(11, 115, 75, 0.10)",
+  warning: "rgba(140, 90, 0, 0.12)",
+  danger: "rgba(191, 49, 42, 0.10)",
 };
 export const tints = isLight ? lightTints : darkTints;
 export type TintSet = typeof darkTints;
@@ -235,13 +243,21 @@ export const typeRamp = {
   },
 };
 
-export const TAG_COLORS: Record<string, string> = {
-  Work: colors.accent,
-  Training: colors.good,
-  Program: colors.accent,
-  Nutrition: colors.warning,
-  Supplement: colors.supplement,
-  Sleep: "#a78bfa",
-  Recovery: "#f472b6",
-  Default: colors.muted,
-};
+export function getTagColors(p: Palette): Record<string, string> {
+  return {
+    Work: p.accent,
+    Training: p.good,
+    Program: p.accent,
+    Nutrition: p.warning,
+    Supplement: p.supplement,
+    Sleep: p.tagSleep,
+    Recovery: p.tagRecovery,
+    Default: p.muted,
+  };
+}
+
+/** Block/tag colour for the live palette (falls back to `Default`). */
+export function tagColor(tag: string, p: Palette): string {
+  const map = getTagColors(p);
+  return map[tag] || map.Default;
+}

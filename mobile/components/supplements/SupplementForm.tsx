@@ -66,6 +66,9 @@ export default function SupplementForm({
           <View style={styles.tierRow}>
             {TIERS.map((tier) => (
               <Pressable
+                accessibilityRole="button"
+                hitSlop={10}
+                accessibilityState={{ selected: draft.tier === tier }}
                 key={tier}
                 style={[styles.tierChip, draft.tier === tier && styles.tierChipSelected]}
                 onPress={() => updateField("tier", tier)}
@@ -84,6 +87,7 @@ export default function SupplementForm({
         </View>
         <View style={styles.formButtons}>
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [styles.saveBtn, pressed && styles.pressed]}
             onPress={() => {
               if (!draft.item.trim()) return;
@@ -93,6 +97,7 @@ export default function SupplementForm({
             <Text style={styles.saveBtnText}>{saveLabel}</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [styles.cancelBtn, pressed && styles.pressed]}
             onPress={onCancel}
           >

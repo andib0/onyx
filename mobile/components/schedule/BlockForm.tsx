@@ -5,8 +5,8 @@ import Card from "../ui/Card";
 import ChipSelector from "../shared/ChipSelector";
 import type { ScheduleBlock } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, radii, fontSizes, TAG_COLORS, type Palette } from "../../theme";
-import { sharedStyles } from "../../theme/sharedStyles";
+import { spacing, radii, fontSizes, tagColor, type Palette } from "../../theme";
+import { getSharedStyles } from "../../theme/sharedStyles";
 
 const TAG_OPTIONS = ["Work", "Training", "Nutrition", "Recovery", "Sleep"];
 const CUSTOM_TAG_OPTION = "Custom…";
@@ -32,6 +32,7 @@ function TimeField({
   onChange: (time: string) => void;
 }) {
   const { colors } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showPicker, setShowPicker] = useState(false);
   return (
@@ -93,6 +94,7 @@ export default function BlockForm({
   embedded,
 }: BlockFormProps) {
   const { colors } = useTheme();
+  const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const initialIsPreset = !initialBlock?.tag || TAG_OPTIONS.includes(initialBlock.tag);
   const [draft, setDraft] = useState<ScheduleBlock>(
@@ -131,7 +133,7 @@ export default function BlockForm({
     setDraft(Object.assign({}, draft, { [field]: value }));
   };
 
-  const getTagColor = (tag: string) => TAG_COLORS[tag] || colors.muted;
+  const getTagColor = (tag: string) => tagColor(tag, colors);
 
   const body = (
     <View style={sharedStyles.formGrid}>
@@ -199,12 +201,14 @@ export default function BlockForm({
       </View>
       <View style={sharedStyles.formButtons}>
         <Pressable
+          accessibilityRole="button"
           style={({ pressed }) => [styles.submitBtn, pressed && sharedStyles.pressed]}
           onPress={handleSubmit}
         >
           <Text style={styles.submitBtnText}>{mode === "add" ? "Add task" : "Save"}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={({ pressed }) => [styles.cancelBtn, pressed && sharedStyles.pressed]}
           onPress={onCancel}
         >
