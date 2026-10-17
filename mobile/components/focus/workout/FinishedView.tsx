@@ -5,6 +5,7 @@ import Button from "../../ui/Button";
 import StatBlock from "../../ui/StatBlock";
 import type { WorkoutState } from "../../../hooks/useWorkout";
 import { formatSeconds } from "./format";
+import { sessionSecondsAt } from "../../../utils/workoutClock";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { spacing, fontSizes, type Palette } from "../../../theme";
 
@@ -33,7 +34,12 @@ export default function FinishedView({
           </Text>
         ) : null}
         <View style={styles.finishedStats}>
-          <StatBlock value={formatSeconds(workout.sessionSeconds)} label="duration" />
+          <StatBlock
+            value={formatSeconds(
+              sessionSecondsAt(workout.timing, workout.timing.finishedAt ?? 0)
+            )}
+            label="duration"
+          />
           <StatBlock value={totalSetsLogged} label="sets" />
           <StatBlock value={workout.completedExercises.size} label="exercises" />
         </View>

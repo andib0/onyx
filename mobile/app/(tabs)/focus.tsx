@@ -112,6 +112,9 @@ export default function FocusScreen() {
     trainingDayActive,
     selectedProgramId,
     programGoal,
+    todayPlan,
+    planFor,
+    trainAnyway,
     workout,
     workoutCompletedToday,
     startWorkout,
@@ -229,7 +232,8 @@ export default function FocusScreen() {
 
   // Outcome Score (contracts/README.md): training vs plan, protein, calories,
   // bodyweight trend. The tick ratio stays visible as the secondary "Routine".
-  const plan = trainingDayActive ? ("train" as const) : null;
+  // Planned rest day = full training credit (rest from the program's frequency)
+  const plan = todayPlan;
   const outcome = useMemo(() => {
     const anyMealLogged = mealTemplatesForToday.some((m) => mealCheckMap[m.id || ""]);
     const consumed = computeConsumedMacros(mealTemplatesForToday, mealCheckMap);
@@ -267,14 +271,14 @@ export default function FocusScreen() {
       {
         proteinTarget: targets.protein,
         calorieTarget: targets.calories,
-        planFor: () => plan,
+        planFor,
       }
     );
     return computeStreak(
       past.concat([{ date: todayKeyValue, score: outcome.score, kept: outcome.kept }]),
       todayKeyValue
     );
-  }, [scoreHistory, todayKeyValue, nutritionTargets, plan, outcome]);
+  }, [scoreHistory, todayKeyValue, nutritionTargets, planFor, outcome]);
   const streak = streakInfo.count;
   const dayScore = outcome.score;
 
@@ -518,6 +522,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
+          onTrainAnyway={trainAnyway}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}
@@ -583,6 +588,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
+          onTrainAnyway={trainAnyway}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}

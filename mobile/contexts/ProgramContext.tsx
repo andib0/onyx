@@ -4,6 +4,7 @@ import useWorkout from "../hooks/useWorkout";
 import type { WorkoutState, LoggedSetValues } from "../hooks/useWorkout";
 import type { ProgramRow, UserWithPreferences } from "../types/appTypes";
 import type { ProgramSummary, ProgramDetail, ProgramDay } from "../api/programs";
+import type { DayPlan } from "../utils/programSchedule";
 
 interface ProgramContextType {
   programs: ProgramSummary[];
@@ -14,6 +15,9 @@ interface ProgramContextType {
   programRows: ProgramRow[];
   programLabel: string;
   trainingDayActive: boolean;
+  todayPlan: DayPlan | null; // null = no program selected
+  planFor: (date: string) => DayPlan | null;
+  trainAnyway: () => void;
   shouldShowProgramSetup: boolean;
   programGoal: string | undefined;
   handleSelectProgram: (id: string) => void;
@@ -58,7 +62,11 @@ export function ProgramProvider({
     undoLastWorkoutSet,
     jumpToWorkoutExercise,
     extendWorkoutRest,
-  } = useWorkout(program.programRows, program.programLabel);
+  } = useWorkout(
+    program.programRows,
+    program.programLabel,
+    program.markProgramDayCompleted
+  );
 
   return (
     <ProgramContext.Provider
@@ -70,7 +78,13 @@ export function ProgramProvider({
         selectedProgramDay: program.selectedProgramDay,
         programRows: program.programRows,
         programLabel: program.programLabel,
-        trainingDayActive: program.trainingDayActive,
+        // A session started (or finished) on a planned rest day stays visible
+        trainingDayActive:
+          program.trainingDayActive ||
+          (!!program.selectedProgramDay && (workout.isActive || workoutCompletedToday)),
+        todayPlan: program.todayPlan,
+        planFor: program.planFor,
+        trainAnyway: program.trainAnyway,
         shouldShowProgramSetup: program.shouldShowProgramSetup,
         programGoal: program.programDetail?.goal,
         handleSelectProgram: program.handleSelectProgram,
