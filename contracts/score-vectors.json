@@ -1,0 +1,346 @@
+{
+  "weights": {
+    "T": 0.4,
+    "Pr": 0.3,
+    "Ca": 0.2,
+    "Bw": 0.1
+  },
+  "vectors": [
+    {
+      "name": "perfect training day",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "perfect planned rest day",
+      "input": {
+        "plan": "rest",
+        "setsDone": 0,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "skipped session, protein 50%",
+      "input": {
+        "plan": "train",
+        "setsDone": 0,
+        "setsPlanned": 15,
+        "protein": 80,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 45,
+        "kept": false,
+        "components": {
+          "T": 0.0,
+          "Pr": 0.5,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "80% of sets counts as full training",
+      "input": {
+        "plan": "train",
+        "setsDone": 12,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "half the sets",
+      "input": {
+        "plan": "train",
+        "setsDone": 6,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 80,
+        "kept": false,
+        "components": {
+          "T": 0.5,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "protein 85% is still kept",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 136,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 96,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 0.85,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "protein 84% breaks kept",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 134,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 95,
+        "kept": false,
+        "components": {
+          "T": 1.0,
+          "Pr": 0.8375,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "calories +5% full credit",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2625,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "calories +20% zero credit",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 3000,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 80,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 0.0,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "calories -12.5% half credit",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2187.5,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 90,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 0.5,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "nothing logged to eat -> unscored",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": null,
+        "proteinTarget": 160,
+        "calories": null,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": null,
+        "kept": false,
+        "components": {
+          "T": 1.0,
+          "Pr": null,
+          "Ca": null,
+          "Bw": 1.0
+        }
+      }
+    },
+    {
+      "name": "no weight trend yet -> Bw dropped from weights",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": null,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": null
+        }
+      }
+    },
+    {
+      "name": "bodyweight off goal by 0.25 kg/wk",
+      "input": {
+        "plan": "train",
+        "setsDone": 15,
+        "setsPlanned": 15,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.15,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 95,
+        "kept": true,
+        "components": {
+          "T": 1.0,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 0.5
+        }
+      }
+    },
+    {
+      "name": "train day with no plan sets -> T unknown",
+      "input": {
+        "plan": "train",
+        "setsDone": 0,
+        "setsPlanned": 0,
+        "protein": 160,
+        "proteinTarget": 160,
+        "calories": 2500,
+        "calorieTarget": 2500,
+        "bwSlope": -0.4,
+        "goalRate": -0.4
+      },
+      "expected": {
+        "score": 100,
+        "kept": false,
+        "components": {
+          "T": null,
+          "Pr": 1.0,
+          "Ca": 1.0,
+          "Bw": 1.0
+        }
+      }
+    }
+  ]
+}
