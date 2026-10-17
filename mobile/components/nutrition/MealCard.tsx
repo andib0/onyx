@@ -36,15 +36,19 @@ export default function MealCard({
 }: MealCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const hasGrams = meal.grams != null;
-  const [localGrams, setLocalGrams] = useState(meal.grams != null ? meal.grams : 100);
+  // The API serialises Prisma Decimal grams as a string ("100"); the web Slider
+  // builds an Animated.Value from it and throws on a non-number — that was bug B2
+  // (Nutrition error boundary right after adding a searched food).
+  const gramsNum = meal.grams == null ? NaN : Number(meal.grams);
+  const hasGrams = Number.isFinite(gramsNum);
+  const [localGrams, setLocalGrams] = useState(hasGrams ? gramsNum : 100);
 
   // Sync when meal changes externally
   useEffect(() => {
-    if (meal.grams != null) {
-      setLocalGrams(meal.grams);
+    if (hasGrams) {
+      setLocalGrams(gramsNum);
     }
-  }, [meal.grams]);
+  }, [hasGrams, gramsNum]);
 
   const factor = hasGrams ? localGrams / 100 : 1;
 

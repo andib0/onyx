@@ -33,6 +33,23 @@ export const toggleMealLogSchema = z.object({
   id: clientId.optional(),
 });
 
+/**
+ * One-off food log (Bet 7/8): an ad-hoc food eaten today. Stored as a dated
+ * template (`dayOfWeek` = the ISO date, so it never recurs on a weekday) plus
+ * an eaten log for that date, created in one idempotent request.
+ */
+export const oneOffMealSchema = z.object({
+  id: clientId.optional(),
+  date: isoDate,
+  name: z.string().min(1, 'Meal name is required').max(200),
+  examples: z.string().max(1000).optional().default(''),
+  grams: z.number().min(0).max(10000).optional().nullable(),
+  foodId: recordId.optional().nullable(),
+  tags: z.array(mealTagSchema).max(20).optional().default([]),
+  hlc: hlc.optional(),
+});
+
+export type OneOffMealInput = z.infer<typeof oneOffMealSchema>;
 export type CreateMealTemplateInput = z.infer<typeof createMealTemplateSchema>;
 export type UpdateMealTemplateInput = z.infer<typeof updateMealTemplateSchema>;
 export type ToggleMealLogInput = z.infer<typeof toggleMealLogSchema>;

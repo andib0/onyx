@@ -29,8 +29,19 @@ import {
   type TintSet,
 } from "../theme";
 import { getSharedStyles } from "../theme/sharedStyles";
+import IntentionForm, {
+  toIntention,
+  type IntentionDraft,
+} from "../components/onboarding/IntentionForm";
+import { applyTrainingIntention } from "../hooks/ui/applyIntention";
+import { defaultWeekdays } from "../utils/trainingIntention";
+import { sessionsPerWeek } from "../utils/programSchedule";
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
+const STEP_PROGRAM = 0;
+const STEP_WEIGHT = 1;
+const STEP_INTENTION = 2;
+const STEP_REMINDERS = 3;
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -46,18 +57,30 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [weight, setWeight] = useState("");
   const [finishing, setFinishing] = useState(false);
+  // Implementation intention draft; defaults spread the program's sessions/week.
+  const selectedSummary = programs.find((p) => p.id === selectedProgramId);
+  const [draft, setDraft] = useState<IntentionDraft | null>(null);
+  const intentionDraft: IntentionDraft = draft ?? {
+    weekdays: defaultWeekdays(selectedSummary ? sessionsPerWeek(selectedSummary) : 3),
+    time: "17:30",
+    place: "Gym",
+  };
+  const intention = toIntention(intentionDraft);
+  const [useIntention, setUseIntention] = useState(false);
 
-  // Seed a starter day so Focus is alive on first open, then reload + go
+  // Seed a starter day so Today is alive on first open, put the user's own
+  // training time/days into it, then reload + go.
   const finish = async () => {
     setFinishing(true);
     try {
       await seedStarterData();
+      if (useIntention && intention) await applyTrainingIntention(intention);
       await reloadState();
     } catch {
       // Non-fatal — proceed to the app regardless
     }
     setProgramSetupDismissed(true);
-    router.replace("/(tabs)/focus");
+    router.replace("/(tabs)/today");
   };
 
   const nextFromWeight = async () => {
@@ -66,14 +89,19 @@ export default function OnboardingScreen() {
       const result = await updateProfile({ weight: parsed });
       if (result.success) await refreshUser();
     }
-    setStep(2);
+    setStep(STEP_INTENTION);
   };
 
   const enableReminders = async () => {
     const granted = await ensurePermission();
     if (granted) {
       const prefs = await loadNotificationPrefs();
-      const next = Object.assign({}, prefs, { checkIn: true, rest: true });
+      const next = Object.assign({}, prefs, {
+        checkIn: true,
+        rest: true,
+        supplements: true,
+        training: useIntention && !!intention,
+      });
       await saveNotificationPrefs(next);
       await syncCheckInReminder(true);
     }
@@ -94,7 +122,7 @@ export default function OnboardingScreen() {
         ))}
       </View>
 
-      {step === 0 ? (
+      {step === STEP_PROGRAM ? (
         <Animated.View key="s0" entering={enter} style={styles.step}>
           <Text style={styles.title}>Pick your program</Text>
           <Text style={styles.subtitle}>
@@ -136,19 +164,19 @@ export default function OnboardingScreen() {
             label="Continue"
             icon="arrow-forward"
             size="lg"
-            onPress={() => setStep(1)}
+            onPress={() => setStep(STEP_WEIGHT)}
             disabled={!selectedProgramId}
           />
           <Button
             label="Skip for now"
             variant="ghost"
             size="sm"
-            onPress={() => setStep(1)}
+            onPress={() => setStep(STEP_WEIGHT)}
           />
         </Animated.View>
       ) : null}
 
-      {step === 1 ? (
+      {step === STEP_WEIGHT ? (
         <Animated.View key="s1" entering={enter} style={styles.step}>
           <Text style={styles.title}>Your bodyweight</Text>
           <Text style={styles.subtitle}>
@@ -175,17 +203,51 @@ export default function OnboardingScreen() {
             label="Skip for now"
             variant="ghost"
             size="sm"
-            onPress={() => setStep(2)}
+            onPress={() => setStep(STEP_INTENTION)}
           />
         </Animated.View>
       ) : null}
 
-      {step === 2 ? (
+      {step === STEP_INTENTION ? (
+        <Animated.View key="s-intention" entering={enter} style={styles.step}>
+          <Text style={styles.title}>When and where will you train?</Text>
+          <Text style={styles.subtitle}>
+            Naming the days, time and place makes you far more likely to show up. Onyx
+            plans those days and reminds you before.
+          </Text>
+          <Card>
+            <IntentionForm value={intentionDraft} onChange={setDraft} />
+          </Card>
+          <Button
+            label="This is my plan"
+            icon="arrow-forward"
+            size="lg"
+            disabled={!intention}
+            onPress={() => {
+              setUseIntention(true);
+              setStep(STEP_REMINDERS);
+            }}
+          />
+          <Button
+            label="Skip for now"
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setUseIntention(false);
+              setStep(STEP_REMINDERS);
+            }}
+          />
+        </Animated.View>
+      ) : null}
+
+      {step === STEP_REMINDERS ? (
         <Animated.View key="s2" entering={enter} style={styles.step}>
           <Text style={styles.title}>Reminders</Text>
           <Text style={styles.subtitle}>
-            Evening check-in nudge and rest-timer alerts. You stay in control — every
-            category can be toggled in Settings.
+            {useIntention && intention
+              ? `Training reminder 15 min before ${intention.time}, one banner per supplement time, and the evening check-in — each skipped once it's done.`
+              : "One banner per supplement time and the evening check-in — each skipped once it's done."}{" "}
+            Toggle any of them in Settings.
           </Text>
           <Button
             label="Enable reminders"

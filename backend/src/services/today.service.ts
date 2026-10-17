@@ -78,7 +78,8 @@ export async function getToday(userId: string, date: string) {
     }),
     prisma.supplementLog.findMany({ where: { userId, date } }),
     prisma.mealTemplate.findMany({
-      where: { userId, dayOfWeek: weekday },
+      // This weekday's plan + one-off foods dated today (POST /meals/one-off)
+      where: { userId, dayOfWeek: { in: [weekday, date] } },
       include: { tags: true },
       orderBy: [{ sortOrder: 'asc' }],
     }),

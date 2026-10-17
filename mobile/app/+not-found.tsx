@@ -17,7 +17,7 @@ export default function NotFoundScreen() {
         title="Page not found"
         subtitle="That screen doesn't exist or has moved."
         actionLabel="Back to Focus"
-        onAction={() => router.replace("/(tabs)/focus")}
+        onAction={() => router.replace("/(tabs)/today")}
       />
     </View>
   );

@@ -25,6 +25,8 @@ import FoodSearchSection from "../../components/nutrition/FoodSearchSection";
 import MyFoodsSection from "../../components/nutrition/MyFoodsSection";
 import useDebouncedValue from "../../hooks/useDebouncedValue";
 import useWater from "../../hooks/useWater";
+import useTodayMeals from "../../hooks/ui/useTodayMeals";
+import { useQuickLog } from "../../hooks/ui/quickLog";
 import { searchFoods, type Food } from "../../api/foods";
 import {
   getUserFoods,
@@ -51,7 +53,8 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, fontSizes, motion, type Palette } from "../../theme";
 import { getSharedStyles } from "../../theme/sharedStyles";
 
-export default function NutritionScreen() {
+// Eat (Bet 8): today's intake on top (log), the weekly plan below (edit).
+export default function EatScreen() {
   const { colors } = useTheme();
   const sharedStyles = getSharedStyles(colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -75,9 +78,14 @@ export default function NutritionScreen() {
     updateMealTemplateForDay,
     addMealTemplateForDay,
     removeMealTemplateForDay,
+    weekdayName,
   } = useMeals();
+  const today = useTodayMeals();
+  const { openQuickLog } = useQuickLog();
 
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ day: string; id: string } | null>(
+    null
+  );
   const [showAdd, setShowAdd] = useState(false);
   const [addMode, setAddMode] = useState<"food" | "supplement">("food");
   const [quickName, setQuickName] = useState("");
@@ -233,7 +241,8 @@ export default function NutritionScreen() {
   };
 
   // Macro totals from checked meals, scaled by grams (tags are per 100g for foods)
-  const macroTotals = computeConsumedMacros(mealTemplatesForDay, mealCheckMap);
+  // Today's intake (planned + one-off foods), whatever plan day is selected below
+  const macroTotals = computeConsumedMacros(today.meals, today.mealCheckMap);
   const macroTargets = computeMacroTargets(nutritionTargets);
   // Completed days only; never suggests below 1.6 g/kg of bodyweight
   const proteinSuggestion = suggestProteinTarget(
@@ -342,9 +351,9 @@ export default function NutritionScreen() {
     }
   };
 
-  const handleGramsChange = (mealId: string, text: string) => {
+  const handleGramsChange = (mealId: string, text: string, day = selectedMealDay) => {
     const grams = text === "" ? null : Number(text);
-    updateMealTemplateForDay(selectedMealDay, mealId, { grams }).catch((err) => {
+    updateMealTemplateForDay(day, mealId, { grams }).catch((err) => {
       showToast(err instanceof Error ? err.message : "Couldn't update grams — try again");
     });
   };
@@ -352,7 +361,7 @@ export default function NutritionScreen() {
   const handleDelete = async () => {
     if (deleteTarget) {
       try {
-        await removeMealTemplateForDay(selectedMealDay, deleteTarget);
+        await removeMealTemplateForDay(deleteTarget.day, deleteTarget.id);
         setDeleteTarget(null);
       } catch (err) {
         showToast(
@@ -367,20 +376,12 @@ export default function NutritionScreen() {
   return (
     <ScreenContainer>
       <Header
-        title="Nutrition"
+        title="Eat"
         subtitle={programGoal ? `Goal: ${programGoal}` : undefined}
+        right={<Button label="Log food" icon="add" size="sm" onPress={openQuickLog} />}
       />
 
-      {/* Day selector */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <ChipSelector
-          options={mealDayOptions}
-          selected={selectedMealDay}
-          onSelect={setSelectedMealDay}
-          getLabel={(day) => day.slice(0, 3)}
-        />
-      </ScrollView>
-
+      {/* Today's intake first (logging), the weekly plan below (editing) */}
       <MacroDashboard
         consumed={macroTotals}
         targets={macroTargets}
@@ -423,8 +424,56 @@ export default function NutritionScreen() {
         </Card>
       ) : null}
 
-      {/* Meals */}
-      <SectionTitle label={`Meals · ${selectedMealDay}`} />
+      <SectionTitle label="Today" />
+      <Card>
+        {today.meals.length > 0 ? (
+          today.meals.map((meal) => {
+            const mealId = meal.id || "";
+            const isOneOff = today.oneOffIds.has(mealId);
+            return (
+              <MealCard
+                key={`today-${mealId}`}
+                meal={meal}
+                isChecked={today.mealCheckMap[mealId] || false}
+                onToggle={() => {
+                  today
+                    .toggleMeal(mealId, !today.mealCheckMap[mealId])
+                    .catch(() => showToast("Couldn't update meal — try again"));
+                }}
+                onGramsChange={(text) =>
+                  isOneOff
+                    ? updateMealTemplateForDay(todayKeyValue, mealId, {
+                        grams: text === "" ? null : Number(text),
+                      }).catch(() => {})
+                    : handleGramsChange(mealId, text, weekdayName)
+                }
+                onDelete={() =>
+                  isOneOff
+                    ? today.removeFood(mealId)
+                    : setDeleteTarget({ day: weekdayName, id: mealId })
+                }
+              />
+            );
+          })
+        ) : (
+          <EmptyState
+            icon="restaurant-outline"
+            title="Nothing logged yet"
+            subtitle="Tap Log food (or +) — recent foods are one tap."
+          />
+        )}
+      </Card>
+
+      {/* Weekly plan (templates). Ad-hoc foods never land here. */}
+      <SectionTitle label={`Plan · ${selectedMealDay}`} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ChipSelector
+          options={mealDayOptions}
+          selected={selectedMealDay}
+          onSelect={setSelectedMealDay}
+          getLabel={(day) => day.slice(0, 3)}
+        />
+      </ScrollView>
       <Card>
         {mealTemplatesForDay.length > 0 ? (
           mealTemplatesForDay.map((meal, i) => {
@@ -443,7 +492,7 @@ export default function NutritionScreen() {
                   isChecked={mealCheckMap[mealId] || false}
                   onToggle={() => setMealChecked(mealId, !mealCheckMap[mealId])}
                   onGramsChange={(text) => handleGramsChange(mealId, text)}
-                  onDelete={() => setDeleteTarget(mealId)}
+                  onDelete={() => setDeleteTarget({ day: selectedMealDay, id: mealId })}
                 />
               </Animated.View>
             );
@@ -471,7 +520,7 @@ export default function NutritionScreen() {
       {/* Add via bottom sheet with Food | Supplement switch */}
       <Sheet
         visible={showAdd}
-        title="Add food or supplement"
+        title="Add to the weekly plan"
         onClose={() => setShowAdd(false)}
       >
         <View style={styles.addHeader}>
@@ -583,7 +632,7 @@ export default function NutritionScreen() {
         <Row
           first
           icon="add-circle-outline"
-          label="Add food or supplement"
+          label="Add to plan (food or supplement)"
           onPress={() => openAdd("food")}
         />
         {mealTemplatesForDay.length > 0 ? (

@@ -1,13 +1,13 @@
 import { View, Text, TextInput, Switch, StyleSheet } from "react-native";
 import Constants from "expo-constants";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
-import { updateProfile } from "../../api/auth";
-import { updatePreferences } from "../../api/preferences";
-import { useSupplements } from "../../contexts/SupplementsContext";
-import { useToastContext } from "../../contexts/ToastContext";
-import { useAuth } from "../../contexts/AuthContext";
-import { useData } from "../../contexts/DataContext";
+import { Stack, useRouter } from "expo-router";
+import { updateProfile } from "../api/auth";
+import { updatePreferences } from "../api/preferences";
+import { useSupplements } from "../contexts/SupplementsContext";
+import { useToastContext } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useData } from "../contexts/DataContext";
 import {
   loadNotificationPrefs,
   saveNotificationPrefs,
@@ -15,39 +15,25 @@ import {
   syncSupplementReminders,
   syncCheckInReminder,
   type NotificationPrefs,
-} from "../../utils/notifications";
-import ScreenContainer from "../../components/layout/ScreenContainer";
-import Header from "../../components/layout/Header";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
-import ConfirmModal from "../../components/ui/ConfirmModal";
-import { SettingsGroup, GroupTitle, Row } from "../../components/ui/SettingsGroup";
-import WeightTrend from "../../components/log/WeightTrend";
-import BarChart from "../../components/ui/BarChart";
-import {
-  buildWeightTrend,
-  buildWeeklyAdherence,
-  scoreBarsFromHistory,
-} from "../../utils/trends";
-import Segmented from "../../components/ui/Segmented";
-import { useTheme, type ThemeMode } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, radii, type Palette } from "../../theme";
+} from "../utils/notifications";
+import { CHECK_IN_TIME } from "../utils/reminderPlan";
+import ScreenContainer from "../components/layout/ScreenContainer";
+import Button from "../components/ui/Button";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import { SettingsGroup, GroupTitle, Row } from "../components/ui/SettingsGroup";
+import Segmented from "../components/ui/Segmented";
+import { useTheme, type ThemeMode } from "../contexts/ThemeContext";
+import { spacing, fontSizes, radii, type Palette } from "../theme";
 
+// Settings moved behind the gear in Today's header (Bet 8); progress moved to the
+// Progress tab.
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { logout, user, refreshUser } = useAuth();
-  const {
-    handleImportClick,
-    exportJson,
-    showImportModal,
-    cancelImport,
-    confirmImport,
-    logEntries,
-    appState,
-    scoreHistory,
-  } = useData();
+  const { handleImportClick, exportJson, showImportModal, cancelImport, confirmImport } =
+    useData();
   const { showToast } = useToastContext();
   const { supplementsList } = useSupplements();
 
@@ -58,16 +44,6 @@ export default function SettingsScreen() {
   const [editCutoff, setEditCutoff] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
-
-  const weightTrend = buildWeightTrend(logEntries);
-  // Prefer durable score snapshots; fall back to recomputing from logs
-  const adherence =
-    scoreHistory.length > 0
-      ? scoreBarsFromHistory(scoreHistory)
-      : buildWeeklyAdherence(appState, supplementsList);
-  const adherenceAvg = adherence.length
-    ? Math.round(adherence.reduce((s, b) => s + b.value, 0) / adherence.length)
-    : 0;
 
   useEffect(() => {
     loadNotificationPrefs().then(setNotifPrefs);
@@ -133,8 +109,8 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScreenContainer>
-      <Header title="Settings" />
+    <ScreenContainer hasNativeHeader>
+      <Stack.Screen options={{ title: "Settings" }} />
 
       {/* PROFILE */}
       <GroupTitle label="Profile" />
@@ -215,50 +191,29 @@ export default function SettingsScreen() {
         )}
       </SettingsGroup>
 
-      {/* PROGRESS */}
-      <GroupTitle label="Progress" />
-      {weightTrend.points.length >= 2 ? (
-        <WeightTrend trend={weightTrend} goalNote="Lean bulk pace: +0.2-0.4 kg/week" />
-      ) : null}
-      <Card>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>ADHERENCE · 7 DAYS</Text>
-          <Text style={styles.chartAvg}>{adherenceAvg}% avg</Text>
-        </View>
-        <BarChart bars={adherence} maxValue={100} color={colors.good} />
-      </Card>
-      <SettingsGroup>
-        <Row
-          first
-          icon="bulb-outline"
-          label="Insights"
-          onPress={() => router.push("/insights")}
-        />
-        <Row
-          icon="trophy-outline"
-          label="Achievements"
-          onPress={() => router.push("/achievements")}
-        />
-        <Row
-          icon="time-outline"
-          label="Full history & trends"
-          onPress={() => router.push("/log")}
-        />
-      </SettingsGroup>
-
-      {/* NOTIFICATIONS */}
+      {/* NOTIFICATIONS — skipped automatically once the item is done */}
       <GroupTitle label="Notifications" />
       <SettingsGroup>
         <Row
           first
           label="Supplement reminders"
-          sublabel="Daily, at each supplement's time"
+          sublabel="One per time slot, skipped once taken"
           right={renderSwitch("supplements")}
         />
         <Row
+          label="Training reminder"
+          sublabel="15 min before your planned time, training days only"
+          right={renderSwitch("training")}
+        />
+        <Row
           label="Evening check-in"
-          sublabel="Daily at 20:00"
+          sublabel={`At ${CHECK_IN_TIME}, skipped once logged`}
           right={renderSwitch("checkIn")}
+        />
+        <Row
+          label="Training plan"
+          sublabel="Days, time and place"
+          onPress={() => router.push("/training-plan")}
         />
         <Row
           label="Rest timer"
