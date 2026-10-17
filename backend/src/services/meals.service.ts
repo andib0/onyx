@@ -56,7 +56,9 @@ export class MealsService {
     const carbs = food.carbsPer100g ? Number(food.carbsPer100g) * factor : null;
     const calories = food.caloriesPer100g ? Number(food.caloriesPer100g) * factor : null;
 
-    await prisma.mealTemplateTag.deleteMany({ where: { mealTemplateId: templateId } });
+    await prisma.mealTemplateTag.deleteMany({
+      where: { mealTemplateId: templateId, mealTemplate: { userId } },
+    });
 
     const newTags: Array<{ label: string; value: string }> = [];
     if (protein !== null)
@@ -89,24 +91,34 @@ export class MealsService {
   ) {
     const { tags, ...templateData } = data;
 
-    // If tags are provided, replace them
-    if (tags) {
-      await prisma.mealTemplateTag.deleteMany({
-        where: { mealTemplateId: templateId },
-      });
-    }
-
-    return prisma.mealTemplate.update({
+    // Ownership BEFORE touching tags (audit F3): a non-owner used to wipe the
+    // owner's tags and only then get a 404 from the scoped update.
+    const owned = await prisma.mealTemplate.findFirst({
       where: { id: templateId, userId },
-      data: {
-        ...templateData,
-        tags: tags
-          ? {
-              create: tags,
-            }
-          : undefined,
-      },
-      include: { tags: true },
+      select: { id: true },
+    });
+    if (!owned) throw new AppError('Meal template not found', 404, 'NOT_FOUND');
+
+    return prisma.$transaction(async (tx) => {
+      // If tags are provided, replace them
+      if (tags) {
+        await tx.mealTemplateTag.deleteMany({
+          where: { mealTemplateId: templateId, mealTemplate: { userId } },
+        });
+      }
+
+      return tx.mealTemplate.update({
+        where: { id: templateId, userId },
+        data: {
+          ...templateData,
+          tags: tags
+            ? {
+                create: tags,
+              }
+            : undefined,
+        },
+        include: { tags: true },
+      });
     });
   }
 
@@ -134,6 +146,13 @@ export class MealsService {
     date: string,
     isEaten: boolean
   ) {
+    // Ownership first (audit F2): see supplements.toggleLog.
+    const owned = await prisma.mealTemplate.findFirst({
+      where: { id: mealTemplateId, userId },
+      select: { id: true },
+    });
+    if (!owned) throw new AppError('Meal template not found', 404, 'NOT_FOUND');
+
     return prisma.mealLog.upsert({
       where: {
         userId_mealTemplateId_date: { userId, mealTemplateId, date },

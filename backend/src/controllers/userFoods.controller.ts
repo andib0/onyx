@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { userFoodsService } from '../services/userFoods.service.js';
-import { sendError, sendSuccess } from '../utils/response.js';
+import { sendError, sendNotFound, sendSuccess } from '../utils/response.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 export async function listUserFoods(req: AuthenticatedRequest, res: Response) {
@@ -27,7 +27,8 @@ export async function addUserFood(req: AuthenticatedRequest, res: Response) {
 
 export async function removeUserFood(req: AuthenticatedRequest, res: Response) {
   try {
-    await userFoodsService.remove(req.userId!, req.params.id);
+    const result = await userFoodsService.remove(req.userId!, req.params.id);
+    if (result.count === 0) return sendNotFound(res, 'Saved food not found');
     return sendSuccess(res, null, 'Removed');
   } catch (error) {
     console.error('Remove user food error:', error);
