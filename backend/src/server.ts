@@ -1,8 +1,10 @@
 import 'dotenv/config';
+// Validates every required env var at import; exits the process if any is bad.
+import { env } from './config/env.js';
 import app from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 
-const PORT = process.env.PORT || 3001;
+const PORT = Number(env.PORT);
 
 async function main() {
   await connectDatabase();

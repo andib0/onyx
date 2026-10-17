@@ -1,9 +1,8 @@
 import { z } from 'zod';
-
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+import { intQuery, isoDate, recordId } from './common.js';
 
 export const startSessionSchema = z.object({
-  date: z.string().regex(datePattern, 'Invalid date format (YYYY-MM-DD)'),
+  date: isoDate,
   programDayName: z.string().max(100).optional(),
 });
 
@@ -22,3 +21,18 @@ export const finishSessionSchema = z.object({
 export type StartSessionInput = z.infer<typeof startSessionSchema>;
 export type LogSetInput = z.infer<typeof logSetSchema>;
 export type FinishSessionInput = z.infer<typeof finishSessionSchema>;
+
+export const sessionsQuerySchema = z.object({
+  limit: intQuery(1, 100, 30),
+  offset: intQuery(0, 100000, 0),
+});
+
+export const exerciseSessionsQuerySchema = z.object({
+  name: z.string().max(200).optional(),
+  limit: intQuery(1, 100, 30),
+});
+
+export const exerciseHistoryQuerySchema = z.object({
+  names: z.string().max(10000).optional(),
+  excludeSessionId: recordId.optional(),
+});

@@ -1,4 +1,5 @@
 import { prisma } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
 
 export class SupplementsService {
   async getSupplements(userId: string) {
@@ -69,6 +70,14 @@ export class SupplementsService {
   }
 
   async toggleLog(userId: string, supplementId: string, date: string, isTaken: boolean) {
+    // Ownership first (audit F2): the FK alone would accept another user's id,
+    // and getLogs would then include that user's supplement row.
+    const owned = await prisma.supplement.findFirst({
+      where: { id: supplementId, userId },
+      select: { id: true },
+    });
+    if (!owned) throw new AppError('Supplement not found', 404, 'NOT_FOUND');
+
     return prisma.supplementLog.upsert({
       where: {
         userId_supplementId_date: { userId, supplementId, date },

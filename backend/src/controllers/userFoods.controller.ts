@@ -1,36 +1,40 @@
 import type { Response } from 'express';
 import { userFoodsService } from '../services/userFoods.service.js';
-import { sendError, sendSuccess } from '../utils/response.js';
+import { sendError, sendNotFound, sendSuccess } from '../utils/response.js';
+import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
+
+function fail(res: Response, error: unknown) {
+  const appError = handleServiceError(error);
+  return sendError(res, appError.message, appError.statusCode);
+}
 
 export async function listUserFoods(req: AuthenticatedRequest, res: Response) {
   try {
     const foods = await userFoodsService.list(req.userId!);
     return sendSuccess(res, foods);
   } catch (error) {
-    console.error('List user foods error:', error);
-    return sendError(res, 'Failed to get user foods', 500);
+    return fail(res, error);
   }
 }
 
 export async function addUserFood(req: AuthenticatedRequest, res: Response) {
   try {
-    const { foodId } = req.body || {};
-    if (!foodId) return sendError(res, 'foodId is required');
-    const item = await userFoodsService.add(req.userId!, String(foodId));
+    const { foodId } = req.body as { foodId: string }; // validated by addUserFoodSchema
+    const item = await userFoodsService.add(req.userId!, foodId);
     return sendSuccess(res, item);
   } catch (error) {
-    console.error('Add user food error:', error);
-    return sendError(res, 'Failed to add user food', 500);
+    // Unknown foodId → FK violation → 400 via handleServiceError.
+    return fail(res, error);
   }
 }
 
 export async function removeUserFood(req: AuthenticatedRequest, res: Response) {
   try {
-    await userFoodsService.remove(req.userId!, req.params.id);
+    const result = await userFoodsService.remove(req.userId!, req.params.id);
+    if (result.count === 0) return sendNotFound(res, 'Saved food not found');
     return sendSuccess(res, null, 'Removed');
   } catch (error) {
-    console.error('Remove user food error:', error);
-    return sendError(res, 'Failed to remove user food', 500);
+    return fail(res, error);
   }
 }

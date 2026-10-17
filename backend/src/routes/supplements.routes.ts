@@ -13,7 +13,11 @@ import {
   createSupplementSchema,
   updateSupplementSchema,
   toggleSupplementLogSchema,
+  supplementLogsQuerySchema,
 } from '../validators/supplements.schema.js';
+import { idParams } from '../validators/common.js';
+
+const id = validate(idParams, 'params');
 
 const router = Router();
 
@@ -21,11 +25,11 @@ router.use(authMiddleware);
 
 router.get('/', getSupplements);
 router.post('/', validate(createSupplementSchema), createSupplement);
-router.put('/:id', validate(updateSupplementSchema), updateSupplement);
-router.delete('/:id', deleteSupplement);
+router.put('/:id', id, validate(updateSupplementSchema), updateSupplement);
+router.delete('/:id', id, deleteSupplement);
 
 // Logs
-router.get('/logs', getLogs);
-router.post('/:id/log', validate(toggleSupplementLogSchema), toggleLog);
+router.get('/logs', validate(supplementLogsQuerySchema, 'query'), getLogs);
+router.post('/:id/log', id, validate(toggleSupplementLogSchema), toggleLog);
 
 export default router;

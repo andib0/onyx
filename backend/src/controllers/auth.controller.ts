@@ -1,13 +1,17 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
-import { registerSchema, loginSchema } from '../validators/auth.schema.js';
+import type {
+  LoginInput,
+  ProfileInput,
+  RegisterInput,
+} from '../validators/auth.schema.js';
 import {
   sendSuccess,
   sendCreated,
   sendError,
   sendUnauthorized,
 } from '../utils/response.js';
-import { AppError } from '../utils/errors.js';
+import { AppError, handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
@@ -20,14 +24,28 @@ const COOKIE_OPTIONS = {
   path: '/',
 };
 
+/** The mobile app sends the refresh token in the body; browsers use the cookie. */
+function presentedRefreshToken(req: Request): string | undefined {
+  const fromBody = (req.body as { refreshToken?: unknown } | undefined)?.refreshToken;
+  if (typeof fromBody === 'string' && fromBody) return fromBody;
+  const fromCookie = (req.cookies as Record<string, unknown> | undefined)?.[
+    REFRESH_TOKEN_COOKIE
+  ];
+  return typeof fromCookie === 'string' && fromCookie ? fromCookie : undefined;
+}
+
+/** AppError messages are ours; anything else (Prisma, DB) becomes a generic 500. */
+function fail(res: Response, error: unknown) {
+  const appError = handleServiceError(error);
+  return sendError(res, appError.message, appError.statusCode);
+}
+
+// Bodies below are already parsed by validate() in auth.routes.ts.
+
 export async function register(req: Request, res: Response) {
   try {
-    const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return sendError(res, parsed.error.errors[0].message);
-    }
-
-    const { email, password, username, age, weight, timezone } = parsed.data;
+    const { email, password, username, age, weight, timezone } =
+      req.body as RegisterInput;
     const result = await authService.register(email, password, {
       username,
       age,
@@ -47,22 +65,13 @@ export async function register(req: Request, res: Response) {
       'Account created successfully'
     );
   } catch (error) {
-    if (error instanceof AppError) {
-      return sendError(res, error.message, error.statusCode);
-    }
-    const message = error instanceof Error ? error.message : 'Registration failed';
-    return sendError(res, message);
+    return fail(res, error);
   }
 }
 
 export async function login(req: Request, res: Response) {
   try {
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return sendError(res, parsed.error.errors[0].message);
-    }
-
-    const { email, password } = parsed.data;
+    const { email, password } = req.body as LoginInput;
     const result = await authService.login(email, password);
 
     res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
@@ -77,14 +86,14 @@ export async function login(req: Request, res: Response) {
       'Login successful'
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Login failed';
-    return sendUnauthorized(res, message);
+    if (error instanceof AppError) return sendError(res, error.message, error.statusCode);
+    return fail(res, error);
   }
 }
 
 export async function refresh(req: Request, res: Response) {
   try {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE] || req.body.refreshToken;
+    const refreshToken = presentedRefreshToken(req);
 
     if (!refreshToken) {
       return sendUnauthorized(res, 'No refresh token provided');
@@ -101,18 +110,17 @@ export async function refresh(req: Request, res: Response) {
       user: result.user,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Token refresh failed';
     res.clearCookie(REFRESH_TOKEN_COOKIE);
-    return sendUnauthorized(res, message);
+    if (error instanceof AppError) return sendUnauthorized(res, error.message);
+    return fail(res, error);
   }
 }
 
 export async function logout(req: AuthenticatedRequest, res: Response) {
   try {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE];
-
     if (req.userId) {
-      await authService.logout(req.userId, refreshToken);
+      const accessToken = req.headers.authorization?.slice(7);
+      await authService.logout(req.userId, accessToken, presentedRefreshToken(req));
     }
 
     res.clearCookie(REFRESH_TOKEN_COOKIE);
@@ -128,23 +136,11 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
     if (!req.userId) {
       return sendUnauthorized(res);
     }
-
-    const { username, age, weight } = req.body as {
-      username?: string;
-      age?: number;
-      weight?: number;
-    };
-    const data: { username?: string; age?: number; weight?: number } = {};
-    if (typeof username === 'string' && username.trim())
-      data.username = username.trim().slice(0, 50);
-    if (typeof age === 'number' && age > 0 && age < 120) data.age = Math.round(age);
-    if (typeof weight === 'number' && weight > 20 && weight < 400) data.weight = weight;
-
-    const user = await authService.updateProfile(req.userId, data);
+    const { username, age, weight } = req.body as ProfileInput;
+    const user = await authService.updateProfile(req.userId, { username, age, weight });
     return sendSuccess(res, { user });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update profile';
-    return sendError(res, message);
+    return fail(res, error);
   }
 }
 
@@ -161,7 +157,6 @@ export async function me(req: AuthenticatedRequest, res: Response) {
 
     return sendSuccess(res, { user });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get user';
-    return sendError(res, message);
+    return fail(res, error);
   }
 }

@@ -53,12 +53,18 @@ model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String
+  // sha256(token) hex. Refresh JWTs carry a random jti, so this is unique and
+  // looked up directly (no bcrypt scan).
+  tokenHash String   @unique
+  // Login session ("token family"): every rotation stays in the same family;
+  // reuse of a rotated token revokes the whole family. Nullable only so that
+  // `prisma db push` can add it to a table with pre-existing (legacy) rows.
+  familyId  String?
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@index([tokenHash])
+  @@index([familyId])
 }
 
 // ============================================

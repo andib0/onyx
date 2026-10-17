@@ -35,16 +35,27 @@ app.use(
   })
 );
 
-// Parsing middleware
-app.use(express.json({ limit: '10mb' })); // Larger limit for import
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-// Rate limiting
+// Rate limiting before any body parsing, so floods are cheap to reject.
 app.use(generalRateLimiter);
+
+// Parsing middleware. Bodies are small everywhere except the full-state
+// import, which alone gets 10 MB (audit F6).
+export const IMPORT_PATH = '/api/sync/import';
+const smallJson = express.json({ limit: '100kb' });
+const largeJson = express.json({ limit: '10mb' });
+app.use((req, res, next) =>
+  req.path === IMPORT_PATH ? largeJson(req, res, next) : smallJson(req, res, next)
+);
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+app.use(cookieParser());
 
 // API routes
 app.use('/api', routes);
+
+// Unknown API paths get the JSON envelope, not Express' HTML page.
+app.use('/api', (_req, res) => {
+  res.status(404).json({ success: false, error: 'Not found' });
+});
 
 // Error handler
 app.use(errorHandler);

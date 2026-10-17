@@ -8,6 +8,7 @@ import {
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { importStateSchema } from '../validators/sync.schema.js';
+import { emptyBody } from '../validators/common.js';
 
 const router = Router();
 
@@ -16,6 +17,6 @@ router.use(authMiddleware);
 router.post('/import', validate(importStateSchema), importState);
 router.get('/export', exportState);
 router.get('/state', getFullState);
-router.post('/seed-starter', seedStarter);
+router.post('/seed-starter', validate(emptyBody), seedStarter);
 
 export default router;

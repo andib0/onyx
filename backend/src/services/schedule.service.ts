@@ -1,4 +1,5 @@
 import { prisma } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
 
 export class ScheduleService {
   async getBlocks(userId: string) {
@@ -70,6 +71,13 @@ export class ScheduleService {
     date: string,
     isComplete: boolean
   ) {
+    // Ownership first (audit F12): don't attach completions to other users' blocks.
+    const owned = await prisma.scheduleBlock.findFirst({
+      where: { id: blockId, userId },
+      select: { id: true },
+    });
+    if (!owned) throw new AppError('Schedule block not found', 404, 'NOT_FOUND');
+
     return prisma.completion.upsert({
       where: {
         userId_blockId_date: { userId, blockId, date },
