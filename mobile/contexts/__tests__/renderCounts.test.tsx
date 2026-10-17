@@ -150,6 +150,7 @@ function FocusLike() {
   useSupplements();
   const { setMealChecked } = useMeals();
   useTimeline();
+  useProgram(); // the real Focus reads program + workout state
   api.showToast = showToast;
   api.setMealChecked = (id: string) => {
     setMealChecked(id, true).catch(() => {});
@@ -282,11 +283,12 @@ describe("provider render counts", () => {
     expect(touched(hidden)).toBe(0);
   });
 
-  it("programs list resolving re-renders only program consumers", async () => {
+  it("programs list resolving re-renders only program consumers (Focus + workout card)", async () => {
     const d = await measure(() => control.setPrograms!([{ id: "p1", name: "PPL" }]));
     console.info("programs resolve", d);
     expect(d.WorkoutSection).toBe(1);
-    expect(touched(d)).toBeLessThanOrEqual(1);
+    expect(d.FocusScreen).toBe(1);
+    expect(touched(d)).toBe(2);
   });
 
   it("a meal check re-renders meal/data consumers once each", async () => {
@@ -301,6 +303,9 @@ describe("provider render counts", () => {
     const d = await measure(() => control.tick!());
     console.info("workout tick", d);
     expect(d.WorkoutSection).toBe(1);
-    expect(touched(d)).toBe(1);
+    // Until the workout clock moves into its own context (useWorkout owner),
+    // a tick still reaches every useProgram() consumer — but nothing else.
+    expect(d.FocusScreen).toBe(1);
+    expect(touched(d)).toBe(2);
   });
 });
