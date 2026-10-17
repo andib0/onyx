@@ -50,7 +50,7 @@ Patch/minor updates: apply, run step 1, commit. Major updates: one package per c
 its changelog read and step 1 + step 6 green.
 
 ## 5. Data safety drill (monthly)
-- Backup round-trip is a test (`backend/test/*export*`), so step 1 covers correctness.
+- Backup round-trip is a test (`backend/test/backup.api.test.ts`), so step 1 covers correctness.
 - Drill: on `onyx_dev`, export v2 for the test user → wipe that user's rows → import v2 →
   compare counts. The client re-hydrates an empty server automatically (dataEpoch protocol,
   `docs/log/backend-sync-api.md` §5) — the production DB is on Render free and can vanish.
