@@ -12,9 +12,9 @@
      e2e/maestro/login.yaml.
   2. Per run:
        a. `am force-stop` + `am start -W` -> TotalTime (ms to first frame; logged in).
-       b. e2e/maestro/coldstart-focus.yaml (stopApp + launch + wait for "Day score"),
-          wall time around the Maestro call -> upper bound for "cold start to Focus"
-          (includes Maestro's own launch overhead, ~1.3 s on the reference machine).
+       b. e2e/maestro/coldstart-focus.yaml (stopApp + launch + wait for "Day score");
+          flow duration from Maestro's JUnit report -> upper bound for "cold start to Focus"
+          (includes Maestro's launchApp step, ~1.3 s on the reference machine).
   3. Writes { runs, amStartTotalMs{p50,p90}, focusVisibleMs{p50,p90} } to -Out.
 
 .EXAMPLE
@@ -64,12 +64,18 @@ for ($i = 1; $i -le $Runs; $i++) {
   if ($total) { $am += [int]$total }
 
   & $adb shell am force-stop $Package | Out-Null
-  $sw = [Diagnostics.Stopwatch]::StartNew()
-  & $maestro test (Join-Path $flows "coldstart-focus.yaml") | Out-Null
+  # Flow duration from Maestro's JUnit report (excludes the CLI's ~10 s JVM/device
+  # connect overhead that a stopwatch around the command would include).
+  $junit = Join-Path $env:TEMP "onyx-coldstart-$i.xml"
+  & $maestro test --format junit --output $junit (Join-Path $flows "coldstart-focus.yaml") | Out-Null
   $ok = ($LASTEXITCODE -eq 0)
-  $sw.Stop()
-  if ($ok) { $focus += [int]$sw.ElapsedMilliseconds }
-  Write-Host ("run {0}/{1}: am TotalTime={2} ms, Maestro launch->'Day score'={3}" -f $i, $Runs, $total, $(if ($ok) { "$($sw.ElapsedMilliseconds) ms" } else { "FAILED" }))
+  $ms = $null
+  if ($ok -and (Test-Path $junit)) {
+    $tc = ([xml](Get-Content $junit -Raw)).SelectSingleNode("//testcase")
+    if ($tc -and $tc.time) { $ms = [int]([double]$tc.time * 1000) }
+  }
+  if ($ms) { $focus += $ms }
+  Write-Host ("run {0}/{1}: am TotalTime={2} ms, Maestro flow launch->'Day score'={3}" -f $i, $Runs, $total, $(if ($ms) { "$ms ms" } else { "FAILED" }))
 }
 
 function Pct([int[]]$xs, [double]$p) {
@@ -83,7 +89,7 @@ $result = [ordered]@{
   device = (& $adb shell getprop ro.product.model).Trim()
   runs = $Runs
   amStartTotalMs = [ordered]@{ p50 = (Pct $am 0.5); p90 = (Pct $am 0.9); samples = $am }
-  focusVisibleMs = [ordered]@{ p50 = (Pct $focus 0.5); p90 = (Pct $focus 0.9); samples = $focus; note = "includes Maestro launch overhead (upper bound)" }
+  focusVisibleMs = [ordered]@{ p50 = (Pct $focus 0.5); p90 = (Pct $focus 0.9); samples = $focus; note = "Maestro JUnit flow time incl. its launchApp step (upper bound)" }
 }
 New-Item -ItemType Directory -Force (Split-Path $Out) | Out-Null
 $result | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 $Out

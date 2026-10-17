@@ -134,7 +134,35 @@ and schedule tick could not complete on web at all (below).
 
 ## Android (Bet 14 step 5)
 
-ANDROID_SECTION
+Verified end-to-end on emulator-5554 (`onyx_pixel`, sdk_gphone64_x86_64), API on :3201.
+
+1. `powershell -File scripts/android/build-release.ps1 -Install` — robocopies `mobile/` to
+   `C:\Users\andi\onyx-build-mach` (short path: the worktree prefix pushes CMake/ninja
+   object paths past Windows' 260-char MAX_PATH), `npm ci`, `expo prebuild --platform
+   android`, `gradlew assembleRelease -PreactNativeArchitectures=x86_64`, `adb install -r`.
+   Generated manifest has `android:usesCleartextTraffic="true"` (from `app.config.ts`,
+   because `EXPO_PUBLIC_API_URL=http://10.0.2.2:3201/api`). First attempt: Gradle native
+   part fine, then `:app:createBundleReleaseJsAndAssets` failed with
+   `A jest worker process (pid=20580) was terminated by another process: signal=SIGTERM`
+   (Metro worker killed under memory pressure — other agents were building in parallel);
+   the incremental retry passed: **BUILD SUCCESSFUL in 3m 47s** (4.1 min incl. copy).
+   Clean first build ≈ 7.5 min + npm ci 1 min.
+2. `powershell -File scripts/android/coldstart.ps1 -Runs 10` — registers the fixture user,
+   signs in once (Maestro `login.yaml`), then 10× force-stop + `am start -W` and 10×
+   Maestro `coldstart-focus.yaml`. Output `e2e/results/coldstart.json`:
+
+| Measurement (logged in, release, local API) | p50 | p90 | samples |
+|---|---|---|---|
+| `am start -W` TotalTime (first frame) | 796 ms | 1093 ms | 555–1112 |
+| Maestro flow launch → "Day score" visible (JUnit time, incl. launchApp ≈1.3 s) | 6514 ms | 7068 ms | 5972–8098 |
+
+   These are slower than the §7 numbers (TotalTime avg 400 ms logged-out; 3.2–3.9 s to
+   "Day score") because the host was heavily loaded (parallel agents building/testing);
+   treat this run as a smoke of the script, re-baseline on an idle machine. A first version
+   timed the Maestro CLI with a stopwatch and got 13–17 s — that is JVM + device-connect
+   overhead, so the script reads Maestro's JUnit `testcase/@time` instead.
+
+Only a PowerShell script exists (`coldstart.ps1`); a bash twin was not written.
 
 ## CI notes
 
