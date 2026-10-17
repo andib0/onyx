@@ -10,6 +10,6 @@ appId: com.onyx.daily
 - hideKeyboard
 - tapOn: "Sign in"
 - extendedWaitUntil:
-    visible: "Day score"
+    visible: "Day score.*"
     timeout: 30000
 - takeScreenshot: results/android-focus
