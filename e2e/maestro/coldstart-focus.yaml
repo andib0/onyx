@@ -4,5 +4,5 @@ appId: com.onyx.daily
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: "Day score"
+    visible: "Day score.*"
     timeout: 60000
