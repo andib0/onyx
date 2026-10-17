@@ -6,8 +6,8 @@
     "test": "playwright test",
     "install-browsers": "playwright install chromium",
     "smoke": "tsc --noEmit && playwright test tests/smoke.spec.ts",
-    "flows": "tsc --noEmit && playwright test tests/flows tests/offline.spec.ts",
-    "offline": "playwright test tests/offline.spec.ts",
+    "flows": "tsc --noEmit && playwright test tests/flows tests/offline.spec.ts tests/offline-sync.spec.ts",
+    "offline": "playwright test tests/offline.spec.ts tests/offline-sync.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

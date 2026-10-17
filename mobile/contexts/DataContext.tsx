@@ -22,6 +22,7 @@ import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
 import { resolveNutritionTargets } from "../utils/adaptiveTargets";
 import { fetchToday, latestCachedToday, refreshHistory } from "../sync/dayData";
+import { reapplyPending } from "../sync/runtime";
 import { qk } from "../sync/queryKeys";
 import { scoresFromToday, type TodayPayload } from "../sync/serverData";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
@@ -106,12 +107,21 @@ export function DataProvider({
     queryFn: () => fetchToday(queryClient, userId, todayKeyValue),
     staleTime: 30_000,
     gcTime: TODAY_GC_MS,
+    // The provider mounts once per launch: always revalidate the restored day
+    // in the background (it renders from the disk copy meanwhile).
+    refetchOnMount: "always",
     retry: 1,
     // After midnight (or offline) keep showing the newest day we have.
     placeholderData: () => (userId ? latestCachedToday(queryClient, userId) : undefined),
   });
 
   const appState = appStateQuery.data ?? EMPTY_STATE;
+
+  // Once the day cache is back from disk, lay the queued writes over it.
+  const hasAppState = appStateQuery.data !== undefined;
+  useEffect(() => {
+    if (userId && hasAppState) reapplyPending().catch(() => {});
+  }, [userId, hasAppState]);
 
   // Kept for the domain hooks' signature; writes go through the outbox.
   const setAppState = useCallback<Dispatch<SetStateAction<AppState>>>(

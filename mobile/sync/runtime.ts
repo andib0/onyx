@@ -368,6 +368,18 @@ export async function enqueueWrite(intents: Intent | Intent[]): Promise<void> {
   requestFlush();
 }
 
+/**
+ * Re-apply every pending op to the caches. After a restart the persisted cache
+ * may predate the last writes (it is saved with a short delay, the outbox
+ * immediately), so the view is rebuilt as cache + pending, even offline.
+ */
+export async function reapplyPending(): Promise<void> {
+  if (!rt && starting) await starting;
+  const r = rt;
+  if (!r) return;
+  for (const op of r.outbox.pending()) applyOptimistic(r, op.intent);
+}
+
 /** Pending intents for a domain, plus ones confirmed after `since` (a refetch
  *  that started before they were confirmed may not include them yet). */
 export function overlayIntents(domain: Domain, since: number): Intent[] {

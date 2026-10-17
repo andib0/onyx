@@ -8,8 +8,10 @@ import type { AppState, LogEntry } from "../types/appTypes";
 const EMPTY_LOG: LogEntry[] = [];
 
 /**
- * Only the fields this save actually changes (field-level PATCH with HLC), so a
- * form that leaves a field blank never wipes what another device wrote there.
+ * Only the fields this save actually sets (field-level PATCH with HLC). A blank
+ * form field means "not entered", never "clear it": the quick-log form resets
+ * after each save, so sending blanks would wipe what was logged earlier (or by
+ * another device) for that day.
  */
 export function changedLogFields(
   existing: LogEntry | undefined,
@@ -19,7 +21,7 @@ export function changedLogFields(
   for (const f of LOG_FIELDS) {
     const next = entry[f] ?? "";
     const prev = existing ? (existing[f] ?? "") : "";
-    if (next !== prev) out[f] = next;
+    if (next !== "" && next !== prev) out[f] = next;
   }
   return out;
 }

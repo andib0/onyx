@@ -2,6 +2,7 @@
 // every launch and refetches in the background.
 import type { PersistedClient, Persister } from "@tanstack/react-query-persist-client";
 import type { Query } from "@tanstack/react-query";
+import { AppState as RNAppState } from "react-native";
 
 import { readBlob, removeBlob, writeBlob } from "./blobStore";
 import { PERSISTED_ROOTS } from "./queryKeys";
@@ -16,12 +17,20 @@ export function createPersister(): Persister {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let latest: PersistedClient | null = null;
   const write = () => {
+    if (timer) clearTimeout(timer);
     timer = null;
     if (!latest) return;
     const text = JSON.stringify(latest);
     latest = null;
     writeBlob(BLOB, text).catch(() => {});
   };
+  // Don't lose the last second of changes when the app goes to the background
+  // (it may be killed there) or the page is closed.
+  RNAppState.addEventListener("change", (s) => {
+    if (s !== "active") write();
+  });
+  const g = globalThis as { addEventListener?: (e: string, cb: () => void) => void };
+  if (g.addEventListener) g.addEventListener("pagehide", write);
   return {
     persistClient: (client) => {
       latest = client;
