@@ -522,7 +522,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
-          onTrainAnyway={trainAnyway}
+          onTrainAnyway={selectedProgramId ? trainAnyway : undefined}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}
@@ -588,7 +588,7 @@ export default function FocusScreen() {
           programRows={programRows}
           programLabel={programLabel}
           trainingDayActive={trainingDayActive}
-          onTrainAnyway={trainAnyway}
+          onTrainAnyway={selectedProgramId ? trainAnyway : undefined}
           onStart={startWorkout}
           onTogglePause={togglePauseWorkout}
           onStop={stopWorkout}
