@@ -1,24 +1,24 @@
 import { useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
-import { useToastContext } from "../../contexts/ToastContext";
-import { useData } from "../../contexts/DataContext";
-import { useSchedule } from "../../contexts/ScheduleContext";
-import { useTimeline } from "../../contexts/TimelineContext";
-import ScreenContainer from "../../components/layout/ScreenContainer";
-import LoadingScreen from "../../components/shared/LoadingScreen";
-import Header from "../../components/layout/Header";
-import Card from "../../components/ui/Card";
-import ProgressBar from "../../components/ui/ProgressBar";
-import FAB from "../../components/ui/FAB";
-import EmptyState from "../../components/ui/EmptyState";
-import Sheet from "../../components/ui/Sheet";
-import ConfirmModal from "../../components/ui/ConfirmModal";
-import BlockItem from "../../components/schedule/BlockItem";
-import BlockForm from "../../components/schedule/BlockForm";
-import type { ScheduleBlock } from "../../types/appTypes";
-import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, fontSizes, fonts, motion, type Palette } from "../../theme";
+import { useToastContext } from "../contexts/ToastContext";
+import { useData } from "../contexts/DataContext";
+import { useSchedule } from "../contexts/ScheduleContext";
+import { useTimeline } from "../contexts/TimelineContext";
+import ScreenContainer from "../components/layout/ScreenContainer";
+import LoadingScreen from "../components/shared/LoadingScreen";
+import { Stack } from "expo-router";
+import Card from "../components/ui/Card";
+import ProgressBar from "../components/ui/ProgressBar";
+import FAB from "../components/ui/FAB";
+import EmptyState from "../components/ui/EmptyState";
+import Sheet from "../components/ui/Sheet";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import BlockItem from "../components/schedule/BlockItem";
+import BlockForm from "../components/schedule/BlockForm";
+import type { ScheduleBlock } from "../types/appTypes";
+import { useTheme } from "../contexts/ThemeContext";
+import { spacing, fontSizes, fonts, motion, type Palette } from "../theme";
 
 export default function ScheduleScreen() {
   const { colors } = useTheme();
@@ -91,20 +91,20 @@ export default function ScheduleScreen() {
 
   return (
     <ScreenContainer
+      hasNativeHeader
       floatingAction={
         !showAddForm && !editingBlock ? (
           <FAB icon="add" label="Add task" onPress={() => setShowAddForm(true)} />
         ) : null
       }
     >
-      <Header
-        title="Schedule"
-        subtitle={
-          nextStartBlock
-            ? `Next at ${nextStartBlock.start} (${nextStartInMinutes ?? "-"}m)`
-            : undefined
-        }
-      />
+      {/* Ticking happens on Today's timeline; this screen edits the plan. */}
+      <Stack.Screen options={{ title: "Schedule" }} />
+      {nextStartBlock ? (
+        <Text style={styles.nextLine}>
+          Next at {nextStartBlock.start} ({nextStartInMinutes ?? "-"} min)
+        </Text>
+      ) : null}
 
       <Card>
         <View style={styles.progressRow}>
@@ -193,6 +193,10 @@ export default function ScheduleScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+    nextLine: {
+      fontSize: fontSizes.sm,
+      color: colors.muted,
+    },
     progressRow: {
       flexDirection: "row",
       justifyContent: "space-between",

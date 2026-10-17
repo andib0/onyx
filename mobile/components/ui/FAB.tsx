@@ -6,14 +6,15 @@ import Animated, { ZoomIn, useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, motion, type Palette } from "../../theme";
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 interface FABProps {
   icon?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label: string;
 }
 
+// Positioning lives on a plain Animated.View: on web, an animated Pressable with a
+// style *function* dropped its styles, so the FAB rendered in the normal flow and
+// squeezed the tab bar (labels clipped).
 export default function FAB({ icon = "add", onPress, label }: FABProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -24,7 +25,7 @@ export default function FAB({ icon = "add", onPress, label }: FABProps) {
   };
 
   return (
-    <AnimatedPressable
+    <Animated.View
       entering={
         reduceMotion
           ? undefined
@@ -32,23 +33,29 @@ export default function FAB({ icon = "add", onPress, label }: FABProps) {
               .damping(motion.spring.damping)
               .stiffness(motion.spring.stiffness)
       }
-      onPress={handlePress}
-      style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      style={styles.wrap}
     >
-      <Ionicons name={icon} size={26} color={colors.onAccent} />
-    </AnimatedPressable>
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Ionicons name={icon} size={26} color={colors.onAccent} />
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    fab: {
+    wrap: {
       position: "absolute",
       right: spacing.lg,
-      // Clears the floating 84px tab bar
+      // Clears the floating tab bar
       bottom: 100,
+    },
+    fab: {
       width: 56,
       height: 56,
       borderRadius: 28,

@@ -15,6 +15,9 @@ import SetPills from "./workout/SetPills";
 import IdleView from "./workout/IdleView";
 import RestView from "./workout/RestView";
 import FinishedView from "./workout/FinishedView";
+import HoldButton from "../shared/HoldButton";
+import { plannedSetCount } from "../../utils/dayOutcome";
+import { workoutCountsAsDone } from "../../utils/workoutClock";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   spacing,
@@ -34,6 +37,10 @@ interface WorkoutSectionProps {
   onStart: () => void;
   onTogglePause: () => void;
   onStop: () => void;
+  // Ends the active session with undo (Today/Train wire it to the undo bar)
+  onFinish?: () => void;
+  // Deferred finish waiting in the undo bar: show the end state already
+  finishing?: false | "done" | "ended";
   onCompleteSet: (values?: LoggedSetValues) => void;
   onSkipRest: () => void;
   onUndoSet?: () => void;
@@ -54,6 +61,8 @@ export default function WorkoutSection({
   onStart,
   onTogglePause,
   onStop,
+  onFinish,
+  finishing = false,
   onCompleteSet,
   onSkipRest,
   onUndoSet,
@@ -153,8 +162,24 @@ export default function WorkoutSection({
     0
   );
 
+  const plannedSets = plannedSetCount(programRows);
+
   /* ── Done for today: collapse to a confirmation row ── */
-  if (!workout.isActive && workoutCompletedToday) {
+  if (finishing === "ended") {
+    return (
+      <Card>
+        <View style={styles.doneRow}>
+          <View style={styles.doneTextWrap}>
+            <Text style={styles.doneTitle}>Session ended</Text>
+            <Text style={styles.doneMeta} numberOfLines={1}>
+              {totalSetsLogged}/{plannedSets} sets — not counted as done
+            </Text>
+          </View>
+        </View>
+      </Card>
+    );
+  }
+  if (finishing === "done" || (!workout.isActive && workoutCompletedToday)) {
     return (
       <Card>
         <View style={styles.doneRow}>
@@ -165,7 +190,9 @@ export default function WorkoutSection({
               {programLabel}
             </Text>
           </View>
-          <Button label="Train again" variant="ghost" size="sm" onPress={onStart} />
+          {finishing ? null : (
+            <Button label="Train again" variant="ghost" size="sm" onPress={onStart} />
+          )}
         </View>
       </Card>
     );
@@ -317,11 +344,13 @@ export default function WorkoutSection({
       )}
 
       {/* Secondary controls + session info */}
+      {/* Pause sits with the clock; finishing lives in its own row below so a
+          mis-tap can't end the session (audit 06 §4: 36 pt End next to Pause). */}
       <View style={styles.controlsRow}>
         <Button
           label={workout.isPaused ? "Resume" : "Pause"}
           variant="secondary"
-          size="sm"
+          icon={workout.isPaused ? "play" : "pause"}
           onPress={onTogglePause}
           style={styles.controlBtn}
         />
@@ -330,13 +359,23 @@ export default function WorkoutSection({
           ticking={workout.isActive && !workout.isPaused && !workout.isFinished}
           style={styles.sessionTime}
         />
-        <Button
-          label="End"
-          variant="danger"
-          size="sm"
-          onPress={onStop}
-          style={styles.controlBtn}
-        />
+      </View>
+      <View style={styles.finishRow}>
+        {workoutCountsAsDone(totalSetsLogged, plannedSets) && onFinish ? (
+          // ≥ 80 % of planned sets (mobile-logic rule) → 1 tap, undo in the bar
+          <Button
+            label="Finish workout"
+            icon="checkmark-done"
+            onPress={onFinish}
+            style={styles.finishBtn}
+          />
+        ) : (
+          <HoldButton
+            label={`End early · ${totalSetsLogged}/${plannedSets} sets`}
+            onConfirm={onFinish ?? onStop}
+            style={styles.finishBtn}
+          />
+        )}
       </View>
 
       {/* Exercise progress: current ±1 by default, expandable (keeps one focal point) */}
@@ -504,7 +543,13 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
       gap: spacing.sm,
     },
     controlBtn: {
-      minWidth: 90,
+      minWidth: 120,
+    },
+    finishRow: {
+      marginTop: spacing.md,
+    },
+    finishBtn: {
+      alignSelf: "stretch",
     },
     sessionTime: {
       fontSize: fontSizes.md,

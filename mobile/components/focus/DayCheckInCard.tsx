@@ -7,9 +7,12 @@ import IconButton from "../ui/IconButton";
 import Input from "../ui/Input";
 import type { LogEntry } from "../../types/appTypes";
 import { useTheme } from "../../contexts/ThemeContext";
+import { CHECK_IN_MINUTES, checkInDoneFor } from "../../utils/reminderPlan";
 import { spacing, fontSizes, type Palette } from "../../theme";
 
-export const CHECK_IN_HOUR = 19;
+// Same minute as the check-in notification (utils/reminderPlan CHECK_IN_TIME);
+// it used to be 19:00 here vs 20:00 in the notification (audit 06 §3).
+export const CHECK_IN_HOUR = CHECK_IN_MINUTES / 60;
 export const CHECKIN_DISMISS_KEY = "onyx_checkin_dismissed";
 const DISMISS_KEY = CHECKIN_DISMISS_KEY;
 
@@ -64,8 +67,12 @@ export default function DayCheckInCard({
     if (onDismiss) onDismiss();
   };
 
-  const isEvening = nowMinutes >= CHECK_IN_HOUR * 60;
-  const alreadyLogged = logEntries.some((entry) => entry.date === todayKeyValue);
+  const isEvening = nowMinutes >= CHECK_IN_MINUTES;
+  const entry = logEntries.find((e) => e.date === todayKeyValue);
+  // Weight/sleep already logged in the morning aren't asked again (audit 06 §1 #10)
+  const askWeight = !(entry?.bw || "").trim();
+  const askSleep = !(entry?.sleep || "").trim();
+  const alreadyLogged = checkInDoneFor(entry);
   if (!isEvening || alreadyLogged || dismissed) return null;
 
   const hasInput = Boolean(weight.trim() || sleep.trim() || steps.trim());
@@ -75,14 +82,14 @@ export default function DayCheckInCard({
     setSaving(true);
     try {
       await onSave({
-        id: `log_${Date.now()}`,
+        id: entry?.id || `log_${Date.now()}`,
         date: todayKeyValue,
-        day: dayLabel,
-        bw: weight.trim(),
-        sleep: sleep.trim(),
+        day: entry?.day || dayLabel,
+        bw: askWeight ? weight.trim() : entry?.bw || "",
+        sleep: askSleep ? sleep.trim() : entry?.sleep || "",
         steps: steps.trim(),
-        top: "",
-        notes: "",
+        top: entry?.top || "",
+        notes: entry?.notes || "",
       });
       showToast("Day logged");
     } catch (err) {
@@ -104,30 +111,34 @@ export default function DayCheckInCard({
       </View>
 
       <View style={styles.fieldsRow}>
-        <View style={styles.fieldCol}>
-          <Input
-            label="Weight"
-            unit="kg"
-            value={weight}
-            onChangeText={setWeight}
-            placeholder="72.5"
-            keyboardType="decimal-pad"
-            maxLength={6}
-            mono
-          />
-        </View>
-        <View style={styles.fieldCol}>
-          <Input
-            label="Sleep"
-            unit="h"
-            value={sleep}
-            onChangeText={setSleep}
-            placeholder="7.5"
-            keyboardType="decimal-pad"
-            maxLength={6}
-            mono
-          />
-        </View>
+        {askWeight ? (
+          <View style={styles.fieldCol}>
+            <Input
+              label="Weight"
+              unit="kg"
+              value={weight}
+              onChangeText={setWeight}
+              placeholder="72.5"
+              keyboardType="decimal-pad"
+              maxLength={6}
+              mono
+            />
+          </View>
+        ) : null}
+        {askSleep ? (
+          <View style={styles.fieldCol}>
+            <Input
+              label="Sleep"
+              unit="h"
+              value={sleep}
+              onChangeText={setSleep}
+              placeholder="7.5"
+              keyboardType="decimal-pad"
+              maxLength={6}
+              mono
+            />
+          </View>
+        ) : null}
         <View style={styles.fieldCol}>
           <Input
             label="Steps"
