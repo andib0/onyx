@@ -17,6 +17,9 @@ export const MEAL_DAYS = [
   "Sunday",
 ];
 
+/** mealTemplatesByDay keys that are dates hold one-off foods for that day only. */
+export const ONE_OFF_DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
 export function normalizeState(rawState: Partial<AppState>): AppState {
   const base = ensureState(rawState);
   const incomingList = Array.isArray(rawState && rawState.supplementsList)
@@ -135,11 +138,18 @@ function normalizeMealTemplatesByDay(
   rawTemplates: Record<string, MealTemplate[]> | undefined
 ): Record<string, MealTemplate[]> {
   const source = rawTemplates && typeof rawTemplates === "object" ? rawTemplates : {};
-  return MEAL_DAYS.reduce<Record<string, MealTemplate[]>>((result, dayName) => {
+  const byDay = MEAL_DAYS.reduce<Record<string, MealTemplate[]>>((result, dayName) => {
     const list = Array.isArray(source[dayName]) ? source[dayName] : [];
     result[dayName] = normalizeMealList(list, dayName);
     return result;
   }, {});
+  // One-off foods (POST /meals/one-off) are templates keyed by their ISO date.
+  for (const key of Object.keys(source)) {
+    if (ONE_OFF_DAY_KEY.test(key) && Array.isArray(source[key])) {
+      byDay[key] = normalizeMealList(source[key], key);
+    }
+  }
+  return byDay;
 }
 
 function normalizeMealList(list: MealTemplate[], dayName: string): MealTemplate[] {

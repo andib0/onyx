@@ -8,7 +8,13 @@ import {
   registerNotificationCategories,
 } from "../utils/notifications";
 
-// Handles lock-screen notification action buttons. Renders nothing.
+type ReminderData = {
+  type?: string;
+  supplementId?: string; // legacy per-supplement reminders
+  supplementIds?: string[]; // one banner per time slot
+};
+
+// Handles notification taps and lock-screen action buttons. Renders nothing.
 export default function NotificationResponder() {
   const router = useRouter();
   const { setSupplementChecked } = useSupplements();
@@ -20,13 +26,22 @@ export default function NotificationResponder() {
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const action = response.actionIdentifier;
-      const data = response.notification.request.content.data as {
-        supplementId?: string;
-      };
-      if (action === ACTION_MARK_TAKEN && data?.supplementId) {
-        setSupplementChecked(data.supplementId, true).catch(() => {});
-      } else if (action === ACTION_LOG_NOW) {
-        router.push("/(tabs)/focus");
+      const data = (response.notification.request.content.data || {}) as ReminderData;
+      if (action === ACTION_MARK_TAKEN) {
+        const ids = data.supplementIds?.length
+          ? data.supplementIds
+          : data.supplementId
+            ? [data.supplementId]
+            : [];
+        for (const id of ids) setSupplementChecked(id, true).catch(() => {});
+        return;
+      }
+      if (action === ACTION_LOG_NOW || data.type === "checkin") {
+        router.push("/(tabs)/today");
+      } else if (data.type === "training") {
+        router.push("/(tabs)/train");
+      } else if (data.type === "supplement") {
+        router.push("/(tabs)/today");
       }
     });
     return () => sub.remove();
