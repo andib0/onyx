@@ -18,35 +18,43 @@ model User {
   username     String?
   age          Int?
   weight       Decimal?
+  // Random identity of this account's server-side data. A client that sees a
+  // different epoch than the one it stored knows the server lost its data (e.g.
+  // the Render free DB was recreated) and must rehydrate via /sync/import?v=2.
+  dataEpoch    String   @default(dbgenerated("(gen_random_uuid())::text"))
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  preferences    UserPreferences?
-  scheduleBlocks ScheduleBlock[]
-  completions    Completion[]
-  supplements    Supplement[]
-  supplementLogs SupplementLog[]
-  mealTemplates  MealTemplate[]
-  mealLogs       MealLog[]
-  dailyLogs      DailyLog[]
-  refreshTokens  RefreshToken[]
-  userFoods      UserFood[]
+  preferences     UserPreferences?
+  scheduleBlocks  ScheduleBlock[]
+  completions     Completion[]
+  supplements     Supplement[]
+  supplementLogs  SupplementLog[]
+  mealTemplates   MealTemplate[]
+  mealLogs        MealLog[]
+  dailyLogs       DailyLog[]
+  refreshTokens   RefreshToken[]
+  userFoods       UserFood[]
   workoutSessions WorkoutSession[]
   workoutSetLogs  WorkoutSetLog[]
   dailyScores     DailyScore[]
 }
 
 model UserPreferences {
-  id              String @id @default(uuid())
-  userId          String @unique
-  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  timezone        String @default("Europe/Belgrade")
-  caffeineCutoff  String @default("15:40")
-  sleepTarget     String @default("23:00")
-  proteinTarget   String @default("140-150 g/day")
-  hydrationTarget String @default(">=2.5 L/day")
-  selectedProgramId     String?
-  selectedProgramDayId  String?
+  id                   String  @id @default(uuid())
+  userId               String  @unique
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone             String  @default("Europe/Belgrade")
+  caffeineCutoff       String  @default("15:40")
+  sleepTarget          String  @default("23:00")
+  proteinTarget        String  @default("140-150 g/day")
+  hydrationTarget      String  @default(">=2.5 L/day")
+  selectedProgramId    String?
+  selectedProgramDayId String?
+  // Numeric targets used by the server-computed Outcome Score (Bet 5).
+  proteinTargetG       Float?
+  calorieTargetKcal    Float?
+  goalRateKgPerWeek    Float?
 }
 
 model RefreshToken {
@@ -69,8 +77,8 @@ model ScheduleBlock {
   id        String  @id @default(uuid())
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  start     String  // "HH:MM"
-  end       String  // "HH:MM"
+  start     String // "HH:MM"
+  end       String // "HH:MM"
   title     String
   purpose   String?
   good      String?
@@ -85,14 +93,15 @@ model ScheduleBlock {
 }
 
 model Completion {
-  id          String    @id @default(uuid())
+  id          String        @id @default(uuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   blockId     String
   block       ScheduleBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
-  date        String    // "YYYY-MM-DD"
-  isComplete  Boolean   @default(false)
+  date        String // "YYYY-MM-DD"
+  isComplete  Boolean       @default(false)
   completedAt DateTime?
+  hlc         String? // hybrid logical clock of the last applied write
 
   @@unique([userId, blockId, date])
   @@index([userId, date])
@@ -125,9 +134,10 @@ model SupplementLog {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   supplementId String
   supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
-  date         String     // "YYYY-MM-DD"
+  date         String // "YYYY-MM-DD"
   isTaken      Boolean    @default(false)
   takenAt      DateTime?
+  hlc          String? // hybrid logical clock of the last applied write
 
   @@unique([userId, supplementId, date])
   @@index([userId, date])
@@ -138,10 +148,10 @@ model SupplementLog {
 // ============================================
 
 model MealTemplate {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dayOfWeek String  // Monday, Tuesday, etc. or "training", "rest", "cardio"
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek String // Monday, Tuesday, etc. or "training", "rest", "cardio"
   name      String
   examples  String?
   grams     Decimal?
@@ -171,9 +181,10 @@ model MealLog {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   mealTemplateId String
   mealTemplate   MealTemplate @relation(fields: [mealTemplateId], references: [id], onDelete: Cascade)
-  date           String       // "YYYY-MM-DD"
+  date           String // "YYYY-MM-DD"
   isEaten        Boolean      @default(false)
   eatenAt        DateTime?
+  hlc            String? // hybrid logical clock of the last applied write
 
   @@unique([userId, mealTemplateId, date])
   @@index([userId, date])
@@ -184,17 +195,20 @@ model MealLog {
 // ============================================
 
 model DailyLog {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      String   // "YYYY-MM-DD"
-  day       String?  // Push, Pull, Legs+Shoulders, Rest, Cardio+Abs
-  bw        String?  // bodyweight
-  sleep     String?
-  steps     String?
-  top       String?  // top sets
-  notes     String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       String // "YYYY-MM-DD"
+  day        String? // Push, Pull, Legs+Shoulders, Rest, Cardio+Abs
+  bw         String? // bodyweight
+  sleep      String?
+  steps      String?
+  top        String? // top sets
+  notes      String?
+  // Per-field HLC of the last applied write, e.g. {"bw":"1760000000000-0000-dev1"}
+  fieldClock Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -258,21 +272,30 @@ model SupplementDatabase {
 // ============================================
 
 model DailyScore {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date        String   // "YYYY-MM-DD"
-  score       Int      // 0-100 overall completion
-  tasksDone   Int      @default(0)
-  tasksTotal  Int      @default(0)
-  suppDone    Int      @default(0)
-  suppTotal   Int      @default(0)
-  mealsDone   Int      @default(0)
-  mealsTotal  Int      @default(0)
-  workoutDone Boolean  @default(false)
-  protein     Int      @default(0)
-  calories    Int      @default(0)
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         String // "YYYY-MM-DD"
+  score        Int // 0-100 overall completion
+  tasksDone    Int       @default(0)
+  tasksTotal   Int       @default(0)
+  suppDone     Int       @default(0)
+  suppTotal    Int       @default(0)
+  mealsDone    Int       @default(0)
+  mealsTotal   Int       @default(0)
+  workoutDone  Boolean   @default(false)
+  protein      Int       @default(0)
+  calories     Int       @default(0)
+  // Server-computed Outcome Score (contracts/README.md). outcomeScore null = unscored.
+  outcomeScore Int?
+  kept         Boolean   @default(false)
+  routinePct   Int?
+  components   Json?
+  plan         String? // train | rest
+  setsDone     Int       @default(0)
+  setsPlanned  Int       @default(0)
+  computedAt   DateTime?
+  updatedAt    DateTime  @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -286,7 +309,7 @@ model WorkoutSession {
   id              String    @id @default(uuid())
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date            String    // "YYYY-MM-DD"
+  date            String // "YYYY-MM-DD"
   programDayName  String?
   startedAt       DateTime  @default(now())
   endedAt         DateTime?
@@ -295,6 +318,7 @@ model WorkoutSession {
   sets WorkoutSetLog[]
 
   @@index([userId, date])
+  @@index([userId, endedAt])
 }
 
 model WorkoutSetLog {
@@ -308,8 +332,10 @@ model WorkoutSetLog {
   weightKg     Decimal?
   reps         Int?
   rir          String?
+  hlc          String?
   createdAt    DateTime       @default(now())
 
+  @@unique([sessionId, exerciseName, setNumber])
   @@index([userId, exerciseName])
   @@index([sessionId])
 }
@@ -336,11 +362,13 @@ model GymProgram {
   id          String  @id @default(uuid())
   name        String
   description String?
-  goal        String  // bulk, cut, strength, general, recomp
+  goal        String // bulk, cut, strength, general, recomp
   isSystem    Boolean @default(true)
   userId      String? // null for system programs
 
   days ProgramDay[]
+
+  @@index([userId])
 }
 
 model ProgramDay {
@@ -349,6 +377,8 @@ model ProgramDay {
   program   GymProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
   name      String
   dayOrder  Int
+  // ISO weekdays (1 = Monday … 7 = Sunday) this day is planned on; empty = unplanned.
+  weekdays  Int[]      @default([])
 
   exercises ProgramExercise[]
 }
