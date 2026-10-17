@@ -1,0 +1,15 @@
+# Signs the fixture user in on a fresh install (local API via 10.0.2.2 only).
+appId: com.onyx.daily
+---
+- launchApp:
+    clearState: true
+- tapOn: "you@example.com"
+- inputText: "e2e@onyx.test"
+- tapOn: "Your password"
+- inputText: "e2e-local-Passw0rd!"
+- hideKeyboard
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Day score"
+    timeout: 30000
+- takeScreenshot: results/android-focus

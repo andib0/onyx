@@ -39,7 +39,7 @@ Baseline commit: `47df93e` (+ infra commit `d6831b9`).
 | Unit tests every mobile util; every backend service | mobile utils **7/17** files; backend services **0/14** | file count |
 | API tests every route | **2/59** (health, auth — added in d6831b9) | backend/test |
 | E2E for 5 core flows | **1/5** (login→Focus smoke on Expo web, added in d6831b9) | e2e/ |
-| "Today" = 1 round trip, p95 < 150 ms local | **7 requests** on critical path (refresh → me → 5 parallel); startup wall p95 **173.5 ms** (80% is bcrypt refresh). `/sync/export` payload grows unbounded (46 KB @ 60 days). | 02 §10 |
+| "Today" = 1 round trip, p95 < 150 ms local | **7 requests** on critical path (refresh → me → 5 parallel). Startup wall p50 / p95: **149 / 267 ms** (my rerun, `npm run perf:bench`, 50 runs) and 173.5 ms p95 (audit run). `/auth/refresh` alone p50 135 ms (bcrypt). `/sync/export` payload grows unbounded (46 KB @ 60 days). | 02 §10, `backend/scripts/perf` |
 | WCAG AA both palettes | **69 / 160** token pairs fail; 41 below 3:1. Light palette effectively unreachable at first launch (`app.json userInterfaceStyle: "dark"`). | 06 §5 |
 | Touch targets ≥ 44 pt | ≥ 60 controls below: 23 `Button size="sm"` (36 pt) incl. workout Pause/End, chips 32, gram presets 28, tier chips ≈25. | 06 §5 |
 | Labels on icon-only buttons | 0 unlabeled icon-only; 7 glyph/backdrop controls unlabeled (Stepper ±, Checkbox, My Foods ×, backdrops); 35 text touchables lack role. | 06 §5 |

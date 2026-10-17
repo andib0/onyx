@@ -1,0 +1,8 @@
+# Logged-in cold start: kill app, launch, wait for Focus content.
+appId: com.onyx.daily
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Day score"
+    timeout: 60000
