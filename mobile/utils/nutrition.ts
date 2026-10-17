@@ -1,5 +1,19 @@
-import type { MealTemplate } from "../types/appTypes";
+import type { LogEntry, MealTemplate } from "../types/appTypes";
 import type { Food } from "../api/foods";
+import { trendWeightKg } from "./trends";
+
+// Nutrition targets.
+// - Energy: Mifflin-St Jeor BMR (Mifflin et al. 1990, Am J Clin Nutr 51(2):241)
+//   × activity factor (default 1.55, "moderately active") ± goal delta
+//   (cut −20 %, bulk +10 %, recomp/general 0; Aragon et al. 2017 ISSN stand,
+//   JISSN 14:16 — rate-based deficits/surpluses). When sex/height/age are not
+//   known, fall back to 33 kcal/kg × goal factor and say so.
+// - After enough logged data, an adaptive TDEE (utils/adaptiveTargets.ts,
+//   energy-balance back-calculation) replaces the formula, clamped ±25 %.
+// - Protein: g/kg by goal within 1.6–2.2 with a hard floor of 1.6 g/kg (Morton
+//   et al. 2018, Br J Sports Med 52:376: gains plateau ≈ 1.62 g/kg).
+// - Bodyweight: the regression trend weight once ≥ 7 weigh-ins exist
+//   (utils/trends.ts), else the profile weight.
 
 type NutritionTarget = {
   k: string;
@@ -7,154 +21,324 @@ type NutritionTarget = {
   n: string;
 };
 
+export type Goal = "bulk" | "cut" | "recomp" | "strength" | "general";
+export type Sex = "male" | "female";
+
 type GoalProfile = {
   label: string;
-  calories: string;
-  caloriesNote: string;
-  proteinPerKg: [number, number];
+  calorieDelta: number; // fraction of TDEE
+  proteinPerKg: number;
+  fatPerKg: number;
   proteinNote: string;
-  fatPerKg: [number, number];
   fatNote: string;
   carbsNote: string;
   weightNote: string;
+  rateKgPerWeek: number;
 };
 
-const GOAL_PROFILES: Record<string, GoalProfile> = {
+const GOAL_PROFILES: Record<Goal, GoalProfile> = {
   bulk: {
     label: "Lean bulk",
-    calories: "+200-300 kcal/day",
-    caloriesNote: "Adjust weekly using scale + performance.",
-    proteinPerKg: [1.8, 2.2],
-    proteinNote: "g/kg for muscle gain in surplus.",
-    fatPerKg: [0.8, 1.0],
+    calorieDelta: 0.1,
+    proteinPerKg: 2.0,
+    fatPerKg: 0.9,
+    proteinNote: "g/kg for muscle gain in a surplus.",
     fatNote: "Avoid very high fat pre-gym if sluggish.",
     carbsNote: "Fuel training + cognition; prioritize earlier day.",
     weightNote: "Aim ~0.2-0.4 kg/week gain.",
+    rateKgPerWeek: 0.3,
   },
   cut: {
     label: "Cut",
-    calories: "-300-500 kcal/day",
-    caloriesNote: "Adjust weekly; prioritize protein to preserve muscle.",
-    proteinPerKg: [2.0, 2.4],
-    proteinNote: "g/kg to preserve muscle in deficit.",
-    fatPerKg: [0.7, 0.9],
+    calorieDelta: -0.2,
+    proteinPerKg: 2.2,
+    fatPerKg: 0.8,
+    proteinNote: "g/kg to preserve muscle in a deficit.",
     fatNote: "Keep moderate for hormones; reduce carbs first.",
     carbsNote: "Lower than bulk; keep around training windows.",
     weightNote: "Aim ~0.3-0.5 kg/week loss.",
+    rateKgPerWeek: -0.4,
   },
   recomp: {
     label: "Recomp",
-    calories: "Maintenance",
-    caloriesNote: "Eat at maintenance; rely on training stimulus.",
-    proteinPerKg: [1.8, 2.2],
+    calorieDelta: 0,
+    proteinPerKg: 2.0,
+    fatPerKg: 0.9,
     proteinNote: "g/kg to support muscle growth at maintenance.",
-    fatPerKg: [0.8, 1.0],
     fatNote: "Moderate; keep consistent.",
     carbsNote: "Fill remaining; prioritize around training.",
     weightNote: "Maintain weight; body composition shifts over time.",
+    rateKgPerWeek: 0,
   },
   strength: {
     label: "Strength",
-    calories: "+100-200 kcal/day",
-    caloriesNote: "Slight surplus to fuel recovery and performance.",
-    proteinPerKg: [1.6, 2.0],
+    calorieDelta: 0.05,
+    proteinPerKg: 1.8,
+    fatPerKg: 0.9,
     proteinNote: "g/kg for strength-focused training.",
-    fatPerKg: [0.8, 1.0],
     fatNote: "Moderate; support joint health.",
     carbsNote: "Fuel heavy sessions; prioritize pre/post workout.",
     weightNote: "Slow gain OK; focus on performance.",
+    rateKgPerWeek: 0.15,
   },
   general: {
     label: "General fitness",
-    calories: "Maintenance",
-    caloriesNote: "Eat at maintenance; adjust if goals change.",
-    proteinPerKg: [1.6, 2.0],
+    calorieDelta: 0,
+    proteinPerKg: 1.6,
+    fatPerKg: 0.9,
     proteinNote: "g/kg for general activity level.",
-    fatPerKg: [0.8, 1.0],
     fatNote: "Moderate; balanced approach.",
     carbsNote: "Fill remaining; no strict limits.",
     weightNote: "Maintain weight; adjust based on goals.",
+    rateKgPerWeek: 0,
   },
 };
 
-const DEFAULT_GOAL = "general";
+export const PROTEIN_FLOOR_G_PER_KG = 1.6;
+export const DEFAULT_ACTIVITY_FACTOR = 1.55;
+export const FALLBACK_KCAL_PER_KG = 33;
+// No weight at all: a 70 kg reference adult (ICRP "reference man") so the
+// app shows usable numbers instead of 0 — clearly labelled as such.
+export const REFERENCE_WEIGHT_KG = 70;
+export const DEFAULT_PROTEIN_PREF = "140-150 g/day";
 
-function rangeString(low: number, high: number, unit: string): string {
-  return `${Math.round(low)}-${Math.round(high)} ${unit}`;
+function goalOf(programGoal: string | undefined): Goal {
+  return programGoal && programGoal in GOAL_PROFILES ? (programGoal as Goal) : "general";
 }
+
+// Mifflin-St Jeor: 10·kg + 6.25·cm − 5·years + 5 (men) / − 161 (women).
+export function mifflinStJeor(p: {
+  weightKg: number;
+  heightCm: number;
+  ageYears: number;
+  sex: Sex;
+}): number {
+  return (
+    10 * p.weightKg + 6.25 * p.heightCm - 5 * p.ageYears + (p.sex === "male" ? 5 : -161)
+  );
+}
+
+export type BodyInputs = {
+  profileWeightKg?: number | null;
+  logEntries?: LogEntry[];
+  heightCm?: number | null;
+  ageYears?: number | null;
+  sex?: Sex | null;
+  activityFactor?: number | null;
+};
+
+export type WeightSource = "trend" | "profile" | "reference";
+
+export function targetWeight(b: BodyInputs): { kg: number; source: WeightSource } {
+  const trend = b.logEntries ? trendWeightKg(b.logEntries) : null;
+  if (trend !== null) return { kg: trend, source: "trend" };
+  // Prisma Decimal may arrive as a string over JSON
+  const profile = Number(b.profileWeightKg);
+  if (isFinite(profile) && profile > 0) return { kg: profile, source: "profile" };
+  return { kg: REFERENCE_WEIGHT_KG, source: "reference" };
+}
+
+export type CalorieTarget = {
+  calories: number;
+  tdee: number;
+  method: "adaptive" | "msj" | "bodyweight";
+  note: string;
+};
+
+// Calories for a goal. `adaptiveTdee` (from logged intake + weight trend) wins
+// over the formula when present.
+export function calorieTarget(p: {
+  weightKg: number;
+  goal: string | undefined;
+  heightCm?: number | null;
+  ageYears?: number | null;
+  sex?: Sex | null;
+  activityFactor?: number | null;
+  adaptiveTdee?: number | null;
+}): CalorieTarget {
+  const profile = GOAL_PROFILES[goalOf(p.goal)];
+  const factor = 1 + profile.calorieDelta;
+  const activity = p.activityFactor && p.activityFactor > 1 ? p.activityFactor : null;
+  const deltaText =
+    profile.calorieDelta === 0
+      ? "maintenance"
+      : `${profile.calorieDelta > 0 ? "+" : "−"}${Math.round(Math.abs(profile.calorieDelta) * 100)}%`;
+
+  if (p.adaptiveTdee && p.adaptiveTdee > 0) {
+    return {
+      calories: Math.round(p.adaptiveTdee * factor),
+      tdee: Math.round(p.adaptiveTdee),
+      method: "adaptive",
+      note: `From your logged intake and weight trend (TDEE ${Math.round(p.adaptiveTdee)}), ${deltaText}.`,
+    };
+  }
+  if (p.heightCm && p.ageYears && p.sex) {
+    const bmr = mifflinStJeor({
+      weightKg: p.weightKg,
+      heightCm: p.heightCm,
+      ageYears: p.ageYears,
+      sex: p.sex,
+    });
+    const tdee = bmr * (activity ?? DEFAULT_ACTIVITY_FACTOR);
+    return {
+      calories: Math.round(tdee * factor),
+      tdee: Math.round(tdee),
+      method: "msj",
+      note: `Mifflin-St Jeor BMR ${Math.round(bmr)} × ${activity ?? DEFAULT_ACTIVITY_FACTOR} activity, ${deltaText}.`,
+    };
+  }
+  const tdee = p.weightKg * FALLBACK_KCAL_PER_KG;
+  return {
+    calories: Math.round(tdee * factor),
+    tdee: Math.round(tdee),
+    method: "bodyweight",
+    note: `Estimate: ${FALLBACK_KCAL_PER_KG} kcal/kg, ${deltaText}. Add sex, height and age for Mifflin-St Jeor.`,
+  };
+}
+
+// Applied preference ("165 g/day") overrides the computed protein target, but
+// never below the floor. The schema default string means "not set".
+export function proteinTargetGrams(p: {
+  weightKg: number;
+  goal: string | undefined;
+  preference?: string | null;
+}): { grams: number; floor: number; source: "goal" | "preference" } {
+  const profile = GOAL_PROFILES[goalOf(p.goal)];
+  const floor = Math.round(p.weightKg * PROTEIN_FLOOR_G_PER_KG);
+  const pref = (p.preference || "").trim();
+  if (pref && pref !== DEFAULT_PROTEIN_PREF && !/g\s*\/\s*kg/i.test(pref)) {
+    const grams = parseTargetNumber(pref);
+    if (grams > 0) return { grams: Math.max(grams, floor), floor, source: "preference" };
+  }
+  return {
+    grams: Math.max(Math.round(p.weightKg * profile.proteinPerKg), floor),
+    floor,
+    source: "goal",
+  };
+}
+
+export type NutritionPlan = {
+  goal: Goal;
+  weightKg: number;
+  weightSource: WeightSource;
+  calories: CalorieTarget;
+  proteinG: number;
+  proteinFloorG: number;
+  proteinSource: "goal" | "preference";
+  fatG: number;
+  carbsG: number;
+};
+
+export function computeNutritionPlan(p: {
+  body: BodyInputs;
+  goal: string | undefined;
+  proteinPreference?: string | null;
+  adaptiveTdee?: number | null;
+}): NutritionPlan {
+  const goal = goalOf(p.goal);
+  const profile = GOAL_PROFILES[goal];
+  const w = targetWeight(p.body);
+  const calories = calorieTarget({
+    weightKg: w.kg,
+    goal,
+    heightCm: p.body.heightCm,
+    ageYears: p.body.ageYears,
+    sex: p.body.sex,
+    activityFactor: p.body.activityFactor,
+    adaptiveTdee: p.adaptiveTdee,
+  });
+  const protein = proteinTargetGrams({
+    weightKg: w.kg,
+    goal,
+    preference: p.proteinPreference,
+  });
+  const fatG = Math.round(w.kg * profile.fatPerKg);
+  const carbsG = Math.max(
+    0,
+    Math.round((calories.calories - protein.grams * 4 - fatG * 9) / 4)
+  );
+  return {
+    goal,
+    weightKg: w.kg,
+    weightSource: w.source,
+    calories,
+    proteinG: protein.grams,
+    proteinFloorG: protein.floor,
+    proteinSource: protein.source,
+    fatG,
+    carbsG,
+  };
+}
+
+const WEIGHT_SOURCE_NOTE: Record<WeightSource, string> = {
+  trend: "Based on your weigh-in trend.",
+  profile: "Based on your profile weight.",
+  reference: "Set your weight for personal targets — using a 70 kg reference.",
+};
 
 export function buildNutritionTargets(
   weight: number | undefined | null,
   proteinTarget: string | undefined,
   hydrationTarget: string | undefined,
-  programGoal: string | undefined
+  programGoal: string | undefined,
+  extras: {
+    logEntries?: LogEntry[];
+    heightCm?: number | null;
+    ageYears?: number | null;
+    sex?: Sex | null;
+    activityFactor?: number | null;
+    adaptiveTdee?: number | null;
+  } = {}
 ): NutritionTarget[] {
-  const goal = programGoal && GOAL_PROFILES[programGoal] ? programGoal : DEFAULT_GOAL;
-  const profile = GOAL_PROFILES[goal];
-
+  const plan = computeNutritionPlan({
+    body: {
+      profileWeightKg: weight ?? null,
+      logEntries: extras.logEntries,
+      heightCm: extras.heightCm,
+      ageYears: extras.ageYears,
+      sex: extras.sex,
+      activityFactor: extras.activityFactor,
+    },
+    goal: programGoal,
+    proteinPreference: proteinTarget,
+    adaptiveTdee: extras.adaptiveTdee,
+  });
+  const profile = GOAL_PROFILES[plan.goal];
   const hydration = hydrationTarget || ">=2.5 L/day";
-
-  if (!weight || weight <= 0) {
-    const protein = proteinTarget || "1.8-2.2 g/kg";
-    return [
-      { k: "Goal", v: profile.label, n: profile.weightNote },
-      { k: "Calories", v: profile.calories, n: profile.caloriesNote },
-      { k: "Protein", v: protein, n: "Set your weight in profile for precise targets." },
-      { k: "Hydration", v: hydration, n: "500 ml on wake; 500 ml pre-gym." },
-    ];
-  }
-
-  const proteinLow = weight * profile.proteinPerKg[0];
-  const proteinHigh = weight * profile.proteinPerKg[1];
-  const fatLow = weight * profile.fatPerKg[0];
-  const fatHigh = weight * profile.fatPerKg[1];
-
-  const proteinMid = (proteinLow + proteinHigh) / 2;
-  const fatMid = (fatLow + fatHigh) / 2;
-  const proteinCals = proteinMid * 4;
-  const fatCals = fatMid * 9;
-  const tdeeEstimate = weight * 33;
-  const carbCals = Math.max(0, tdeeEstimate - proteinCals - fatCals);
-  const carbLow = Math.round((carbCals / 4) * 0.85);
-  const carbHigh = Math.round((carbCals / 4) * 1.15);
+  const perKg = Math.round((plan.proteinG / plan.weightKg) * 10) / 10;
 
   return [
-    { k: "Goal", v: profile.label, n: profile.weightNote },
-    { k: "Calories", v: profile.calories, n: profile.caloriesNote },
+    {
+      k: "Goal",
+      v: profile.label,
+      n: `${profile.weightNote} ${WEIGHT_SOURCE_NOTE[plan.weightSource]} (${plan.weightKg} kg)`,
+    },
+    { k: "Calories", v: `${plan.calories.calories} kcal/day`, n: plan.calories.note },
     {
       k: "Protein",
-      v: rangeString(proteinLow, proteinHigh, "g/day"),
-      n: `~${profile.proteinPerKg[0]}-${profile.proteinPerKg[1]} ${profile.proteinNote}`,
+      v: `${plan.proteinG} g/day`,
+      n:
+        plan.proteinSource === "preference"
+          ? `Your applied target (≈${perKg} g/kg; floor ${plan.proteinFloorG} g).`
+          : `~${perKg} ${profile.proteinNote} Floor ${PROTEIN_FLOOR_G_PER_KG} g/kg.`,
     },
-    { k: "Fat", v: rangeString(fatLow, fatHigh, "g/day"), n: profile.fatNote },
-    {
-      k: "Carbs",
-      v: rangeString(carbLow, carbHigh, "g/day (est.)"),
-      n: profile.carbsNote,
-    },
+    { k: "Fat", v: `${plan.fatG} g/day`, n: profile.fatNote },
+    { k: "Carbs", v: `${plan.carbsG} g/day`, n: profile.carbsNote },
     { k: "Hydration", v: hydration, n: "500 ml on wake; 500 ml pre-gym." },
   ];
 }
 
 export function getGoalLabel(programGoal: string | undefined): string {
-  if (programGoal && GOAL_PROFILES[programGoal]) {
-    return GOAL_PROFILES[programGoal].label;
+  if (programGoal && programGoal in GOAL_PROFILES) {
+    return GOAL_PROFILES[programGoal as Goal].label;
   }
   return "General";
 }
 
 // Target bodyweight change in kg/week per goal — midpoints of each profile's
 // weightNote (cut 0.3–0.5 loss, bulk 0.2–0.4 gain). Outcome Score Bw input.
-const GOAL_RATES: Record<string, number> = {
-  cut: -0.4,
-  bulk: 0.3,
-  strength: 0.15,
-  recomp: 0,
-  general: 0,
-};
-
 export function getGoalRateKgPerWeek(programGoal: string | undefined): number {
-  return GOAL_RATES[programGoal || ""] ?? 0;
+  return GOAL_PROFILES[goalOf(programGoal)].rateKgPerWeek;
 }
 
 // -- Consumed macros from checked meals --
@@ -195,17 +379,23 @@ export type MacroTargets = {
   calories: number;
 };
 
-// Parse numeric macro targets from the target list; calories derived from macros
-// (the calorie target string is relative, e.g. "+200-300 kcal/day").
+// Numeric macro targets from the target list. An absolute "N kcal/day" calorie
+// target wins; otherwise calories derive from the macros (4/4/9).
 export function computeMacroTargets(
   targets: Array<{ k: string; v: string }>
 ): MacroTargets {
-  const find = (key: string) =>
-    parseTargetNumber(targets.find((t) => t.k.toLowerCase().includes(key))?.v || "");
+  const entry = (key: string) => targets.find((t) => t.k.toLowerCase().includes(key));
+  const find = (key: string) => parseTargetNumber(entry(key)?.v || "");
   const protein = find("protein");
   const carbs = find("carb");
   const fat = find("fat");
-  const calories = protein && carbs && fat ? protein * 4 + carbs * 4 + fat * 9 : 0;
+  const calorieText = entry("calorie")?.v || "";
+  const absolute = /^\s*\d/.test(calorieText) && /kcal/i.test(calorieText);
+  const calories = absolute
+    ? parseTargetNumber(calorieText)
+    : protein && carbs && fat
+      ? protein * 4 + carbs * 4 + fat * 9
+      : 0;
   return { protein, carbs, fat, calories };
 }
 
@@ -221,7 +411,11 @@ export function parseTargetNumber(value: string): number {
 
 // -- Food-to-MealTemplate conversion --
 
-export function foodToMealTemplate(food: Food): MealTemplate {
+// `servingGrams` (e.g. a barcode product's serving) sets the default portion;
+// otherwise 100 g. Tag values stay per 100 g and are scaled by `grams`.
+export function foodToMealTemplate(
+  food: Food & { servingGrams?: number | null }
+): MealTemplate {
   const tags: Array<{ label: string; value: string }> = [];
   if (food.proteinPer100g != null)
     tags.push({ label: "Protein", value: `${food.proteinPer100g}g` });
@@ -230,11 +424,15 @@ export function foodToMealTemplate(food: Food): MealTemplate {
   if (food.caloriesPer100g != null)
     tags.push({ label: "Cal", value: `${food.caloriesPer100g}` });
   if (food.fatPer100g != null) tags.push({ label: "Fat", value: `${food.fatPer100g}g` });
+  const grams =
+    food.servingGrams != null && food.servingGrams > 0
+      ? Math.round(food.servingGrams * 10) / 10
+      : 100;
   return {
     id: `food_${food.id}_${Date.now()}`,
     name: food.name + (food.brand ? ` (${food.brand})` : ""),
-    examples: "per 100g",
-    grams: 100,
+    examples: grams === 100 ? "per 100g" : `1 serving (${grams} g)`,
+    grams,
     tags,
   };
 }

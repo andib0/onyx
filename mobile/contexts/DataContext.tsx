@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
   type Dispatch,
@@ -19,7 +20,7 @@ import { getScores, type DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
-import { buildNutritionTargets } from "../utils/nutrition";
+import { resolveNutritionTargets } from "../utils/adaptiveTargets";
 import { flushMutationQueue } from "../utils/mutationQueue";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
 
@@ -171,11 +172,30 @@ export function DataProvider({
 
   // Derived
   const meta = user?.preferences || DATA.meta;
-  const nutritionTargets = buildNutritionTargets(
-    user?.weight,
-    meta.proteinTarget,
-    meta.hydrationTarget,
-    programGoal
+  // Goal-aware targets: trend weight, MSJ when known, adaptive TDEE from logs
+  const scoreRows = scoresQuery.data;
+  const nutritionTargets = useMemo(
+    () =>
+      resolveNutritionTargets({
+        profileWeightKg: user?.weight,
+        proteinPreference: meta.proteinTarget,
+        hydrationTarget: meta.hydrationTarget,
+        goal: programGoal,
+        logEntries,
+        scoreHistory: scoreRows ?? [],
+        todayKey: todayKeyValue,
+        ageYears: user?.age ?? null,
+      }),
+    [
+      user?.weight,
+      user?.age,
+      meta.proteinTarget,
+      meta.hydrationTarget,
+      programGoal,
+      logEntries,
+      scoreRows,
+      todayKeyValue,
+    ]
   );
 
   return (
