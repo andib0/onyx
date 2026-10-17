@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "install-browsers": "playwright install chromium"
+    "install-browsers": "playwright install chromium",
+    "smoke": "playwright test tests/smoke.spec.ts",
+    "flows": "playwright test tests/flows",
+    "offline": "playwright test tests/offline.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.55.1"

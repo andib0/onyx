@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:api": "vitest run --config vitest.api.config.ts",
     "perf:seed": "node scripts/perf/seed_bench.mjs",
-    "perf:bench": "node scripts/perf/bench.mjs"
+    "perf:bench": "node scripts/perf/bench.mjs",
+    "check": "node ../scripts/check.mjs backend"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

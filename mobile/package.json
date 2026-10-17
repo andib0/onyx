@@ -13,7 +13,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "perf:bundle": "node scripts/check-bundle-budget.mjs",
-    "perf:tti": "bash scripts/measure-tti.sh"
+    "perf:tti": "bash scripts/measure-tti.sh",
+    "check": "node ../scripts/check.mjs mobile",
+    "e2e:smoke": "npm --prefix ../e2e run smoke",
+    "e2e:flows": "npm --prefix ../e2e run flows",
+    "test:config": "node ../scripts/test-app-config.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",
