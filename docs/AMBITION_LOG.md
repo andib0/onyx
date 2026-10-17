@@ -85,3 +85,24 @@ Open: no tombstones (client outbox must cancel create+delete), no delta sync.
 - Bugs found by the harness: B1 web logout after login (refresh via cookie only), B2 Nutrition
   crash after food add, B3 schedule tick not re-rendered (in-place cache mutation). Routed to
   client-data (B1, B3) and nav (B2) agents.
+
+## 2026-10-17 — Bets 8, 9: Today-first navigation, quick-log, behaviour (details `docs/log/nav-behaviour.md`)
+Tabs Today · Train · Eat · Progress (+ gear → Settings); Today = next action → workout/rest
+card → protein/calorie bars → Day ring + streak ("pending"/"1 day to repair") → morning
+weight/sleep; global "+" quick-log; Finish = 1 tap + undo, End early = hold; onboarding
+implementation-intention step; one-shot reminders skip done items, one banner per supplement
+slot; `POST /meals/one-off` for ad-hoc food (not a weekly template); B2 fixed.
+
+Tap/time — judge: `E2E_ENFORCE_BUDGETS=1 npx playwright test` (rerun by me on merged main: 20 passed)
+| Action | Before | After |
+|---|---|---|
+| Mark workout done | 15 taps ✗ | 1 tap, 0.12 s |
+| Planned meal | 1 | 1 (next action) / 2 via "+" |
+| Ad-hoc food (search) | blocked (crash B2) | 2 taps + 1 input, 1.9 s |
+| Ad-hoc food (recent) | 5 ✗ | 2, 0.66 s |
+| All AM supplements | 3 ✗ | 1, 0.18 s |
+| Bodyweight / sleep | 3 + typing, 2 screens ✗ | 1 each, ~0.2 s |
+| Schedule tick | blocked (B3) | still blocked by B3 (data layer) |
+| Others (set, supplement, check-in, what's next) | pass | pass |
+Result: 11/12 measurable actions ≤ 2 taps & ≤ 5 s (barcode: device-only).
+Verified on merged main: mobile + backend `npm run check` PASSED (174 API tests, route coverage 62/62).
