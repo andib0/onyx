@@ -1,6 +1,6 @@
 import { api, type ApiResponse } from "./client";
 import { qk } from "../sync/queryKeys";
-import { syncContext } from "../sync/runtime";
+import { syncContextReady } from "../sync/runtime";
 
 export interface WorkoutSession {
   id: string;
@@ -64,16 +64,35 @@ export async function finishWorkoutSession(sessionId: string, durationSeconds: n
 export type WorkoutSessionWithSets = WorkoutSession & { sets: LoggedSet[] };
 
 /** Recent sessions with sets; the last good copy when offline (prefill/PRs). */
+const HISTORY_FRESH_MS = 30 * 60 * 1000;
+
 export async function getWorkoutSessions(
   limit = 30
 ): Promise<ApiResponse<WorkoutSessionWithSets[]>> {
-  const ctx = syncContext();
+  const ctx = await syncContextReady();
+  if (ctx) {
+    // Recent enough, not invalidated by a workout write, and fetched with at
+    // least this limit: no request (keeps the Monday recap off the startup path).
+    const state = ctx.qc.getQueryState<WorkoutSessionWithSets[]>(
+      qk.workoutHistory(ctx.userId)
+    );
+    if (
+      state &&
+      state.data &&
+      !state.isInvalidated &&
+      (ctx.qc.getQueryData<number>(qk.workoutHistory(ctx.userId).concat(["limit"])) ??
+        0) >= limit &&
+      Date.now() - state.dataUpdatedAt < HISTORY_FRESH_MS
+    )
+      return { success: true, data: state.data.slice(0, limit) };
+  }
   const res = await api.get<WorkoutSessionWithSets[]>(
     `/workouts/sessions?limit=${limit}`
   );
   if (!ctx) return res;
   const key = qk.workoutHistory(ctx.userId);
   if (res.success && res.data) {
+    ctx.qc.setQueryData(key.concat(["limit"]), limit);
     ctx.qc.setQueryData(key, res.data);
     return res;
   }

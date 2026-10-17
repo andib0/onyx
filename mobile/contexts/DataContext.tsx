@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type Dispatch,
@@ -136,6 +137,16 @@ export function DataProvider({
   );
 
   const refetchToday = todayQuery.refetch;
+
+  // Revalidate the restored day once per launch. The query mounts disabled
+  // (session still restoring) and enabling a query with fresh cached data does
+  // not refetch, so do it explicitly — in the background, Focus already shows.
+  const launchRefetched = useRef("");
+  useEffect(() => {
+    if (!enabled || launchRefetched.current === userId) return;
+    launchRefetched.current = userId;
+    refetchToday().catch(() => {});
+  }, [enabled, userId, refetchToday]);
   const reloadState = useCallback(async () => {
     await Promise.allSettled([
       refetchToday(),

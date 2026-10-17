@@ -88,7 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restoreSession()
       .then((result) => {
         if (cancelled) return;
-        if (result.user) setUserState(result.user);
+        if (result.user) {
+          // Start the engine before any screen mounts and reads through it.
+          startSync(result.user.id, queryClient).catch(() => {});
+          setUserState(result.user);
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -99,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [queryClient]);
 
   // One sync engine (outbox + clock) per signed-in user.
   const userId = user ? user.id : null;
@@ -157,9 +161,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // best effort
       }
+      startSync(signed.id, queryClient).catch(() => {});
       setUser(signed);
     },
-    [setUser]
+    [setUser, queryClient]
   );
 
   const login = useCallback(

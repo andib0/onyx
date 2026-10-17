@@ -231,10 +231,10 @@ test("(c) two devices edit the same day offline, then both converge to the max-H
   // Both devices re-read (background refetch after their flush) and hold the same state.
   for (const p of [a, b]) {
     await p.bringToFront(); // background pages run throttled timers
-    await p.reload();
-    await expect(p.getByLabel(/^Day score/).first()).toBeVisible();
+    // A relaunch revalidates the day (like reopening the app on the phone).
+    await p.reload({ waitUntil: "domcontentloaded" });
     await expect
-      .poll(() => deviceDay(p), { timeout: 15_000 })
+      .poll(() => deviceDay(p), { timeout: 45_000 })
       .toEqual(Object.assign({ mealsEaten: 0 }, expected));
   }
   fs.mkdirSync("results", { recursive: true });

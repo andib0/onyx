@@ -357,6 +357,15 @@ export function syncContext(): { qc: QueryClient; userId: string } | null {
   return rt ? { qc: rt.qc, userId: rt.userId } : null;
 }
 
+/** syncContext() once a starting engine is ready (reads issued during launch). */
+export async function syncContextReady(): Promise<{
+  qc: QueryClient;
+  userId: string;
+} | null> {
+  if (!rt && starting) await starting.catch(() => {});
+  return syncContext();
+}
+
 /** Queue writes durably, apply them to the caches, and try to send them. */
 export async function enqueueWrite(intents: Intent | Intent[]): Promise<void> {
   if (!rt && starting) await starting;
