@@ -7,6 +7,7 @@ import {
   deleteTemplate,
   getLogs,
   toggleLog,
+  logOneOff,
 } from '../controllers/meals.controller.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -17,6 +18,7 @@ import {
   toggleMealLogSchema,
   templatesQuerySchema,
   mealLogsQuerySchema,
+  oneOffMealSchema,
 } from '../validators/meals.schema.js';
 import { idParams } from '../validators/common.js';
 
@@ -33,6 +35,8 @@ router.patch('/templates/:id/grams', id, validate(updateGramsSchema), updateGram
 router.delete('/templates/:id', id, deleteTemplate);
 
 // Logs
+// One-off food eaten today (dated template + eaten log, one request)
+router.post('/one-off', validate(oneOffMealSchema), logOneOff);
 router.get('/logs', validate(mealLogsQuerySchema, 'query'), getLogs);
 router.post('/:id/log', id, validate(toggleMealLogSchema), toggleLog);
 
