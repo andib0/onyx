@@ -53,3 +53,17 @@ Verified on main after merge: tsc, eslint, prettier, 29 unit + 117 API tests PAS
 - Utils with tests 7/17 → 24/24. Mobile tests 48 → 269.
 Verified on main after merge (2 context conflicts resolved): tsc, eslint, prettier, 269
 tests, bundle budget PASS.
+
+## 2026-10-17 — Bets 1/2/4/5 server side (details `docs/log/backend-sync.md`, client contract `docs/log/backend-sync-api.md`)
+| Metric | Before | After | Judge |
+|---|---|---|---|
+| Migrations reproduce schema | no (drift) | yes, empty diff | `npm run db:check-migrations` |
+| Render deploy | `prisma db push` at boot | `scripts/migrate-deploy.sh` (baselines db-push DBs) | `db:verify-deploy` 13/13 |
+| "Today" data | 7 requests, p95 173–267 ms | `GET /api/today` 1 request, p50 15.8 / p95 22.6 ms, 22 KB (3.6 KB gz) | `npm run perf:today` (200 runs, 1 seeded year) |
+| Duplicate creates on retry | yes | no (client UUIDs, upsert) | API regression tests |
+| Two-device convergence | stale toggles / LWW zeros / field wipes reproduced | 200/200 property runs converge (2,665 requests, 1,352 dups, skew ±10 min) | fast-check test |
+| Score | client-posted, last writer wins | server-computed per contract; client POST only triggers recompute | API test |
+| Backup | export missed 5 tables | export/import v2, 15 tables, round-trip identical | round-trip test |
+| API tests | 117 | 171 (61/61 routes 2xx+4xx) | `npm run test:api` |
+Verified on main after merge.
+Open: no tombstones (client outbox must cancel create+delete), no delta sync.
