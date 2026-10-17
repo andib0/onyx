@@ -1,6 +1,6 @@
 # Onyx Ambition Plan
 
-Status: **DRAFT — waiting for owner approval** (2026-10-17)
+Status: **APPROVED 2026-10-17** — decisions: hosting = stay on Render free; drop no-spread rule; theme follows OS.
 Evidence: `docs/audit/01…07-*.md` (each claim there cites file:line, a command, or a measured request).
 Baseline commit: `47df93e` (+ infra commit `d6831b9`).
 
@@ -171,7 +171,12 @@ then the *deeper-version check* that revised it.
 - **Verified by:** tsc/eslint/tests green after each deletion.
 - **Keep:** Express + Prisma + Postgres (adequate; a rewrite buys nothing for one user), TanStack Query, Expo Router, the food DB (95% USDA match), double progression, theme tokens/primitives.
 
-### Bet 13 — Hosting decision (needs you) — S
+### Bet 13 — Hosting decision — S — **DECIDED: stay on Render free**
+- Consequence: the server DB is disposable (expires ~30 days). Mitigation moved into Bet 4:
+  the device holds the full history (persisted, Bet 1) and **re-hydrates an empty server**
+  (server reports `dataEpoch`; on mismatch/empty the client uploads its full local state via
+  `/sync/import` v2). Plus a downloadable full export (JSON file via share sheet) in Settings.
+  Verified by an API+client test: wipe DB → app reopens → server state equals device state.
 - **Options:** (a) Render paid Postgres (~$7/mo; no expiry, daily backups); (b) Neon free tier (no 30-day expiry, branching for test DBs; API stays on Render free); (c) keep Render free and accept 30-day rebuilds (not compatible with "never loses data").
 - **Recommendation:** (b) Neon free + Render free API + local-first client (Bet 1) makes the API's cold start invisible. I can't create accounts or enter payment details; you would create the DB and paste the connection string into Render's env yourself.
 
