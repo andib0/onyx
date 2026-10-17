@@ -32,7 +32,7 @@ Baseline commit: `47df93e` (+ infra commit `d6831b9`).
 
 | Target | Baseline (measured unless marked *est.*) | Source |
 |---|---|---|
-| Cold start → interactive Focus < 1.0 s (mid Android, release) | **Not reachable by design.** Critical path = fonts → 2 serial SecureStore reads → `/auth/refresh` (bcrypt, p95 180 ms) → `/auth/me` → `/sync/export` (all-time history). *est.* 1.0–2.8 s warm API, **30–60 s on a cold Render instance**, **offline → Login screen**. Emulator number: see §1a. | 07 §2, 02 §4 |
+| Cold start → interactive Focus < 1.0 s (mid Android, release) | **Emulator release APK: ≈ 2.3–3.9 s** to "Day score" visible, logged in, *warm local* API (5 runs, §7). First native frame alone 352–539 ms. **Offline + logged in → Login screen (reproduced on device).** A cold Render instance adds its wake time (*est.* 30–60 s). Critical path: fonts → 2 serial SecureStore reads → `/auth/refresh` (bcrypt) → `/auth/me` → `/sync/export` (all-time history). | §7, 07 §2, 02 §4 |
 | Log meal/set/supplement ≤ 2 taps, ≤ 5 s | **4 of 11** core actions pass. Workout done ≈16 taps, ad-hoc food 5–6 + typing, barcode 5–6, all AM supplements 3, weight/sleep 4 + typing via Settings → History. | 06 §1 |
 | 100% writes offline, deterministic, zero loss (kill, reinstall, 2 devices) | **3 of ~25 write types** queued (completion/meal/supplement toggles). Queue drops on any 4xx/429, replays stale toggles over newer ones (verified), not cleared on logout (cross-account replay verified). Workout sets silently lost if session start fails. Daily log upsert wipes other device's fields (verified). Score: last device wins, stale zeros overwrite (verified). Creates not idempotent: retry → duplicates (verified, 5/5 onboarding races doubled data). | 02 §1-3,7-8 |
 | 0 tsc / 0 eslint, both packages | **Met** (0/0/0/0). Prettier `--check` fails on 69 backend + 57 mobile files. Lockfiles out of sync (`npm ci` fails). | baseline run, 01 |
@@ -46,8 +46,7 @@ Baseline commit: `47df93e` (+ infra commit `d6831b9`).
 | Bundle | Hermes 3.46 MB; JS 3.71 MB (908 KB gz); **8.24 MB assets of which ~8.2 MB unused** (34 font files + 19 icon fonts via barrel imports). | 07 §1 |
 
 ### 1a. Device measurement status
-Android emulator + Maestro setup is in progress by a separate agent at time of writing;
-numbers are appended in §7 when available. Web dev build (not comparable to the target):
+Android emulator (release APK, Maestro) works; results in §7. Web dev build (not comparable):
 sign-in → Focus visible **1249 ms** (Playwright, `e2e/tests/smoke.spec.ts`).
 
 ---
@@ -204,5 +203,22 @@ Every slice logs before/after numbers in `docs/AMBITION_LOG.md`.
 3. **Spread rule:** OK to drop it (the brief lists it as a convention to follow)?
 4. Light palette: follow OS (default) or dark-only?
 
-## 7. Device measurement results
-_(pending — Android emulator agent)_
+## 7. Device measurement results (2026-10-17)
+
+Setup (user-level, nothing in the repo): JDK 17 (Temurin), Android SDK 36 / NDK 27.1, AVD
+`onyx_pixel` (pixel_6, API 35 x86_64, 4 GB, WHPX-accelerated on an i7-8700K host), Maestro 2.11.0.
+Release APK built from a copy at `C:/Users/andi/onyx-build` (the scratch path exceeded Windows'
+260-char limit for CMake), `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001/api`. Clean build ≈ 9 min,
+incremental ≈ 1 min. Flows: `e2e/maestro/login.yaml`, `e2e/maestro/coldstart-focus.yaml`.
+
+| Measurement | Result |
+|---|---|
+| `am start -W` TotalTime, logged out (first frame = Login) | 539, 352, 368, 353, 390 ms (avg 400) |
+| Logged-in cold start → "Day score" visible (Maestro launch → assertion) | 3606, 3601, 3912, 3233, 3946 ms; minus Maestro's ~1.3 s launch command ⇒ **≈ 2.3–2.9 s** app time (bracket 2.3–3.9 s) |
+| Logged-in cold start in airplane mode | **Login screen** (`docs/audit/evidence/android-offline-coldstart-logged-in.png`) |
+| Release build against an `http://` API | "Network request failed": release manifests block cleartext, so local e2e builds need `usesCleartextTraffic` for the local API only (`android-release-cleartext-blocked.png`). Machinery fix in Bet 14: an `app.config.ts` that enables it only when `EXPO_PUBLIC_API_URL` starts with `http://10.0.2.2`. |
+
+Caveats: an emulator on a desktop CPU is faster than a mid-range phone for native work and
+slower for I/O; Maestro polls the UI, so its timestamps are upper bounds. Bet 1 adds JS perf
+marks (`ONYX_PERF focus_interactive`) read by `npm run perf:tti`, which replaces this bracket with
+a direct number.
