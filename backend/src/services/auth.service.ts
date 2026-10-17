@@ -40,7 +40,14 @@ export class AuthService {
   async register(
     email: string,
     password: string,
-    profile?: { username?: string; age?: number; weight?: number; timezone?: string }
+    profile?: {
+      username?: string;
+      age?: number;
+      weight?: number;
+      heightCm?: number | null;
+      sex?: string | null;
+      timezone?: string;
+    }
   ) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -56,6 +63,8 @@ export class AuthService {
         username: profile?.username || null,
         age: profile?.age || null,
         weight: profile?.weight || null,
+        heightCm: profile?.heightCm ?? null,
+        sex: profile?.sex ?? null,
         preferences: {
           // Use the device timezone when the client sends one; otherwise the
           // schema default applies.
@@ -171,7 +180,13 @@ export class AuthService {
 
   async updateProfile(
     userId: string,
-    data: { username?: string; age?: number; weight?: number }
+    data: {
+      username?: string;
+      age?: number;
+      weight?: number;
+      heightCm?: number | null;
+      sex?: string | null;
+    }
   ) {
     return prisma.user.update({
       where: { id: userId },
@@ -182,6 +197,8 @@ export class AuthService {
         username: true,
         age: true,
         weight: true,
+        heightCm: true,
+        sex: true,
         createdAt: true,
         preferences: true,
       },
@@ -197,6 +214,8 @@ export class AuthService {
         username: true,
         age: true,
         weight: true,
+        heightCm: true,
+        sex: true,
         createdAt: true,
         preferences: true,
       },

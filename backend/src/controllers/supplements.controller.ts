@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { supplementsService } from '../services/supplements.service.js';
-import { sendSuccess, sendCreated, sendError } from '../utils/response.js';
+import { sendSuccess, sendIdempotent, sendError } from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -16,8 +16,8 @@ export async function getSupplements(req: AuthenticatedRequest, res: Response) {
 
 export async function createSupplement(req: AuthenticatedRequest, res: Response) {
   try {
-    const supplement = await supplementsService.createSupplement(req.userId!, req.body);
-    return sendCreated(res, supplement);
+    const result = await supplementsService.createSupplement(req.userId!, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);
@@ -65,13 +65,14 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
 
 export async function toggleLog(req: AuthenticatedRequest, res: Response) {
   try {
-    const { date, isTaken } = req.body;
+    const { date, isTaken, hlc, id } = req.body;
     const supplementId = req.params.id;
     const log = await supplementsService.toggleLog(
       req.userId!,
       supplementId,
       date,
-      isTaken
+      isTaken,
+      { hlc, id }
     );
     return sendSuccess(res, log);
   } catch (error) {

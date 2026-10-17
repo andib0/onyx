@@ -11,7 +11,7 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm install && npm run build
-    startCommand: npx prisma db push --skip-generate && npm start
+    startCommand: bash scripts/migrate-deploy.sh && npm start
     envVars:
       - key: NODE_ENV
         value: production

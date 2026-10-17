@@ -18,7 +18,11 @@
     "test": "vitest run",
     "test:api": "vitest run --config vitest.api.config.ts",
     "perf:seed": "node scripts/perf/seed_bench.mjs",
-    "perf:bench": "node scripts/perf/bench.mjs"
+    "perf:bench": "node scripts/perf/bench.mjs",
+    "db:check-migrations": "node scripts/check-migrations.mjs",
+    "db:verify-deploy": "node scripts/verify-migrate-deploy.mjs",
+    "db:deploy": "bash scripts/migrate-deploy.sh",
+    "perf:today": "tsx scripts/perf/today.bench.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -45,6 +49,7 @@
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.39.1",
+    "fast-check": "^3.23.2",
     "globals": "^16.5.0",
     "prettier": "^3.3.3",
     "prisma": "^5.22.0",

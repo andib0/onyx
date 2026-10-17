@@ -1,16 +1,10 @@
 import { z } from 'zod';
+import { isCalendarDate } from '../utils/dates.js';
 
 /** True when "YYYY-MM-DD" names a real calendar day (rejects 2026-02-31). */
 export function isRealDate(value: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!m) return false;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const date = new Date(Date.UTC(y, mo - 1, d));
-  return (
-    date.getUTCFullYear() === y &&
-    date.getUTCMonth() === mo - 1 &&
-    date.getUTCDate() === d
-  );
+  // Same rule as utils/dates.isCalendarDate (also bounds the year to 2000–2100).
+  return isCalendarDate(value);
 }
 
 export const isoDate = z

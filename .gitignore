@@ -8,3 +8,6 @@ dist-ssr
 # local agent settings
 .claude/settings.local.json
 .claude/worktrees/
+
+# test evidence written by API tests
+backend/test-results/

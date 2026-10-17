@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clientId, hlc } from './common.schema.js';
 import { isoDate, recordId } from './common.js';
 
 const mealTagSchema = z.object({
@@ -7,15 +8,19 @@ const mealTagSchema = z.object({
 });
 
 export const createMealTemplateSchema = z.object({
+  id: clientId.optional(),
   dayOfWeek: z.string().min(1, 'Day of week is required').max(20),
   name: z.string().min(1, 'Meal name is required').max(200),
   examples: z.string().max(1000).optional().default(''),
   grams: z.number().min(0).max(10000).optional().nullable(),
   foodId: recordId.optional().nullable(),
+  sortOrder: z.number().int().optional(),
   tags: z.array(mealTagSchema).max(20).optional().default([]),
 });
 
-export const updateMealTemplateSchema = createMealTemplateSchema.partial();
+export const updateMealTemplateSchema = createMealTemplateSchema
+  .omit({ id: true })
+  .partial();
 
 export const updateGramsSchema = z.object({
   grams: z.number().min(0, 'Grams must be a non-negative number').max(10000),
@@ -24,6 +29,8 @@ export const updateGramsSchema = z.object({
 export const toggleMealLogSchema = z.object({
   date: isoDate,
   isEaten: z.boolean(),
+  hlc: hlc.optional(),
+  id: clientId.optional(),
 });
 
 export type CreateMealTemplateInput = z.infer<typeof createMealTemplateSchema>;

@@ -1,5 +1,7 @@
 import { prisma } from '../config/database.js';
-import { AppError } from '../utils/errors.js';
+import { createIdempotent } from '../utils/idempotent.js';
+import { applyToggle } from './sync/toggle.js';
+import { scoreService } from './score/score.service.js';
 
 export class ScheduleService {
   async getBlocks(userId: string) {
@@ -9,9 +11,11 @@ export class ScheduleService {
     });
   }
 
+  /** Idempotent when the client sends its own `id` (retries return the same row). */
   async createBlock(
     userId: string,
     data: {
+      id?: string;
       start: string;
       end: string;
       title: string;
@@ -23,12 +27,14 @@ export class ScheduleService {
       sortOrder?: number;
     }
   ) {
-    return prisma.scheduleBlock.create({
-      data: {
-        userId,
-        ...data,
-      },
-    });
+    const result = await createIdempotent(
+      userId,
+      data.id,
+      (id) => prisma.scheduleBlock.findUnique({ where: { id } }),
+      () => prisma.scheduleBlock.create({ data: { ...data, userId } })
+    );
+    if (result.created) await scoreService.afterCatalogChange(userId);
+    return result;
   }
 
   async updateBlock(
@@ -53,9 +59,11 @@ export class ScheduleService {
   }
 
   async deleteBlock(userId: string, blockId: string) {
-    return prisma.scheduleBlock.delete({
+    const deleted = await prisma.scheduleBlock.delete({
       where: { id: blockId, userId },
     });
+    await scoreService.afterCatalogChange(userId);
+    return deleted;
   }
 
   // Completions
@@ -65,35 +73,29 @@ export class ScheduleService {
     });
   }
 
+  /**
+   * Last-writer-wins by `hlc` when provided (Bet 2); 404 when the block does not
+   * exist or belongs to another user. The returned row carries `applied: false`
+   * when a newer write was already stored.
+   */
   async toggleCompletion(
     userId: string,
     blockId: string,
     date: string,
-    isComplete: boolean
+    isComplete: boolean,
+    opts: { hlc?: string; id?: string } = {}
   ) {
-    // Ownership first (audit F12): don't attach completions to other users' blocks.
-    const owned = await prisma.scheduleBlock.findFirst({
-      where: { id: blockId, userId },
-      select: { id: true },
+    const outcome = await applyToggle('completion', {
+      userId,
+      targetId: blockId,
+      date,
+      value: isComplete,
+      hlc: opts.hlc,
+      id: opts.id,
     });
-    if (!owned) throw new AppError('Schedule block not found', 404, 'NOT_FOUND');
-
-    return prisma.completion.upsert({
-      where: {
-        userId_blockId_date: { userId, blockId, date },
-      },
-      create: {
-        userId,
-        blockId,
-        date,
-        isComplete,
-        completedAt: isComplete ? new Date() : null,
-      },
-      update: {
-        isComplete,
-        completedAt: isComplete ? new Date() : null,
-      },
-    });
+    if (outcome.applied) await scoreService.afterWrite(userId, date);
+    const row = await prisma.completion.findUniqueOrThrow({ where: { id: outcome.id } });
+    return Object.assign(row, { applied: outcome.applied });
   }
 }
 

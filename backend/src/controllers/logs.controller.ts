@@ -1,6 +1,13 @@
 import type { Response } from 'express';
 import { logsService } from '../services/logs.service.js';
-import { sendSuccess, sendCreated, sendError, sendNotFound } from '../utils/response.js';
+import {
+  sendSuccess,
+  sendCreated,
+  sendError,
+  sendNotFound,
+  sendIdempotent,
+} from '../utils/response.js';
+import { isCalendarDate } from '../utils/dates.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -41,6 +48,20 @@ export async function createOrUpdateLog(req: AuthenticatedRequest, res: Response
   try {
     const log = await logsService.createOrUpdateLog(req.userId!, req.body);
     return sendCreated(res, log);
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
+/** PATCH /logs/:date — field-level, HLC last-writer-wins per field. */
+export async function patchLog(req: AuthenticatedRequest, res: Response) {
+  try {
+    const date = req.params.date;
+    if (!isCalendarDate(date))
+      return sendError(res, 'Invalid date (expected YYYY-MM-DD)');
+    const result = await logsService.patchLog(req.userId!, date, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);

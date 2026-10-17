@@ -1,6 +1,11 @@
 import type { Response } from 'express';
 import { mealsService } from '../services/meals.service.js';
-import { sendSuccess, sendCreated, sendError, sendNotFound } from '../utils/response.js';
+import {
+  sendSuccess,
+  sendIdempotent,
+  sendError,
+  sendNotFound,
+} from '../utils/response.js';
 import { handleServiceError } from '../utils/errors.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -17,8 +22,8 @@ export async function getTemplates(req: AuthenticatedRequest, res: Response) {
 
 export async function createTemplate(req: AuthenticatedRequest, res: Response) {
   try {
-    const template = await mealsService.createTemplate(req.userId!, req.body);
-    return sendCreated(res, template);
+    const result = await mealsService.createTemplate(req.userId!, req.body);
+    return sendIdempotent(res, result);
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);
@@ -86,9 +91,12 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
 
 export async function toggleLog(req: AuthenticatedRequest, res: Response) {
   try {
-    const { date, isEaten } = req.body;
+    const { date, isEaten, hlc, id } = req.body;
     const mealTemplateId = req.params.id;
-    const log = await mealsService.toggleLog(req.userId!, mealTemplateId, date, isEaten);
+    const log = await mealsService.toggleLog(req.userId!, mealTemplateId, date, isEaten, {
+      hlc,
+      id,
+    });
     return sendSuccess(res, log);
   } catch (error) {
     const appError = handleServiceError(error);

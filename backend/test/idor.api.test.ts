@@ -98,6 +98,8 @@ const BODY_REFERENCES: Record<string, Call> = {
 /** Param routes that are deliberately not user-owned. */
 const EXEMPT: Record<string, string> = {
   'GET /api/foods/:id': 'global reference data (Food), readable by every user',
+  'PATCH /api/logs/:date':
+    'keyed by date, not by a record id: always writes the caller’s own DailyLog row',
 };
 
 async function snapshot(userId: string) {

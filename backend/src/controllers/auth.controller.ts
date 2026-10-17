@@ -44,12 +44,14 @@ function fail(res: Response, error: unknown) {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { email, password, username, age, weight, timezone } =
+    const { email, password, username, age, weight, heightCm, sex, timezone } =
       req.body as RegisterInput;
     const result = await authService.register(email, password, {
       username,
       age,
       weight,
+      heightCm,
+      sex,
       timezone,
     });
 
@@ -136,8 +138,14 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
     if (!req.userId) {
       return sendUnauthorized(res);
     }
-    const { username, age, weight } = req.body as ProfileInput;
-    const user = await authService.updateProfile(req.userId, { username, age, weight });
+    const { username, age, weight, heightCm, sex } = req.body as ProfileInput;
+    const user = await authService.updateProfile(req.userId, {
+      username,
+      age,
+      weight,
+      heightCm,
+      sex,
+    });
     return sendSuccess(res, { user });
   } catch (error) {
     return fail(res, error);

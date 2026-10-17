@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { clientId, hlc } from './common.schema.js';
 import { isoDate, recordId } from './common.js';
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const createBlockSchema = z.object({
+  id: clientId.optional(),
   start: z.string().regex(timePattern, 'Invalid time format (HH:MM)'),
   end: z.string().regex(timePattern, 'Invalid time format (HH:MM)'),
   title: z.string().min(1, 'Title is required').max(200),
@@ -15,12 +17,14 @@ export const createBlockSchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-export const updateBlockSchema = createBlockSchema.partial();
+export const updateBlockSchema = createBlockSchema.omit({ id: true }).partial();
 
 export const toggleCompletionSchema = z.object({
   blockId: recordId,
   date: isoDate,
   isComplete: z.boolean(),
+  hlc: hlc.optional(),
+  id: clientId.optional(),
 });
 
 export type CreateBlockInput = z.infer<typeof createBlockSchema>;

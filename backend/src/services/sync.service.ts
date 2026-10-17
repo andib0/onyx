@@ -98,17 +98,21 @@ const WEEKDAYS = [
 export class SyncService {
   // Populate a believable starter day for a brand-new account so the first
   // session shows a living dashboard. No-op if the user already has data.
+  // A per-user advisory lock serialises concurrent calls and the emptiness
+  // check runs inside the same transaction, so racing onboarding requests can
+  // no longer double the data (docs/audit/02-sync-offline.md §1 row 23).
   async seedStarterData(userId: string) {
-    const [blocks, supps, meals] = await Promise.all([
-      prisma.scheduleBlock.count({ where: { userId } }),
-      prisma.supplement.count({ where: { userId } }),
-      prisma.mealTemplate.count({ where: { userId } }),
-    ]);
-    if (blocks > 0 || supps > 0 || meals > 0) {
-      return { seeded: false };
-    }
+    return prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${'seed:' + userId}))::text`;
+      const [blocks, supps, meals] = await Promise.all([
+        tx.scheduleBlock.count({ where: { userId } }),
+        tx.supplement.count({ where: { userId } }),
+        tx.mealTemplate.count({ where: { userId } }),
+      ]);
+      if (blocks > 0 || supps > 0 || meals > 0) {
+        return { seeded: false };
+      }
 
-    await prisma.$transaction(async (tx) => {
       await tx.scheduleBlock.createMany({
         data: STARTER_SCHEDULE.map((b, i) => ({
           userId,
@@ -146,9 +150,8 @@ export class SyncService {
           });
         }
       }
+      return { seeded: true };
     });
-
-    return { seeded: true };
   }
 
   async importState(userId: string, state: AppState) {
@@ -163,10 +166,40 @@ export class SyncService {
       await tx.mealTemplate.deleteMany({ where: { userId } });
       await tx.dailyLog.deleteMany({ where: { userId } });
 
+      // Keep the client's ids (they are this user's own, just deleted above) so
+      // another device's cached ids and queued toggles stay valid
+      // (docs/audit/02 §2.9). Ids still taken by another user's rows, or not
+      // UUIDs, get a fresh id as before (reported in idMappings).
+      const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const wanted = [
+        ...(state.schedule ?? []).map((b) => b.id),
+        ...(state.supplementsList ?? []).map((s) => s.id),
+        ...Object.values(state.mealTemplatesByDay ?? {}).flatMap((ms) =>
+          Array.isArray(ms) ? ms.map((m) => m.id) : []
+        ),
+      ].filter((i): i is string => !!i && UUID.test(i));
+      const [takenBlocks, takenSupps, takenMeals] = await Promise.all([
+        tx.scheduleBlock.findMany({
+          where: { id: { in: wanted } },
+          select: { id: true },
+        }),
+        tx.supplement.findMany({ where: { id: { in: wanted } }, select: { id: true } }),
+        tx.mealTemplate.findMany({ where: { id: { in: wanted } }, select: { id: true } }),
+      ]);
+      const taken = new Set(
+        [...takenBlocks, ...takenSupps, ...takenMeals].map((r) => r.id)
+      );
+      const keepId = (oldId?: string) => {
+        if (!oldId || !UUID.test(oldId) || taken.has(oldId)) return undefined;
+        taken.add(oldId);
+        return oldId;
+      };
+
       if (state.schedule && Array.isArray(state.schedule)) {
         for (const block of state.schedule) {
           const created = await tx.scheduleBlock.create({
             data: {
+              id: keepId(block.id),
               userId,
               start: block.start,
               end: block.end,
@@ -215,6 +248,7 @@ export class SyncService {
         for (const supp of state.supplementsList) {
           const created = await tx.supplement.create({
             data: {
+              id: keepId(supp.id),
               userId,
               item: supp.item,
               goal: supp.goal,
@@ -264,10 +298,13 @@ export class SyncService {
               const meal = meals[i];
               const created = await tx.mealTemplate.create({
                 data: {
+                  id: keepId(meal.id),
                   userId,
                   dayOfWeek,
                   name: meal.name,
                   examples: meal.examples || '',
+                  grams: meal.grams ?? null,
+                  foodId: meal.foodId ?? null,
                   sortOrder: i,
                   tags: {
                     create:
@@ -405,6 +442,9 @@ export class SyncService {
         id: template.id,
         name: template.name,
         examples: template.examples || '',
+        // Needed for grams-scaled macros after a reload (docs/audit/02 §3.7).
+        grams: template.grams === null ? null : Number(template.grams),
+        foodId: template.foodId,
         tags: template.tags.map((t) => ({ label: t.label, value: t.value })),
       });
     }

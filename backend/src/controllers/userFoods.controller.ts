@@ -20,8 +20,9 @@ export async function listUserFoods(req: AuthenticatedRequest, res: Response) {
 
 export async function addUserFood(req: AuthenticatedRequest, res: Response) {
   try {
-    const { foodId } = req.body as { foodId: string }; // validated by addUserFoodSchema
-    const item = await userFoodsService.add(req.userId!, foodId);
+    // validated by addUserFoodSchema
+    const { foodId, id } = req.body as { foodId: string; id?: string };
+    const item = await userFoodsService.add(req.userId!, foodId, id);
     return sendSuccess(res, item);
   } catch (error) {
     // Unknown foodId → FK violation → 400 via handleServiceError.
