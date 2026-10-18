@@ -8,6 +8,13 @@ export const envSchema = z
     PORT: z.string().regex(/^\d+$/).default('3001'),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     CORS_ORIGIN: z.string().default('http://localhost:5173'),
+    // Proxies between the client and Express whose X-Forwarded-For entries we
+    // trust (audit F7). See middleware/rateLimit.ts for how to measure it.
+    TRUST_PROXY_HOPS: z
+      .string()
+      .regex(/^[0-5]$/, 'must be an integer 0-5')
+      .default('1')
+      .transform(Number),
   })
   .refine((e) => e.JWT_SECRET !== e.JWT_REFRESH_SECRET, {
     message: 'JWT_SECRET and JWT_REFRESH_SECRET must differ',

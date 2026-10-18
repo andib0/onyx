@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import {
@@ -9,6 +10,7 @@ import {
   getRefreshTokenExpiry,
 } from '../utils/jwt.js';
 import { AppError } from '../utils/errors.js';
+import { markFamilyRevoked } from './sessionRevocation.js';
 
 /**
  * Refresh tokens are high-entropy (random jti + signature), so a fast hash is
@@ -22,11 +24,15 @@ export function hashRefreshToken(token: string): string {
 
 export class AuthService {
   /** Issues an access + refresh pair in `familyId` (a new family when omitted). */
-  private async issueTokens(user: { id: string; email: string }, familyId?: string) {
+  private async issueTokens(
+    user: { id: string; email: string },
+    familyId?: string,
+    db: Prisma.TransactionClient = prisma
+  ) {
     const fam = familyId ?? randomUUID();
     const accessToken = generateAccessToken(user.id, user.email, fam);
     const refreshToken = generateRefreshToken(user.id, user.email, fam);
-    await prisma.refreshToken.create({
+    await db.refreshToken.create({
       data: {
         userId: user.id,
         tokenHash: hashRefreshToken(refreshToken),
@@ -120,17 +126,29 @@ export class AuthService {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
     }
 
-    // Consume the token atomically: of N concurrent requests presenting the
-    // same token, exactly one deletes the row and may rotate.
-    const consumed = await prisma.refreshToken.deleteMany({
-      where: {
-        tokenHash: hashRefreshToken(refreshToken),
-        userId: payload.sub,
-        expiresAt: { gt: new Date() },
-      },
+    // Consume the token and insert its successor in one transaction: of N
+    // concurrent requests presenting the same token, exactly one deletes the
+    // row and may rotate, and the family never has a moment with zero rows
+    // (which the access-token check in authMiddleware would read as logout).
+    const rotated = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.refreshToken.deleteMany({
+        where: {
+          tokenHash: hashRefreshToken(refreshToken),
+          userId: payload.sub,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (consumed.count !== 1) return 'reused' as const;
+      const user = await tx.user.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, email: true },
+      });
+      if (!user) return 'no-user' as const;
+      const tokens = await this.issueTokens(user, payload.fam, tx);
+      return { user, tokens };
     });
 
-    if (consumed.count !== 1) {
+    if (rotated === 'reused') {
       // A validly signed token with no live row was already rotated, logged
       // out, or revoked. Treat it as reuse: kill the whole family so whoever
       // holds the newer token (attacker or victim) must log in again.
@@ -138,24 +156,19 @@ export class AuthService {
         await prisma.refreshToken.deleteMany({
           where: { userId: payload.sub, familyId: payload.fam },
         });
+        markFamilyRevoked(payload.fam);
       }
       throw new AppError('Refresh token not found or expired', 401, 'INVALID_TOKEN');
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, email: true },
-    });
-
-    if (!user) {
+    if (rotated === 'no-user') {
       throw new AppError('User not found', 401, 'INVALID_TOKEN');
     }
 
+    const { user, tokens } = rotated;
     await prisma.refreshToken.deleteMany({
       where: { userId: user.id, expiresAt: { lte: new Date() } },
     });
 
-    const tokens = await this.issueTokens(user, payload.fam);
     return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
   }
 
@@ -176,6 +189,8 @@ export class AuthService {
     }
     if (!familyId) return;
     await prisma.refreshToken.deleteMany({ where: { userId, familyId } });
+    // Kills this device's access token too, effective on its next request (F8).
+    markFamilyRevoked(familyId);
   }
 
   async updateProfile(

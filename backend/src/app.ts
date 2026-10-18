@@ -4,13 +4,15 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { generalRateLimiter } from './middleware/rateLimit.js';
+import { generalRateLimiter, logProxyChainShape } from './middleware/rateLimit.js';
+import { env } from './config/env.js';
 
 const app = express();
 
-// Behind Render's proxy — needed so rate limiting keys on the client IP,
-// not the proxy's, and secure cookies work over the forwarded proto.
-app.set('trust proxy', 1);
+// Behind Render's proxy: trust exactly TRUST_PROXY_HOPS entries of
+// X-Forwarded-For (a hop count, never `true`, so a client-prepended value is
+// never req.ip). Default 1; see middleware/rateLimit.ts and audit F7.
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
 // Security middleware
 app.use(helmet());
@@ -36,6 +38,7 @@ app.use(
 );
 
 // Rate limiting before any body parsing, so floods are cheap to reject.
+app.use(logProxyChainShape);
 app.use(generalRateLimiter);
 
 // Parsing middleware. Bodies are small everywhere except the full-state
