@@ -4,6 +4,7 @@ import { AppError } from '../utils/errors.js';
 import { hlcWins } from '../utils/hlc.js';
 import { createIdempotent } from '../utils/idempotent.js';
 import { scoreService } from './score/score.service.js';
+import { writeTime } from './sync/toggle.js';
 import {
   assertNotTombstoned,
   deleteStamp,
@@ -95,7 +96,8 @@ export class WorkoutsService {
         ("id", "userId", "sessionId", "exerciseName", "setNumber", "weightKg", "reps", "rir", "hlc", "createdAt")
       VALUES (${data.id ?? randomUUID()}, ${userId}, ${sessionId}, ${data.exerciseName},
               ${data.setNumber}, ${values.weightKg}::numeric, ${values.reps}::int, ${values.rir},
-              ${data.hlc ?? null}, (now() AT TIME ZONE 'UTC'))
+              ${data.hlc ?? null},
+              COALESCE(${writeTime(data.hlc)}::timestamp, (now() AT TIME ZONE 'UTC')))
       ON CONFLICT ("sessionId", "exerciseName", "setNumber") DO UPDATE
         SET "weightKg" = EXCLUDED."weightKg",
             "reps" = EXCLUDED."reps",
