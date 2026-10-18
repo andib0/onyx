@@ -66,8 +66,21 @@ export type WorkoutSessionWithSets = WorkoutSession & { sets: LoggedSet[] };
 /** Recent sessions with sets; the last good copy when offline (prefill/PRs). */
 const HISTORY_FRESH_MS = 30 * 60 * 1000;
 
-export async function getWorkoutSessions(
+// Concurrent callers (recap card, workout start) share one request.
+const inFlight = new Map<number, Promise<ApiResponse<WorkoutSessionWithSets[]>>>();
+
+export function getWorkoutSessions(
   limit = 30
+): Promise<ApiResponse<WorkoutSessionWithSets[]>> {
+  const running = inFlight.get(limit);
+  if (running) return running;
+  const p = loadWorkoutSessions(limit).finally(() => inFlight.delete(limit));
+  inFlight.set(limit, p);
+  return p;
+}
+
+async function loadWorkoutSessions(
+  limit: number
 ): Promise<ApiResponse<WorkoutSessionWithSets[]>> {
   const ctx = await syncContextReady();
   if (ctx) {

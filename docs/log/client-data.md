@@ -84,13 +84,14 @@ redundant supplement-reminder effect removed (ReminderSync owns it).
 | Judge | Result |
 |---|---|
 | mobile `tsc` / `eslint .` / `prettier --check .` | 0 / 0 / clean |
-| mobile `vitest run` | 33 files, 322 tests pass |
+| mobile `npm run check` (final, merged main @ bddd7a0) | tsc, eslint, prettier, unit (34 files / 326 tests), config, bundle — pass |
+| backend `npm run check` (final) | tsc, eslint, prettier, unit 81, API 176 (route coverage 62/62), migrations — pass |
 | outbox property test (fast-check) | **300 runs**, 2 devices, skew ±10 min: 2802 requests, 83 drops, 94 lost responses, 73 duplicates, 141 kills (26 mid-flush), 64 create→delete cancellations — devices + server = max-HLC reference model in 300/300. Mutation check: 4/4 injected bugs caught (server ignores HLC, no re-send after in-flight coalesce, cancel of a maybe-delivered create, coalesced fields stamped with the newest HLC). |
 | `npm run perf:bundle` | HBC 3,263,448 / 3,280,000 B; assets 883,283 / 930,000 B; 29/31 files; 5/5 fonts — pass, no budget change |
 | backend `tsc` / `eslint src` / `prettier --check src test` / `vitest` | 0 / 0 / clean / 81 pass |
 | backend `test:api` (onyx_client_api_test) | 176 pass, route coverage 62/62 |
 | `db:check-migrations` (onyx_client_mig_check) | OK, empty diff |
-| Playwright (web, API :3301, Expo :8381, `E2E_ENFORCE_BUDGETS=1`) | 23 passed, 2 skipped (screens) |
+| Playwright (web, API :3301, Expo :8381, `E2E_ENFORCE_BUDGETS=1`, final) | 22 passed + startup-requests 3/3 after a single-flight fix for the recap's duplicate request; 2 skipped (screens). #7 (B3) and both offline specs are plain passing tests (no `test.fail`). |
 
 Playwright specs owned here: `offline.spec.ts` (both flipped from `test.fail` to passing),
 `offline-sync.spec.ts` (b) offline block tick + meal + bodyweight → reload offline → state
@@ -104,15 +105,51 @@ queued stamps; `startup-requests.spec.ts`. Core flow #7 (B3) passes.
 | | Before | After |
 |---|---|---|
 | Requests before Focus can render (logged in) | 7 (refresh → me → export, scores, programs, PUT prefs, program) | **0** — Today renders from disk; 1 background `GET /today` (+ the Monday recap's own list) |
-| Offline cold start, logged in | Login screen | Today with cached data (web: Playwright; Android: below) |
+| Offline cold start, logged in | Login screen | Today with cached data (web: Playwright; Android: Maestro, airplane mode) |
+| Android cold start → Today interactive (JS marks) | not measurable (bracket 2.3–3.9 s, Maestro) | p50 2.34 s / p90 2.76 s online; 2.35 / 3.27 s in airplane mode |
 | Web launch → Today with data (dev build, Playwright) | 1249 ms sign-in → Focus | reload → data visible ~0.8 s, 0 requests awaited |
 | Write types surviving offline + app kill | 3 / ~25 | all (list above) |
 | 4xx on a queued write | silently dropped | dead-letter list in Settings |
 | Logout | queue replayed into next account | outbox cleared per user |
 | Server DB wiped | data gone | device re-imports backup + journal on epoch change |
 
-## Android
-(see below — filled in after the emulator run)
+## Android (emulator `onyx_pixel`, release APK, 2026-10-18)
+
+Built from `C:\Users\andi\onyx-build-client` (`scripts/android/build-release.ps1 -Name client
+-ApiUrl http://10.0.2.2:3301/api`; the first attempts died with "Insufficient system
+resources" — host had ~2 GB commit free — and succeeded with `--max-workers=1`, 11 min).
+After a host restart the system Postgres service was stopped (starting it needs admin), so
+the API and all DB judges of this final round ran on a throwaway cluster in the scratchpad
+(`initdb`, port 5433, DBs `onyx_client_*`).
+
+- **Airplane mode, kill, relaunch → Today with data** (`e2e/maestro/offline-coldstart.yaml`
+  after `login.yaml`): greeting, supplements card, timeline "Deep work / Breakfast oats /
+  Lunch walk", no "Sign in" — screenshot `docs/audit/evidence/android-offline-coldstart-after-bet1.png`
+  (before: Login screen, `android-offline-coldstart-logged-in.png`).
+- **Direct numbers from JS marks** (`npm run perf:tti`, now computed as ms from the logcat
+  `Start proc` line to each `ONYX_PERF` line — `performance.now()` on this RN build counts
+  from device boot, so the old script printed boot-relative values), 10 cold runs with
+  `drop_caches`, logged in, local API:
+
+  | mark (ms since process start) | p50 | p90 |
+  |---|---|---|
+  | js_start | 1282 | 1515 |
+  | fonts_loaded | 1356 | 1594 |
+  | cache_restored / auth_ready | 1502 | 1727 |
+  | focus_first_render (Today with data) | 2118 | 2499 |
+  | **focus_interactive** | **2335** | **2758** |
+  | same, airplane mode (5 runs) | 2349 | 3265 |
+
+  Online and offline are the same: the network is off the critical path (no refresh,
+  no `/auth/me`, no export before render). ~1.3 s of the 2.3 s is before the first JS line
+  (process + Hermes + module init) — the next lever is native/JS init, not data.
+- **Maestro bracket** (`scripts/android/coldstart.ps1 -Runs 5`, launch → "Day score"):
+  5125–6737 ms (p50 6111) — *worse* than the 2026-10-17 baseline (3233–3946 ms), but this
+  run was on a host under memory pressure right after an emulator cold boot (`am start -W`
+  varied 860–2954 ms in the same run; baseline 352–539 ms logged out). Also `am start -W`
+  now includes the held splash (first frame is Today, not Login/spinner), so it is not
+  comparable to the old logged-out number. Not re-measured on an idle host — treat the
+  JS-mark table as the direct number and re-run both on an idle machine.
 
 ## Not done / known limits
 - No delete tombstones on the server: a delete from device B can race a delayed create retry
