@@ -34,13 +34,18 @@ export function createPersister(): Persister {
     g.addEventListener("pagehide", write);
     g.addEventListener("beforeunload", write);
   }
+  // Cold start: start reading the file now (module load, before React mounts),
+  // so the disk read overlaps JS init instead of waiting for the provider.
+  let early: Promise<string | null> | null = readBlob(BLOB);
   return {
     persistClient: (client) => {
       latest = client;
       if (!timer) timer = setTimeout(write, THROTTLE_MS);
     },
     restoreClient: async () => {
-      const raw = await readBlob(BLOB);
+      const pending = early;
+      early = null;
+      const raw = await (pending ?? readBlob(BLOB));
       if (!raw) return undefined;
       try {
         return JSON.parse(raw) as PersistedClient;

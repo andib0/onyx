@@ -40,6 +40,21 @@ export async function writeCachedUser(user: UserWithPreferences | null): Promise
   }
 }
 
+let early: Promise<RestoreResult> | null = null;
+
+/** Cold start: begin the session restore at module load (app/_layout.tsx), so
+ *  the SecureStore/AsyncStorage reads overlap JS init. */
+export function prefetchSession(): void {
+  if (!early) early = restoreSession();
+}
+
+/** The prefetched restore if one is pending (used once), else a fresh one. */
+export function takeSession(): Promise<RestoreResult> {
+  const pending = early;
+  early = null;
+  return pending ?? restoreSession();
+}
+
 export async function restoreSession(): Promise<RestoreResult> {
   const [refresh, access, cached] = await Promise.all([
     getRefreshToken(),
