@@ -73,6 +73,8 @@ Free tier sleeps; > 60 s or no answer twice → owner must check the Render dash
 expiry). Don't try to fix production from here.
 
 ## 9. Docs
-- `AGENTS.md` still matches reality? Spot-check 5 claims against the code; fix drift.
+- `AGENTS.md` still matches reality? The `docs` judge (`npm run check:docs`, part of
+  `npm run check`) catches stale paths and script names; spot-check 5 other claims against
+  the code; fix drift.
 - New audit findings go to `docs/audit/`, plans to `docs/AMBITION_PLAN.md`, results to
   `docs/AMBITION_LOG.md`.

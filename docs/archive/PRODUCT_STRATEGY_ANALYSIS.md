@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — MOSTLY DONE: roadmap items 1, 3, 5, 8, 10, 12, 13 DONE; 2, 4, 7, 9 PARTIAL; HealthKit, weekly intention and Render DB expiry STILL WORTH DOING; social OBSOLETE, brand pass ABANDONED.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx — Comprehensive Product Analysis & Growth Strategy
 
 Date: June 2026. Scope: the whole product as it stands after this build cycle —

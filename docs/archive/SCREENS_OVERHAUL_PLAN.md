@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — DONE: nothing left (5ba5f88).** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Nutrition / Program / Settings Overhaul + Charts
 
 Audit of the three remaining inconsistent screens, plus a charts upgrade. Root

@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — MOSTLY DONE: quick wins and medium items DONE; meal "Mark eaten" and recap push notifications STILL WORTH DOING.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx — App-Wide UX/UI Overhaul Blueprint
 
 Audit date: June 2026. Scope: mobile app (`mobile/`), all five tabs plus stack screens (Supplements management, Log), auth flow, and the engagement layer that doesn't exist yet. Every finding references the actual implementation, not hypotheticals.
