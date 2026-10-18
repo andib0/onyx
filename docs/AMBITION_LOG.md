@@ -151,3 +151,20 @@ user-level cluster on port 5442.)
 Remaining known limits: daily-log deletes not tombstoned; meal grams PATCH unclocked;
 undo-last-set not restored after kill.
 Also: Playwright no longer reuses already-running servers by default (stale-server false pass found).
+
+## 2026-10-18 — Cold start (details `docs/log/cold-start.md`)
+Emulator `onyx_pixel` (API 35 x86_64, WHPX, i7-8700K host under load), release APK, JS perf marks
+from logcat, alternating A/B runs in one session (sequential sessions drift 100–600 ms).
+| Measure | Value |
+|---|---|
+| Blank Expo SDK 54 release app (floor) | 465 / 495 ms p50/p90 |
+| Onyx before this slice (same session) | 1221 / 1345 ms |
+| Onyx after (R8 + resource shrink, embedded fonts/icons, early disk reads, deferred below-fold) | **1163 / 1237 ms**; best clean session 985–1045 ms |
+| Airplane mode, after | Today from disk, p50 1303 ms (host 1.9 GB free) |
+The earlier "2.3 s" came from a degraded emulator (same APK: 1590 ms before reboot, 1043 after).
+Target < 1.0 s **not reliably met**: floor 465 ms + ~110–190 ms extra native module setup + ~500 ms
+JS (router ~100, module eval ~70, first render of provider tree + tabs + Today ~200, nav re-render
+~40, next frame ~80). Next steps in the log (Today-first lightweight first frame before full
+providers, fewer eager native modules, baseline profiles via Play install). Not measured on a
+physical mid-range phone.
+Kept bundle budget: 3,274,660 / 3,280,000 B (little headroom).
