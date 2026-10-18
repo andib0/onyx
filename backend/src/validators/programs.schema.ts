@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { clientId } from './common.schema.js';
+import { clientId, hlc } from './common.schema.js';
 
 const exerciseSchema = z.object({
   id: clientId.optional(),
@@ -26,6 +26,8 @@ export const programSchema = z.object({
   description: z.string().max(500).nullable().optional(),
   goal: z.enum(['bulk', 'cut', 'recomp', 'strength', 'general']),
   days: z.array(daySchema).min(1).max(7),
+  /** HLC of this write (per-field last-writer-wins on name/description/goal/days). */
+  hlc: hlc.optional(),
 });
 
 export const updateProgramSchema = programSchema.omit({ id: true });

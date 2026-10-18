@@ -15,6 +15,8 @@ export const createBlockSchema = z.object({
   readonly: z.boolean().optional(),
   source: z.enum(['schedule', 'supplement', 'program', 'nutrition']).optional(),
   sortOrder: z.number().int().optional(),
+  /** HLC of this write: stamps every field (per-field last-writer-wins). */
+  hlc: hlc.optional(),
 });
 
 export const updateBlockSchema = createBlockSchema.omit({ id: true }).partial();

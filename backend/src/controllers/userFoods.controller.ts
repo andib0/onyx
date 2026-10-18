@@ -32,7 +32,11 @@ export async function addUserFood(req: AuthenticatedRequest, res: Response) {
 
 export async function removeUserFood(req: AuthenticatedRequest, res: Response) {
   try {
-    const result = await userFoodsService.remove(req.userId!, req.params.id);
+    const result = await userFoodsService.remove(
+      req.userId!,
+      req.params.id,
+      req.body?.hlc
+    );
     if (result.count === 0) return sendNotFound(res, 'Saved food not found');
     return sendSuccess(res, null, 'Removed');
   } catch (error) {

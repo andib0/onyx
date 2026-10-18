@@ -40,7 +40,7 @@ export async function updateSupplement(req: AuthenticatedRequest, res: Response)
 
 export async function deleteSupplement(req: AuthenticatedRequest, res: Response) {
   try {
-    await supplementsService.deleteSupplement(req.userId!, req.params.id);
+    await supplementsService.deleteSupplement(req.userId!, req.params.id, req.body?.hlc);
     return sendSuccess(res, null, 'Supplement deleted');
   } catch (error) {
     const appError = handleServiceError(error);

@@ -2,9 +2,33 @@ import { AppError } from '../utils/errors.js';
 import { prisma } from '../config/database.js';
 import { createIdempotent } from '../utils/idempotent.js';
 import { applyToggle } from './sync/toggle.js';
+import {
+  clockColumn,
+  createClock,
+  editOutcome,
+  lockOwnedRow,
+  mergeFieldWrite,
+} from './sync/fieldClock.js';
+import {
+  assertNotTombstoned,
+  deleteStamp,
+  goneOr,
+  recordTombstones,
+} from './sync/tombstones.js';
 import { scoreService } from './score/score.service.js';
 
 type Tag = { label: string; value: string };
+
+/** Editable fields, each with its own HLC in `fieldClock` (tags are one field). */
+export const MEAL_FIELDS = [
+  'dayOfWeek',
+  'name',
+  'examples',
+  'grams',
+  'foodId',
+  'sortOrder',
+  'tags',
+] as const;
 
 export class MealsService {
   async getTemplates(userId: string, dayOfWeek?: string) {
@@ -18,11 +42,12 @@ export class MealsService {
     });
   }
 
-  /** Idempotent when the client sends its own `id`. */
+  /** Idempotent when the client sends its own `id`; 410 if that id was deleted. */
   async createTemplate(
     userId: string,
     data: {
       id?: string;
+      hlc?: string;
       dayOfWeek: string;
       name: string;
       examples?: string;
@@ -32,7 +57,8 @@ export class MealsService {
       tags?: Tag[];
     }
   ) {
-    const { tags, ...templateData } = data;
+    await assertNotTombstoned(userId, 'meal', data.id);
+    const { tags, hlc, ...templateData } = data;
     const result = await createIdempotent(
       userId,
       data.id,
@@ -42,6 +68,7 @@ export class MealsService {
           data: {
             ...templateData,
             userId,
+            fieldClock: createClock(MEAL_FIELDS, data as Record<string, unknown>, hlc),
             tags: tags ? { create: tags } : undefined,
           },
           include: { tags: true },
@@ -70,7 +97,11 @@ export class MealsService {
     }
   ) {
     const { date, hlc, ...template } = data;
-    const result = await this.createTemplate(userId, { ...template, dayOfWeek: date });
+    const result = await this.createTemplate(userId, {
+      ...template,
+      hlc,
+      dayOfWeek: date,
+    });
     const log = await this.toggleLog(userId, result.row.id, date, true, { hlc });
     return { row: { template: result.row, log }, created: result.created };
   }
@@ -118,6 +149,7 @@ export class MealsService {
     return updated;
   }
 
+  /** Per-field last-writer-wins by `hlc` (tags = one field); 404 missing, 410 deleted. */
   async updateTemplate(
     userId: string,
     templateId: string,
@@ -129,32 +161,52 @@ export class MealsService {
       foodId?: string | null;
       sortOrder?: number;
       tags?: Tag[];
+      hlc?: string;
     }
   ) {
-    const { tags, ...templateData } = data;
-
-    // If tags are provided, replace them
-    if (tags) {
-      await prisma.mealTemplateTag.deleteMany({
-        where: { mealTemplateId: templateId, mealTemplate: { userId } },
+    const updated = await prisma.$transaction(async (tx) => {
+      if (!(await lockOwnedRow(tx, 'MealTemplate', templateId, userId)))
+        return goneOr(userId, 'meal', templateId, new AppError('Record not found', 404));
+      const current = await tx.mealTemplate.findUniqueOrThrow({
+        where: { id: templateId },
+        include: { tags: true },
       });
-    }
-
-    const updated = await prisma.mealTemplate.update({
-      where: { id: templateId, userId },
-      data: {
-        ...templateData,
-        tags: tags ? { create: tags } : undefined,
-      },
-      include: { tags: true },
+      const w = mergeFieldWrite(
+        MEAL_FIELDS,
+        current.fieldClock,
+        data as Record<string, unknown>,
+        data.hlc
+      );
+      if (Object.keys(w.data).length === 0) return Object.assign(current, editOutcome(w));
+      const { tags, ...columns } = w.data as { tags?: Tag[] } & Record<string, unknown>;
+      // Tags are replaced as a whole when they win.
+      if (tags)
+        await tx.mealTemplateTag.deleteMany({ where: { mealTemplateId: templateId } });
+      const row = await tx.mealTemplate.update({
+        where: { id: templateId },
+        data: Object.assign({}, columns, {
+          fieldClock: clockColumn(w.clock ?? undefined),
+          tags: tags ? { create: tags } : undefined,
+        }),
+        include: { tags: true },
+      });
+      return Object.assign(row, editOutcome(w));
     });
     await scoreService.afterCatalogChange(userId);
     return updated;
   }
 
-  async deleteTemplate(userId: string, templateId: string) {
-    const deleted = await prisma.mealTemplate.delete({
-      where: { id: templateId, userId },
+  /** Deletes and remembers the id (tombstone), so it can never come back. */
+  async deleteTemplate(userId: string, templateId: string, hlc?: string) {
+    const deleted = await prisma.$transaction(async (tx) => {
+      const row = await tx.mealTemplate.delete({ where: { id: templateId, userId } });
+      await recordTombstones(
+        tx,
+        userId,
+        [{ entity: 'meal', entityId: templateId }],
+        deleteStamp(hlc)
+      );
+      return row;
     });
     await scoreService.afterCatalogChange(userId);
     return deleted;

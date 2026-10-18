@@ -57,7 +57,11 @@ export async function updateProgram(req: AuthenticatedRequest, res: Response) {
 
 export async function deleteProgram(req: AuthenticatedRequest, res: Response) {
   try {
-    const deleted = await programsService.deleteProgram(req.userId!, req.params.id);
+    const deleted = await programsService.deleteProgram(
+      req.userId!,
+      req.params.id,
+      req.body?.hlc
+    );
     if (!deleted) return sendNotFound(res, 'Program not found or not deletable');
     return sendSuccess(res, null, 'Program deleted');
   } catch (error) {

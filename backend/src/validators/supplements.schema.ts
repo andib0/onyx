@@ -20,6 +20,8 @@ export const createSupplementSchema = z.object({
   category: z.string().max(100).optional(),
   typicalDose: z.string().max(200).optional(),
   timingRecommendation: z.string().max(500).optional(),
+  /** HLC of this write: stamps every field (per-field last-writer-wins). */
+  hlc: hlc.optional(),
 });
 
 export const updateSupplementSchema = createSupplementSchema.omit({ id: true }).partial();

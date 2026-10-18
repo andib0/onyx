@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { programSchema, updateProgramSchema } from '../validators/programs.schema.js';
 import { idParams } from '../validators/common.js';
+import { deleteBodySchema } from '../validators/common.schema.js';
 import {
   getProgram,
   listPrograms,
@@ -20,6 +21,6 @@ router.get('/', listPrograms);
 router.get('/:id', id, getProgram);
 router.post('/', validate(programSchema), createProgram);
 router.put('/:id', id, validate(updateProgramSchema), updateProgram);
-router.delete('/:id', id, deleteProgram);
+router.delete('/:id', id, validate(deleteBodySchema), deleteProgram);
 
 export default router;

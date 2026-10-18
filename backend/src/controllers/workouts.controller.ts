@@ -51,11 +51,32 @@ export async function finishSession(req: AuthenticatedRequest, res: Response) {
 
 export async function deleteSet(req: AuthenticatedRequest, res: Response) {
   try {
-    const deleted = await workoutsService.deleteSet(req.userId!, req.params.id);
+    const deleted = await workoutsService.deleteSet(
+      req.userId!,
+      req.params.id,
+      req.body?.hlc
+    );
     if (!deleted) {
       return sendNotFound(res, 'Set not found');
     }
     return sendSuccess(res, null, 'Set deleted');
+  } catch (error) {
+    const appError = handleServiceError(error);
+    return sendError(res, appError.message, appError.statusCode);
+  }
+}
+
+export async function deleteSession(req: AuthenticatedRequest, res: Response) {
+  try {
+    const deleted = await workoutsService.deleteSession(
+      req.userId!,
+      req.params.id,
+      req.body?.hlc
+    );
+    if (!deleted) {
+      return sendNotFound(res, 'Workout session not found');
+    }
+    return sendSuccess(res, null, 'Workout session deleted');
   } catch (error) {
     const appError = handleServiceError(error);
     return sendError(res, appError.message, appError.statusCode);

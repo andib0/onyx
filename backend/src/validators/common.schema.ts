@@ -13,5 +13,8 @@ export const hlc = z.string().superRefine((value, ctx) => {
   if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
 });
 
+/** Optional body of a DELETE: the delete's HLC, recorded on its tombstone. */
+export const deleteBodySchema = z.object({ hlc: hlc.optional() });
+
 /** ISO-8601 timestamp sent by a client (e.g. when a workout started offline). */
 export const clientTimestamp = z.string().datetime({ offset: true });

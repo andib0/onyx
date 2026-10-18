@@ -24,6 +24,8 @@ export const logSetSchema = z.object({
 export const finishSessionSchema = z.object({
   durationSeconds: z.number().int().min(0).max(86400).optional(),
   endedAt: clientTimestamp.optional(),
+  /** "Mark done": trained but didn't log sets — counts as the planned sets (T = 1). */
+  markedDone: z.boolean().optional(),
 });
 
 export type StartSessionInput = z.infer<typeof startSessionSchema>;

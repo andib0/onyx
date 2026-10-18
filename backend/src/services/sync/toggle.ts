@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/database.js';
 import { AppError } from '../../utils/errors.js';
+import { goneOr, type TombstoneEntity } from './tombstones.js';
 
 interface ToggleSpec {
   table: string;
@@ -47,6 +48,12 @@ export const TOGGLES = {
 
 export type ToggleKind = keyof typeof TOGGLES;
 
+const TARGET_ENTITY: Record<ToggleKind, TombstoneEntity> = {
+  completion: 'block',
+  supplement: 'supplement',
+  meal: 'meal',
+};
+
 export interface ToggleWrite {
   userId: string;
   targetId: string;
@@ -65,7 +72,8 @@ export interface ToggleOutcome {
 
 const q = (ident: string) => Prisma.raw(`"${ident}"`);
 
-/** Applies the write if newer; 404 when the target is missing or not the user's. */
+/** Applies the write if newer; 404 when the target is missing or not the user's,
+ *  410 when the user deleted it (the write is meaningless now). */
 export async function applyToggle(
   kind: ToggleKind,
   w: ToggleWrite
@@ -92,5 +100,10 @@ export async function applyToggle(
     SELECT "id" FROM ${table}
     WHERE "userId" = ${w.userId} AND ${q(s.targetCol)} = ${w.targetId} AND "date" = ${w.date}`;
   if (existing.length > 0) return { id: existing[0].id, applied: false };
-  throw new AppError('Target not found', 404, 'NOT_FOUND');
+  return goneOr(
+    w.userId,
+    TARGET_ENTITY[kind],
+    w.targetId,
+    new AppError('Target not found', 404, 'NOT_FOUND')
+  );
 }
