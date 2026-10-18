@@ -10,6 +10,7 @@ import {
   motion,
   elevation,
   zLayer,
+  floating,
   type Palette,
 } from "../../theme";
 
@@ -64,8 +65,9 @@ const makeStyles = (colors: Palette) =>
     bar: {
       position: "absolute",
       left: spacing.lg,
-      right: spacing.lg + 64,
-      bottom: 100,
+      // Beside the quick-log "+", bottom-aligned with it
+      right: spacing.lg + floating.fabSize + spacing.sm,
+      bottom: floating.fabBottom,
       minHeight: 52,
       flexDirection: "row",
       alignItems: "center",

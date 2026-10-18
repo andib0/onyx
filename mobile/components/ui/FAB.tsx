@@ -4,7 +4,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import Animated, { ZoomIn, useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, motion, type Palette } from "../../theme";
+import { spacing, motion, floating, type Palette } from "../../theme";
 
 interface FABProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -53,12 +53,12 @@ const makeStyles = (colors: Palette) =>
       position: "absolute",
       right: spacing.lg,
       // Clears the floating tab bar
-      bottom: 100,
+      bottom: floating.fabBottom,
     },
     fab: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: floating.fabSize,
+      height: floating.fabSize,
+      borderRadius: floating.fabSize / 2,
       backgroundColor: colors.accent,
       alignItems: "center",
       justifyContent: "center",

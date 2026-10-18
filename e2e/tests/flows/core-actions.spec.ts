@@ -222,7 +222,20 @@ test.describe("core actions", () => {
     await f.end(() => expect(undoBar(page, /logged for today/)).toBeVisible());
   });
 
-  test("5 · scan barcode", async () => {
+  test("5 · scan barcode", async ({ page }) => {
+    // The entry is 1 tap from "+" (the scan itself is the camera); on web the row
+    // is shown disabled with a label instead of opening a camera.
+    await openFocus(page, {
+      tag: "scan",
+      at: { h: 8, m: 5 },
+      seed: seedDay,
+      ready: /^Day score/,
+    });
+    await plus(page).click();
+    const scan = page.getByRole("button", { name: "Scan barcode" });
+    await expect(scan).toBeVisible();
+    await expect(scan).toBeDisabled();
+    await expect(page.getByText(/Needs the phone camera/)).toBeVisible();
     recordNotApplicable(
       { id: "barcode", n: "5", action: "Scan barcode" },
       "camera not available on the web build — Maestro/device only"

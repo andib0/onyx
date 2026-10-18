@@ -63,7 +63,8 @@ export default function MetricLogRow({
       <View style={styles.row}>
         <View style={styles.stepper}>
           <Stepper
-            label={unit}
+            label={title}
+            unit={unit}
             value={value}
             onChangeText={(t) => {
               setTouched(true);
@@ -101,7 +102,7 @@ const makeStyles = (colors: Palette) =>
     },
     row: {
       flexDirection: "row",
-      alignItems: "flex-end",
+      alignItems: "center",
       gap: spacing.sm,
     },
     title: {

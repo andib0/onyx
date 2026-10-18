@@ -140,6 +140,21 @@ export const zLayer = {
   toast: 1000,
 };
 
+// Floating chrome above the tab bar: the quick-log "+" and what must clear it.
+// `fabTop` = distance from the screen bottom to the FAB's top edge; toasts sit
+// above it and scroll content reserves it, so neither hides the other.
+const FAB_SIZE = 56;
+const FAB_BOTTOM = 100; // clears the floating tab bar
+export const floating = {
+  fabSize: FAB_SIZE,
+  fabBottom: FAB_BOTTOM,
+  fabTop: FAB_BOTTOM + FAB_SIZE,
+  // Toast baseline: above the FAB with a small gap
+  toastBottom: FAB_BOTTOM + FAB_SIZE + spacing.md,
+  // Scroll content bottom inset: the last row ends above the FAB + margin
+  contentInset: FAB_BOTTOM + FAB_SIZE + spacing.lg,
+};
+
 // Motion tokens — one rhythm for the whole app.
 // Durations in ms; spring configs for reanimated withSpring.
 // (Easing functions stay in components — they import from reanimated.)

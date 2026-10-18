@@ -16,6 +16,7 @@ import {
   motion,
   elevation,
   zLayer,
+  floating,
   type Palette,
 } from "../../theme";
 import type { ToastType } from "../../hooks/useToast";
@@ -67,7 +68,8 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     toast: {
       position: "absolute",
-      bottom: 100,
+      // Above the quick-log "+" so neither covers the other
+      bottom: floating.toastBottom,
       left: spacing.xl,
       right: spacing.xl,
       flexDirection: "row",

@@ -5,6 +5,7 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  Platform,
   StyleSheet,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -16,13 +17,17 @@ import useBodyMetrics from "../../hooks/ui/useBodyMetrics";
 import useDebouncedValue from "../../hooks/useDebouncedValue";
 import Sheet from "../ui/Sheet";
 import MetricLogRow from "./MetricLogRow";
+import BarcodeScannerSheet from "../nutrition/BarcodeScannerSheet";
 import { searchFoods, type Food } from "../../api/foods";
 import { getRecentFoods } from "../../utils/recentFoods";
+import { lookupBarcode } from "../../utils/openFoodFacts";
 import { success } from "../../utils/haptics";
 import { useTheme } from "../../contexts/ThemeContext";
 import { spacing, radii, fontSizes, type Palette, type TintSet } from "../../theme";
 
 const RECENT_COUNT = 5;
+// expo-camera's barcode scanner needs a device camera; web shows the row disabled
+const CAN_SCAN = Platform.OS !== "web";
 
 // Global quick-log (Bet 8): every frequent log is ≤ 1 tap once the sheet is open.
 // Food = a one-off entry for today (POST /meals/one-off), never a weekly template.
@@ -47,6 +52,7 @@ export default function QuickLogSheet({
   const debounced = useDebouncedValue(query, 250);
   const [results, setResults] = useState<Food[]>([]);
   const [searching, setSearching] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -117,6 +123,20 @@ export default function QuickLogSheet({
     });
   };
 
+  // "+" → Scan → camera: a found product is logged as a one-off for today (its
+  // serving size, like Eat's scanner); anything else keeps the sheet open with
+  // the product name prefilled into search as the manual starting point.
+  const handleScanned = async (barcode: string) => {
+    const result = await lookupBarcode(barcode);
+    setScanning(false);
+    if (result.status !== "found") {
+      showToast(result.message);
+      if (result.prefill.name) setQuery(result.prefill.name);
+      return;
+    }
+    await logOneOff(result.food);
+  };
+
   const dayLabel = trainingDay ? workoutTitle : "Rest";
   const listed = query.trim() ? results : recent;
 
@@ -143,6 +163,21 @@ export default function QuickLogSheet({
           styles={styles}
         />
       ) : null}
+
+      <QuickRow
+        icon="barcode-outline"
+        color={CAN_SCAN ? colors.accent : colors.muted}
+        label="Scan barcode"
+        detail={
+          CAN_SCAN
+            ? "Log a packaged food for today"
+            : "Needs the phone camera — use the iOS/Android app"
+        }
+        trailing="scan-outline"
+        disabled={!CAN_SCAN}
+        onPress={() => setScanning(true)}
+        styles={styles}
+      />
 
       <Text style={styles.section}>{query.trim() ? "RESULTS" : "FOOD"}</Text>
       <TextInput
@@ -214,6 +249,15 @@ export default function QuickLogSheet({
           onLog={(v) => metrics.save({ sleep: v }, dayLabel)}
         />
       </View>
+      {CAN_SCAN ? (
+        <BarcodeScannerSheet
+          visible={scanning}
+          onScanned={(code) => {
+            handleScanned(code).catch(() => showToast("Couldn't log food — try again"));
+          }}
+          onClose={() => setScanning(false)}
+        />
+      ) : null}
     </Sheet>
   );
 }
@@ -225,6 +269,8 @@ function QuickRow({
   detail,
   onPress,
   styles,
+  trailing = "checkmark-circle-outline",
+  disabled = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
@@ -232,13 +278,22 @@ function QuickRow({
   detail: string;
   onPress: () => void;
   styles: ReturnType<typeof makeStyles>;
+  trailing?: keyof typeof Ionicons.glyphMap;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.quick, pressed && styles.pressed]}
+      accessibilityHint={disabled ? detail : undefined}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [
+        styles.quick,
+        disabled && styles.quickDisabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Ionicons name={icon} size={22} color={color} />
       <View style={styles.foodText}>
@@ -249,7 +304,7 @@ function QuickRow({
           {detail}
         </Text>
       </View>
-      <Ionicons name="checkmark-circle-outline" size={26} color={color} />
+      <Ionicons name={trailing} size={26} color={color} />
     </Pressable>
   );
 }
@@ -265,6 +320,10 @@ const makeStyles = (colors: Palette, tints: TintSet) =>
       paddingVertical: spacing.sm,
       borderRadius: radii.sm,
       backgroundColor: tints.accent,
+    },
+    // Unavailable (web): neutral surface instead of the accent tint
+    quickDisabled: {
+      backgroundColor: colors.surface2,
     },
     quickLabel: {
       fontSize: fontSizes.md,
