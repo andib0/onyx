@@ -8,10 +8,14 @@
 //   5xx, 429, non-JSON) stops the flush and backs off exponentially;
 // - nothing is dropped silently: permanent 4xx failures move to a visible
 //   dead-letter list (retry / discard), except a 404 on a toggle whose target
-//   was deleted (meaningless) and a 404 on a delete (already gone);
+//   was deleted (meaningless), a 404 on a delete (already gone) and a 410 Gone
+//   (the server holds a tombstone: another device deleted the entity, so any
+//   write to it — even a create retry — is moot);
 // - ops coalesce per key before sending (latest local write wins), daily-log
-//   fields keep their own HLC; a create that was never sent cancels with its
-//   delete (the server keeps no tombstones);
+//   fields and partial entity edits keep one HLC per field; a create that was
+//   never sent cancels with its delete (the server never saw either);
+// - small side state (the in-progress workout position) is persisted in the
+//   same record as the queue (`setAux`), so it survives an app kill with it;
 // - `attempts` is persisted *before* each send, so after an app kill an op that
 //   may have reached the server is treated as delivered-maybe (never cancelled,
 //   always re-sent — every request is idempotent).
@@ -30,7 +34,7 @@ export type Op = {
   intent: Intent;
   meta: IntentMeta;
   hlc: string;
-  /** per-field stamps for coalesced daily-log fields */
+  /** per-field stamps for coalesced daily-log fields and partial entity edits */
   fieldHlc?: Record<string, string>;
   createdAt: number;
   updatedAt: number;
@@ -91,7 +95,17 @@ export type OutboxOptions = {
 const BASE_BACKOFF_MS = 2_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
 
-type Persisted = { v: 2; pending: Op[]; dead: Op[]; clock?: HlcState };
+type Persisted = {
+  v: 2;
+  pending: Op[];
+  dead: Op[];
+  clock?: HlcState;
+  aux?: Record<string, unknown>;
+};
+
+/** Partial entity edits (PUT) coalesce field by field with their own stamps. */
+const perFieldUpdate = (intent: Intent) =>
+  intent.t === "update" && describeIntent(intent).coalesce === "merge";
 
 export function backoffMs(attempts: number, random: () => number = Math.random): number {
   const exp = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** Math.max(0, attempts - 1));
@@ -109,6 +123,7 @@ export function createOutbox(opts: OutboxOptions) {
 
   let pending: Op[] = [];
   let dead: Op[] = [];
+  let aux: Record<string, unknown> = {};
   const inflight = new Set<string>();
   let flushing: Promise<FlushResult> | null = null;
   let loaded = false;
@@ -126,7 +141,7 @@ export function createOutbox(opts: OutboxOptions) {
   };
 
   const persist = (): Promise<void> => {
-    const body: Persisted = { v: 2, pending, dead, clock: opts.clock.state() };
+    const body: Persisted = { v: 2, pending, dead, clock: opts.clock.state(), aux };
     const text = JSON.stringify(body);
     writeChain = writeChain
       .then(() => opts.storage.setItem(opts.storageKey, text))
@@ -144,6 +159,10 @@ export function createOutbox(opts: OutboxOptions) {
         const parsed = JSON.parse(raw) as Partial<Persisted>;
         pending = Array.isArray(parsed.pending) ? parsed.pending : [];
         dead = Array.isArray(parsed.dead) ? parsed.dead : [];
+        aux =
+          parsed.aux && typeof parsed.aux === "object"
+            ? (parsed.aux as Record<string, unknown>)
+            : {};
         // Never stamp below anything already queued (wall clock may have gone back).
         for (const op of pending.concat(dead)) {
           opts.clock.receive(op.hlc);
@@ -160,6 +179,7 @@ export function createOutbox(opts: OutboxOptions) {
     } catch {
       pending = [];
       dead = [];
+      aux = {};
     }
     loaded = true;
     emit();
@@ -213,6 +233,11 @@ export function createOutbox(opts: OutboxOptions) {
           for (const f of Object.keys(intent.fields)) fh[f] = hlc;
           existing.fieldHlc = fh;
         }
+        if (perFieldUpdate(intent) && intent.t === "update") {
+          const fh = Object.assign({}, existing.fieldHlc || {});
+          for (const f of Object.keys(intent.data)) fh[f] = hlc;
+          existing.fieldHlc = fh;
+        }
         existing.updatedAt = t;
         existing.rev += 1;
         // A fresh user action deserves a prompt attempt.
@@ -235,6 +260,10 @@ export function createOutbox(opts: OutboxOptions) {
     if (intent.t === "logFields") {
       op.fieldHlc = {};
       for (const f of Object.keys(intent.fields)) op.fieldHlc[f] = hlc;
+    }
+    if (perFieldUpdate(intent) && intent.t === "update") {
+      op.fieldHlc = {};
+      for (const f of Object.keys(intent.data)) op.fieldHlc[f] = hlc;
     }
     pending.push(op);
     return op;
@@ -267,11 +296,12 @@ export function createOutbox(opts: OutboxOptions) {
 
   function classify(
     res: TransportResult
-  ): "ok" | "transient" | "auth" | "notFound" | "fatal" {
+  ): "ok" | "transient" | "auth" | "notFound" | "gone" | "fatal" {
     if (res.ok) return "ok";
     if (res.auth || res.status === 401) return "auth";
     if (res.transient || res.status === 0 || res.status === 429) return "transient";
     if (res.status === 404) return "notFound";
+    if (res.status === 410) return "gone";
     if (res.status >= 500) return "transient";
     return "fatal";
   }
@@ -327,6 +357,16 @@ export function createOutbox(opts: OutboxOptions) {
       inflight.delete(op.id);
       result.sent += 1;
       const stillQueued = pending.includes(op);
+
+      if (kind === "gone") {
+        // Tombstoned on the server (deleted elsewhere): this write — and any
+        // newer version of it coalesced meanwhile — can never apply.
+        if (stillQueued) pending = pending.filter((x) => x !== op);
+        await persist();
+        result.dropped.push(op);
+        if (opts.onDropped) opts.onDropped(op);
+        continue;
+      }
 
       if (kind === "ok" || (kind === "notFound" && op.meta.notFound !== "dead")) {
         for (const d of data) {
@@ -437,9 +477,23 @@ export function createOutbox(opts: OutboxOptions) {
     for (const op of pending) op.nextAttemptAt = 0;
   }
 
+  /** Side state persisted atomically with the queue (null removes it). */
+  async function setAux(key: string, value: unknown): Promise<void> {
+    const next = Object.assign({}, aux);
+    if (value === null || value === undefined) delete next[key];
+    else next[key] = value;
+    aux = next;
+    await persist();
+  }
+
+  function getAux<T = unknown>(key: string): T | null {
+    return key in aux ? (aux[key] as T) : null;
+  }
+
   async function clear(): Promise<void> {
     pending = [];
     dead = [];
+    aux = {};
     await writeChain;
     try {
       await opts.storage.removeItem(opts.storageKey);
@@ -458,6 +512,8 @@ export function createOutbox(opts: OutboxOptions) {
     discardDead,
     wake,
     clear,
+    setAux,
+    getAux,
     snapshot,
     pending: () => pending.slice(),
     dead: () => dead.slice(),

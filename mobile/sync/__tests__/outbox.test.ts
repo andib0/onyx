@@ -242,4 +242,126 @@ describe("outbox", () => {
     });
     expect(reqs[1].body).toMatchObject({ sleep: "7", hlc: "1760000000002-0000-dev1" });
   });
+
+  it("410 Gone (deleted on another device) drops any write to that entity", async () => {
+    const dropped: string[] = [];
+    const storage = new MemStorage();
+    const time = { now: 1_760_000_000_000 };
+    const outbox = createOutbox({
+      storage,
+      storageKey: "outbox:u1",
+      clock: createHlcClock("dev1", () => time.now),
+      now: () => time.now,
+      transport: async () => ({ ok: false, status: 410, error: "Record was deleted" }),
+      onDropped: (op) => dropped.push(op.intent.t),
+    });
+    await outbox.enqueue([
+      { t: "create", entity: "block", id: "b1", data: { title: "x" } },
+      { t: "update", entity: "supplement", id: "s1", data: { dose: "1" } },
+      tick("s1", true),
+    ]);
+    // the create may have reached the server earlier (not cancellable)
+    outbox.pending()[0].attempts = 1;
+    const res = await outbox.flush();
+    expect(res.dropped).toHaveLength(3);
+    expect(dropped).toEqual(["create", "update", "toggle"]);
+    expect(outbox.pending()).toHaveLength(0);
+    expect(outbox.dead()).toHaveLength(0);
+  });
+
+  it("deletes carry their HLC (recorded on the server tombstone)", async () => {
+    const { outbox, sent } = setup(ok);
+    await outbox.enqueue({ t: "delete", entity: "session", id: "w1" });
+    await outbox.flush();
+    expect(sent[0]).toMatchObject({ method: "DELETE", path: "/workouts/sessions/w1" });
+    expect(String(sent[0].body!.hlc)).toMatch(/^\d{13}-\d{4}-dev1$/);
+  });
+
+  it("entity edits keep a stamp per field: one PUT per distinct HLC", async () => {
+    const { outbox, sent, time } = setup(() => ({
+      ok: false,
+      status: 0,
+      transient: true,
+    }));
+    await outbox.enqueue({
+      t: "update",
+      entity: "supplement",
+      id: "s1",
+      data: { dose: "1 g" },
+    });
+    time.now += 1000;
+    await outbox.enqueue({
+      t: "update",
+      entity: "supplement",
+      id: "s1",
+      data: { timeAt: "09:00" },
+    });
+    const op = outbox.pending()[0];
+    expect(outbox.pending()).toHaveLength(1);
+    expect(op.fieldHlc!.dose < op.fieldHlc!.timeAt).toBe(true);
+    const reqs = requestsFor(op.intent, op.hlc, op.fieldHlc);
+    expect(reqs).toEqual([
+      {
+        method: "PUT",
+        path: "/supplements/s1",
+        body: { dose: "1 g", hlc: op.fieldHlc!.dose },
+      },
+      {
+        method: "PUT",
+        path: "/supplements/s1",
+        body: { timeAt: "09:00", hlc: op.fieldHlc!.timeAt },
+      },
+    ]);
+    // A later edit of the same field takes the newer stamp.
+    const timeAtStamp = op.fieldHlc!.timeAt;
+    time.now += 1000;
+    await outbox.enqueue({
+      t: "update",
+      entity: "supplement",
+      id: "s1",
+      data: { dose: "2 g" },
+    });
+    expect(outbox.pending()[0].fieldHlc!.dose > timeAtStamp).toBe(true);
+    expect(outbox.pending()[0].fieldHlc!.timeAt).toBe(timeAtStamp);
+    expect(outbox.pending()[0].intent).toMatchObject({
+      data: { dose: "2 g", timeAt: "09:00" },
+    });
+    expect(sent).toHaveLength(0);
+  });
+
+  it("program edits are whole documents: one PUT with one stamp", async () => {
+    const { outbox } = setup(ok);
+    await outbox.enqueue({
+      t: "update",
+      entity: "program",
+      id: "p1",
+      data: { name: "A" },
+    });
+    await outbox.enqueue({
+      t: "update",
+      entity: "program",
+      id: "p1",
+      data: { name: "B" },
+    });
+    const op = outbox.pending()[0];
+    expect(op.fieldHlc).toBeUndefined();
+    expect(requestsFor(op.intent, op.hlc, op.fieldHlc)).toHaveLength(1);
+  });
+
+  it("keeps side state (e.g. the workout position) with the queue across restarts", async () => {
+    const storage = new MemStorage();
+    const a = setup(ok, storage);
+    await a.outbox.load();
+    await a.outbox.setAux("workout", { exerciseIndex: 2, currentSet: 3 });
+    const b = setup(ok, storage);
+    await b.outbox.load();
+    expect(b.outbox.getAux("workout")).toEqual({ exerciseIndex: 2, currentSet: 3 });
+    await b.outbox.setAux("workout", null);
+    const c = setup(ok, storage);
+    await c.outbox.load();
+    expect(c.outbox.getAux("workout")).toBeNull();
+    await c.outbox.setAux("workout", { x: 1 });
+    await c.outbox.clear();
+    expect(c.outbox.getAux("workout")).toBeNull();
+  });
 });
