@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — PARTIAL: tokens DONE; motion, a11y and perf partial; copy not started.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx — UI/UX Overhaul TODO (detailed)
 
 Living checklist for a unified, modern, sleek, performant mobile UI.

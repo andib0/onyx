@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — MOSTLY DONE: phases 1-4 and duplicate DONE; week strip, name normalisation, volume per muscle, reorder and plateau flag were STILL WORTH DOING at audit time.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Program & Exercises — Detailed Overhaul Plan
 
 Synthesises every gym-related thread in this project: per-set logging, "beat last

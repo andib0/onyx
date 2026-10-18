@@ -23,7 +23,8 @@
     "db:verify-deploy": "node scripts/verify-migrate-deploy.mjs",
     "db:deploy": "bash scripts/migrate-deploy.sh",
     "perf:today": "tsx scripts/perf/today.bench.ts",
-    "check": "node ../scripts/check.mjs backend"
+    "check": "node ../scripts/check.mjs backend",
+    "check:docs": "node ../scripts/check-agents-md.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
