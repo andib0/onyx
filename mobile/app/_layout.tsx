@@ -24,6 +24,7 @@ import { setupConnectivity } from "../sync/connectivity";
 import {
   CACHE_BUSTER,
   CACHE_MAX_AGE_MS,
+  QUERY_GC_MS,
   createPersister,
   shouldPersistQuery,
 } from "../sync/persist";
@@ -92,8 +93,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 30_000,
-      // >= the persisted max age, or restored queries would be dropped unseen
-      gcTime: CACHE_MAX_AGE_MS,
+      // >= the persisted max age and a valid timer delay (see QUERY_GC_MS)
+      gcTime: QUERY_GC_MS,
     },
   },
 });
