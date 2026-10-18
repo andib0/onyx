@@ -7,6 +7,7 @@
 //   TEST_DATABASE_URL   backend: enables API tests (local *_test DB only; see backend/test/globalSetup.ts)
 //   CHECK_SKIP          comma list of judge ids to skip, e.g. "e2e,bundle"
 //   CHECK_ONLY          comma list of judge ids to run (everything else skipped)
+// Judge "docs" (both packages) runs scripts/check-agents-md.mjs against AGENTS.md.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -54,6 +55,8 @@ const JUDGES = {
           ? true
           : "TEST_DATABASE_URL/MIG_DATABASE_URL not set -> migration drift NOT CHECKED.",
     },
+    // AGENTS.md: every backtick path exists, every `npm run x` is a real script.
+    { id: "docs", cmd: "npm run check:docs" },
   ],
   mobile: [
     { id: "tsc", cmd: "npx tsc --noEmit" },
@@ -63,6 +66,8 @@ const JUDGES = {
     { id: "config", cmd: "npm run test:config" },
     { id: "bundle", cmd: "npm run perf:bundle" },
     { id: "e2e", cmd: "npm run e2e:smoke" },
+    // AGENTS.md: every backtick path exists, every `npm run x` is a real script.
+    { id: "docs", cmd: "npm run check:docs" },
   ],
 };
 

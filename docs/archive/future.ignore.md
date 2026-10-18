@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — OBSOLETE as architecture (Rust/Axum plan; the backend is Express/Prisma); its offline/sync goals were unmet at audit time.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # BACKEND.md
 
 ## Purpose

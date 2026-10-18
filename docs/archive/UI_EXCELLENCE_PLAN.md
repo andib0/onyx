@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — DONE / OBSOLETE: built in b727615 and 72cf3a4; superseded by DESIGN_SYSTEM.md.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx — UI Excellence Plan
 
 Goal: move from "clean functional dark app" to an interface that feels crafted — the Apple Fitness / Whoop tier. Functional architecture stays; this is the visual + motion + feel layer. Every item is implementable in Expo (Expo Go compatible unless flagged).

@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — PARTIAL: tokens, fonts, Sheet/Input/StatBlock, light mode and motion tokens DONE; unified Chart, Card variants and app mark ABANDONED.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx — Design Language Redesign
 
 A step-change, not another pass. After many incremental UI edits the app is

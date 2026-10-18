@@ -1,3 +1,5 @@
+> **Archived 2026-10-18 — STALE: its theming section predated the live theme switch; rules 1, 2 and 6 (Typo, Input, reduced motion) still worth doing; no-spread rule 3 was dropped.** (verdicts: `docs/audit/01-architecture-and-docs.md` §3; current truth: `AGENTS.md`)
+
 # Onyx Design System
 
 Living reference for tokens, primitives, and usage rules. The older design docs
