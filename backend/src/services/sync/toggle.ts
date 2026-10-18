@@ -104,6 +104,24 @@ export async function applyToggle(
   kind: ToggleKind,
   w: ToggleWrite
 ): Promise<ToggleOutcome> {
+  // Two concurrent first writes of the same day's row carry the same id (derived
+  // from the natural key): the loser hits the primary key, not the ON CONFLICT
+  // target. Its retry then takes the natural-key conflict path (LWW).
+  try {
+    return await upsertToggle(kind, w);
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    return upsertToggle(kind, w);
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  const meta = (error.meta ?? {}) as { code?: string };
+  return error.code === 'P2002' || meta.code === '23505' || /23505/.test(error.message);
+}
+
+async function upsertToggle(kind: ToggleKind, w: ToggleWrite): Promise<ToggleOutcome> {
   const s: ToggleSpec = TOGGLES[kind];
   const table = q(s.table);
   const rows = await prisma.$queryRaw<Array<{ id: string }>>`
