@@ -133,3 +133,21 @@ GymProgram.userId FK added.
 - Core actions: 12/12 web-measurable ≤ 2 taps & ≤ 5 s (barcode device-only: "+" → Scan).
 (Postgres service was stopped after a reboot and needs admin to start; these runs used a
 user-level cluster on port 5442.)
+
+## 2026-10-18 — Sync gaps closed (details `docs/log/client-data.md`, contract `docs/log/backend-sync-api.md`)
+- Server tombstones for every deletable entity: writes to a deleted id → 410 Gone; delete wins;
+  tombstones travel in export/import v2 (rehydrate can't resurrect deletes).
+- Entity edits are per-field HLC last-writer-wins (were last-arrival-wins).
+- In-progress workout position survives app kill. "Mark done" counts T = 1 (contract input
+  `markedDone`; vectors 14 → 18, both implementations match).
+- Automated server-wipe e2e: log data → wipe server rows → reload → app re-hydrates → export
+  equals pre-wipe state. It forced two fixes (toggle ids derived from natural key; times from HLC).
+| Judge | Result |
+|---|---|
+| Client fast-check convergence (deletes from either device) | 300/300 runs, 3,146 requests, 144 kills; 2/2 injected bugs caught |
+| Backend real-API property test | 60/60 runs (+ existing 200-run test) |
+| API tests / route coverage | 216 / 63 of 63 |
+| e2e (budgets enforced, fresh servers) | 25 passed, 2 skipped (opt-in screenshots) |
+Remaining known limits: daily-log deletes not tombstoned; meal grams PATCH unclocked;
+undo-last-set not restored after kill.
+Also: Playwright no longer reuses already-running servers by default (stale-server false pass found).
