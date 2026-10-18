@@ -332,14 +332,15 @@ export default function useWorkout(
       .catch(() => {});
   }, [programRows, programLabel, resetAll, syncTiming]);
 
-  const finishSession = useCallback((durationSeconds: number) => {
+  const finishSession = useCallback((durationSeconds: number, markedDone?: boolean) => {
     const sessionId = sessionIdRef.current;
     if (sessionId) {
-      enqueueWrite({
-        t: "finishSession",
-        id: sessionId,
-        data: { durationSeconds, endedAt: new Date().toISOString() },
-      }).catch(() => {});
+      const data: { durationSeconds: number; endedAt: string; markedDone?: boolean } = {
+        durationSeconds,
+        endedAt: new Date().toISOString(),
+      };
+      if (markedDone) data.markedDone = true;
+      enqueueWrite({ t: "finishSession", id: sessionId, data }).catch(() => {});
     }
   }, []);
 
@@ -660,7 +661,7 @@ export default function useWorkout(
   const markWorkoutDone = useCallback(() => {
     const now = new Date();
     if (isActive && sessionIdRef.current) {
-      finishSession(currentSessionSeconds());
+      finishSession(currentSessionSeconds(), true);
       markCompleted();
       resetAll();
       return;
@@ -680,7 +681,7 @@ export default function useWorkout(
       {
         t: "finishSession",
         id,
-        data: { durationSeconds: 0, endedAt: now.toISOString() },
+        data: { durationSeconds: 0, endedAt: now.toISOString(), markedDone: true },
       },
     ]).catch(() => {});
     markCompleted();

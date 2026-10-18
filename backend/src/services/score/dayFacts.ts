@@ -177,6 +177,21 @@ export function resolvePlan(
   return { plan: 'rest', setsPlanned: 0, programDayId: null, source: 'default' };
 }
 
+/**
+ * "Mark done" (trained but didn't log): a session finished with the
+ * `markedDone` flag, or — clients before the flag existed — a finished
+ * session with no sets at all. Counts as the planned training (T = 1,
+ * contracts/README.md).
+ */
+export function isMarkedDone(s: {
+  markedDone?: boolean | null;
+  endedAt: Date | string | null;
+  _count?: { sets: number };
+}): boolean {
+  if (s.markedDone) return true;
+  return s.endedAt !== null && s._count !== undefined && s._count.sets === 0;
+}
+
 // ---------------------------------------------------------------------------
 // One day's facts → DailyScore payload
 // ---------------------------------------------------------------------------
@@ -193,6 +208,8 @@ export interface DayFacts {
   setsDone: number;
   sessionCount: number;
   finishedSession: boolean;
+  /** A session finished via "Mark done" (see isMarkedDone). */
+  markedDone?: boolean;
   plan: PlanResult;
   bwSlope: number | null;
   proteinTarget: number | null;
@@ -232,6 +249,7 @@ export function scoreDay(f: DayFacts): DayScorePayload {
     plan: f.plan.plan,
     setsDone: f.setsDone,
     setsPlanned: f.plan.setsPlanned,
+    markedDone: f.markedDone ?? false,
     protein: f.macros ? f.macros.protein : null,
     proteinTarget: f.proteinTarget,
     calories: f.macros ? f.macros.calories : null,

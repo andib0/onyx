@@ -14,6 +14,10 @@ def components(d):
     c = {}
     if d["plan"] == "rest":
         c["T"] = 1.0
+    elif d.get("markedDone"):
+        # "Trained but didn't log" (a session finished via Mark done): counts as
+        # the planned training, whatever was logged and even without a plan.
+        c["T"] = 1.0
     elif d.get("setsPlanned"):
         c["T"] = min(1.0, d["setsDone"] / (0.8 * d["setsPlanned"]))
     else:
@@ -41,7 +45,8 @@ def score(d):
     return {"score": math.floor(s + 0.5), "kept": kept, "components": {k: (None if v is None else round(v, 4)) for k, v in c.items()}}
 
 
-BASE = {"plan": "train", "setsDone": 15, "setsPlanned": 15, "protein": 160, "proteinTarget": 160,
+BASE = {"plan": "train", "setsDone": 15, "setsPlanned": 15, "markedDone": False,
+        "protein": 160, "proteinTarget": 160,
         "calories": 2500, "calorieTarget": 2500, "bwSlope": -0.4, "goalRate": -0.4}
 
 CASES = [
@@ -59,6 +64,10 @@ CASES = [
     ("no weight trend yet -> Bw dropped from weights", {"bwSlope": None}),
     ("bodyweight off goal by 0.25 kg/wk", {"bwSlope": -0.15}),
     ("train day with no plan sets -> T unknown", {"setsPlanned": 0, "setsDone": 0}),
+    ("marked done without sets counts as full training", {"setsDone": 0, "markedDone": True}),
+    ("marked done after half the sets is full training", {"setsDone": 6, "markedDone": True}),
+    ("marked done with no plan sets -> T = 1", {"setsPlanned": 0, "setsDone": 0, "markedDone": True}),
+    ("marked done, protein 50% -> not kept", {"setsDone": 0, "markedDone": True, "protein": 80}),
 ]
 
 if __name__ == "__main__":

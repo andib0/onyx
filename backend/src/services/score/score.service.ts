@@ -7,6 +7,7 @@ import { prisma } from '../../config/database.js';
 import { addDays, localDateKey, weekdayName } from '../../utils/dates.js';
 import {
   bodyweightSlope,
+  isMarkedDone,
   leadingNumber,
   resolvePlan,
   scoreDay,
@@ -138,6 +139,7 @@ export class ScoreService {
           date: true,
           programDayName: true,
           endedAt: true,
+          markedDone: true,
           _count: { select: { sets: true } },
         },
       }),
@@ -226,6 +228,7 @@ export class ScoreService {
         setsDone: daySessions.reduce((n, s) => n + s._count.sets, 0),
         sessionCount: daySessions.length,
         finishedSession: daySessions.some((s) => s.endedAt !== null),
+        markedDone: daySessions.some((s) => isMarkedDone(s)),
         plan: resolvePlan(
           date,
           programDays,

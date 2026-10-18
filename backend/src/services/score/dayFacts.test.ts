@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bodyweightSlope,
+  isMarkedDone,
   leadingNumber,
   resolvePlan,
   routinePercent,
@@ -155,5 +156,25 @@ describe('scoreDay', () => {
     expect(p.outcomeScore).toBeNull();
     expect(p.kept).toBe(false);
     expect(p.protein).toBe(0);
+  });
+
+  it('a marked-done session counts as the planned sets (T = 1, kept)', () => {
+    const p = scoreDay(Object.assign({}, facts, { setsDone: 0, markedDone: true }));
+    expect(p.components.T).toBe(1);
+    expect(p.kept).toBe(true);
+    expect(p.outcomeScore).toBe(100);
+    const without = scoreDay(Object.assign({}, facts, { setsDone: 0 }));
+    expect(without.components.T).toBe(0);
+    expect(without.kept).toBe(false);
+  });
+});
+
+describe('isMarkedDone', () => {
+  const ended = new Date('2026-10-17T10:00:00Z');
+  it('flag, or a finished session with no sets (older clients)', () => {
+    expect(isMarkedDone({ markedDone: true, endedAt: null })).toBe(true);
+    expect(isMarkedDone({ endedAt: ended, _count: { sets: 0 } })).toBe(true);
+    expect(isMarkedDone({ endedAt: ended, _count: { sets: 3 } })).toBe(false);
+    expect(isMarkedDone({ endedAt: null, _count: { sets: 0 } })).toBe(false);
   });
 });

@@ -155,8 +155,11 @@ export default function useTodayPlan() {
     );
     return computeTodayOutcome({
       plan,
-      setsDone: workoutCompletedToday ? Math.max(setsLogged, setsPlanned) : setsLogged,
+      setsDone: setsLogged,
       setsPlanned,
+      // Done today (≥ 80 % logged, or "Mark done"): same rule as the server's
+      // contract — a marked-done day counts as the planned training.
+      markedDone: workoutCompletedToday,
       consumed: anyMealLogged ? consumed : null,
       proteinTarget: targets.protein,
       calorieTarget: targets.calories,

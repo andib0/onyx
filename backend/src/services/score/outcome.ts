@@ -12,6 +12,8 @@ export interface OutcomeInputs {
   setsDone: number;
   /** Planned working sets for a train day; 0/null = unknown plan. */
   setsPlanned?: number | null;
+  /** A session was finished via "Mark done" (trained, didn't log): T = 1. */
+  markedDone?: boolean | null;
   /** Grams of protein logged; null = nothing logged. */
   protein?: number | null;
   proteinTarget?: number | null;
@@ -43,6 +45,7 @@ const truthy = (v: number | null | undefined): v is number => known(v) && v !== 
 export function outcomeComponents(d: OutcomeInputs): OutcomeComponents {
   let T: number | null;
   if (d.plan === 'rest') T = 1.0;
+  else if (d.markedDone) T = 1.0;
   else if (truthy(d.setsPlanned)) T = Math.min(1.0, d.setsDone / (0.8 * d.setsPlanned));
   else T = null;
 
