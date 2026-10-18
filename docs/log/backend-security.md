@@ -154,3 +154,90 @@ Boot (NODE_ENV=production, test DB): /api/health 200, malformed JSON 400 envelop
   none of them ship at runtime.
 - **AGENTS.md** still lists `env` under `utils/`. That file is gone; env lives in
   `config/env.ts`. This is left for the final AGENTS.md pass in the plan.
+
+## F7 and F8 (follow-up)
+
+Branch `worktree-agent-a98749400d33ce866`, based on `main` @ `bddd7a0`. Local Postgres only: a
+throwaway cluster on port 5434 with `onyx_sec2_test` and `onyx_mig_check` (the system
+Postgres service was stopped and can't be started without admin). Production was never
+contacted.
+
+### F8: access tokens revoked on logout
+
+- Access tokens already carried the session family as `fam` (since F1). I kept that name
+  rather than adding a second `fid` claim.
+- A family is live while it has a `RefreshToken` row. `authMiddleware` now rejects tokens
+  with no `fam` and tokens whose family is dead (401 `Session has been logged out`). The
+  logic is in `src/services/sessionRevocation.ts`.
+  - **Revoked cache:** an LRU of up to 10k ids. Its TTL equals the access-token lifetime
+    (15 min, exported as `ACCESS_TOKEN_TTL_MS`), after which every token of the family has
+    expired anyway.
+  - **Live cache:** an LRU with a 60 s TTL.
+  - **On a miss:** one `findFirst` on the indexed `RefreshToken.familyId`, and the result is
+    cached either way.
+- Logout and refresh-token reuse detection call `markFamilyRevoked()` synchronously. On the
+  single Render instance, the very next request with that access token gets a 401. After a
+  restart the caches are empty, so the DB decides. With several instances, another instance
+  could keep accepting the token for up to 60 s (the live-cache TTL).
+- Refresh rotation now runs as consume, find user and insert successor in one
+  `$transaction`. Before, there was a moment between delete and create when the family had
+  zero rows, which the middleware would read as a logout. Concurrency is unchanged: of N
+  parallel refreshes exactly 1 wins (the existing test still passes).
+- No schema change.
+- **Overhead:** measured with `isFamilyLive` over 200 samples on local Postgres. A cache hit
+  costs p50 0.027 ms and p95 0.099 ms. A miss costs p50 1.66 ms and p95 3.77 ms, and happens
+  at most once per family per minute.
+- **Tests:** `test/sessionRevocation.api.test.ts`
+  - logout on device B: B's access token gets 401 immediately and A's gets 200;
+  - the same after a cache reset (simulated restart), so the DB fallback is exercised;
+  - refresh-token reuse kills the family's access tokens;
+  - 5 rotations racing `/auth/me` on an empty cache give no false 401s;
+  - an access token without `fam` gets 401;
+  - the overhead measurement.
+
+### F7: rate-limit keying behind Render
+
+- **Hop count is not verified.**
+  - The brief assumed one hop. Render's own article "How Render handles DDoS attacks"
+    (render.com/articles/how-render-handles-ddos-attacks) says traffic passes through
+    Cloudflare *and* Render's load balancers.
+  - One public project (github.com/wandersonpjbkn/ecos-api PR #13) replayed Render logs and
+    found that `trust proxy 1` yielded rotating internal `10.x` load-balancer addresses, and
+    `3` yielded the client.
+  - Other projects use `1`. I could not measure this without contacting production.
+- **Default stays at 1.** The two possible errors are not equally risky:
+  - Hops set too low: clients share a bucket per proxy address. Spoofing is impossible.
+  - Hops set too high: a client-prepended X-Forwarded-For value becomes `req.ip`, which
+    bypasses the limit.
+- **What changed:**
+  - `trust proxy` now comes from the `TRUST_PROXY_HOPS` environment variable. It is
+    validated in `config/env.ts` (an integer from 0 to 5, default `1`) and is never `true`.
+  - `logProxyChainShape` logs the shape of the chain for the first 5 production requests
+    after each boot. The line reads `[proxy-chain] xff+socket hops=N [public, public, private, ...]`,
+    with no addresses.
+  - **How to set it:** load the app once from a normal client (one that sends no
+    X-Forwarded-For) and read N from Render's logs. Set `TRUST_PROXY_HOPS = N - 1` on the
+    service. The ecos-api finding predicts 3.
+- **Limiter key:**
+  - All three limiters use `clientKey(req.ip)`. It never reads the raw header.
+  - IPv4-mapped IPv6 addresses are unwrapped.
+  - IPv6 addresses are collapsed to their /64, so a client can't rotate through addresses in
+    its own prefix.
+- **Store:** the limiters keep their counters in process memory, so a free-tier restart or
+  spin-down resets them. This is accepted for a single instance with 1-minute windows. A
+  shared store (Redis or Postgres) would only matter with more than one instance.
+- **Tests:**
+  - `src/middleware/rateLimit.test.ts` (unit) covers IPv4, mapped and IPv6 /64 keys.
+  - `test/ratelimit-proxy.api.test.ts` sets 1 hop and sends 101 requests, each with
+    different spoofed leftmost XFF values and the same rightmost "real" client. Requests
+    1-100 get 200 and request 101 gets 429. A different rightmost client still gets 200,
+    and a /64 IPv6 rotation is limited.
+  - The spoofing test fails when run with `TRUST_PROXY_HOPS=5` (an over-trusting setting),
+    which shows the test can detect the bypass.
+
+### Evidence
+
+```
+npm run check (backend)   tsc, eslint, prettier, unit (84), api (25 files, 183), migrations: PASSED
+API route coverage: 62/62 (2xx: 62/62, 4xx: 62/62)
+```

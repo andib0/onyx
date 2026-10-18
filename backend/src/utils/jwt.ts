@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '../types/index.js';
 import { env } from '../config/env.js';
 
-const ACCESS_TOKEN_EXPIRY = '15m';
+/** Access-token lifetime; also the TTL of the revoked-family cache (F8). */
+export const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
+const ACCESS_TOKEN_EXPIRY = ACCESS_TOKEN_TTL_MS / 1000; // seconds
 const REFRESH_TOKEN_EXPIRY = '7d';
 const ALGORITHM = 'HS256';
 
