@@ -9,7 +9,7 @@ import {
 import { useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
-import { spacing, type Palette } from "../../theme";
+import { spacing, floating, type Palette } from "../../theme";
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -88,8 +88,8 @@ const makeStyles = (colors: Palette) =>
     content: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.xl,
-      // Clears the floating blur tab bar
-      paddingBottom: 120,
+      // Clears the floating tab bar AND the quick-log "+" (last row never under it)
+      paddingBottom: floating.contentInset,
       gap: spacing.lg,
     },
   });

@@ -154,3 +154,29 @@ legacy daily repeats removed. `dayPlan.test.ts`: plan order, next-action picking
 `docs/log/screens/nav/{today,today-below,quicklog,train,eat,progress}-{light,dark}.png`
 (Playwright, 412×915, reduced motion; regenerate with
 `E2E_SCREENS=1 npx playwright test tests/screens.spec.ts`).
+
+## Polish: FAB vs toasts, stepper fields, barcode in quick log (2026-10-18)
+
+Merged `main` @ `bddd7a0` first. Judges: `mobile/ npm run check` pass (tsc, eslint,
+prettier, vitest, config, bundle, e2e smoke); `e2e/ E2E_ENFORCE_BUDGETS=1 npx playwright
+test` 20 passed, 2 skipped (screens), 3 expected failures (B3, offline ×2) — same as before.
+Local run used ports 3601/8681 and a private Postgres (the shared service was stopped).
+
+- **FAB vs toasts** — new `floating` tokens in `theme.ts` (`fabSize`, `fabBottom`, `fabTop`,
+  `toastBottom`, `contentInset`). The toast now sits above the "+" (`toastBottom` = FAB top +
+  `spacing.md`) instead of on top of it; the undo bar stays beside the FAB and uses the same
+  tokens. `ScreenContainer` reserves `contentInset` (FAB top + `spacing.lg`) at the bottom,
+  so the last content row always scrolls clear of the FAB (was 120 px < FAB top 156).
+- **Stepper** — the bordered box is a `field` View with the TextInput inside: horizontal
+  padding, value centred via style (react-native-web ignored the `textAlign` prop, so the
+  value hugged the left border). New `unit` prop renders the unit inside the field at the
+  right ("80.4 … kg") and drops the floating caption; `MetricLogRow` (morning card + quick
+  log) uses it, so its a11y labels are now "Weight (kg)" / "Decrease Weight". Workout and
+  onboarding steppers keep their column caption.
+- **Barcode in quick log** — "Scan barcode" row in the sheet (+ → Scan = 2 taps, then the
+  camera). It opens the existing `BarcodeScannerSheet`; a found product is logged as a
+  one-off via `useTodayMeals().logFood` (same path as search, with undo); not found /
+  offline shows the message and prefills search with the product name. Web: the row is
+  disabled with "Needs the phone camera — use the iOS/Android app"; flow #5 asserts that and
+  stays n/a for timing.
+- Screens retaken: `today`, `today-below`, `quicklog` × light/dark.
