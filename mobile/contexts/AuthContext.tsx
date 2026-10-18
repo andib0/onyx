@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import * as authApi from "../api/auth";
 import { clearTokens, onAuthExpired, setAccessToken } from "../api/client";
-import { restoreSession, writeCachedUser } from "../api/session";
+import { takeSession, writeCachedUser } from "../api/session";
 import { adoptPreviousAccount, onAccountLost, onServerUser } from "../sync/dayData";
 import {
   flushNow,
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Restore the session from disk: zero network calls when a user is cached.
   useEffect(() => {
     let cancelled = false;
-    restoreSession()
+    takeSession()
       .then((result) => {
         if (cancelled) return;
         if (result.user) {

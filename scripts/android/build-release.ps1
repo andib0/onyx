@@ -55,6 +55,11 @@ $t0 = Get-Date
 robocopy $src $Dest /MIR /NFL /NDL /NJH /NJS /NP `
   /XD node_modules android ios .expo .perf-export dist web-build | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE)" }
+# Metro's shared transform cache (%TEMP%\metro-cache) is keyed by file content, not by
+# EXPO_PUBLIC_* values: a build for another API port with an identical api/client.ts
+# reuses the old inlined URL (seen 2026-10-18: a :3701 build shipped :3301). Stamp the
+# copy so the cache key changes with the URL.
+Add-Content -Path (Join-Path $Dest "api\client.ts") -Value "// build-api: $ApiUrl"
 
 Push-Location $Dest
 try {
@@ -73,7 +78,9 @@ try {
   }
 
   Push-Location android
-  .\gradlew.bat assembleRelease "-PreactNativeArchitectures=$Arch" --console=plain
+  # --no-daemon: a background daemon keeps ~2 GB and inherits redirected stdout, so a
+  # caller doing `build-release.ps1 *> log` never returns.
+  .\gradlew.bat assembleRelease "-PreactNativeArchitectures=$Arch" --console=plain --no-daemon
   $code = $LASTEXITCODE
   Pop-Location
   if ($code) { throw "gradle assembleRelease failed ($code)" }

@@ -12,6 +12,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import useTodayPlan from "../../hooks/ui/useTodayPlan";
 import useBodyMetrics from "../../hooks/ui/useBodyMetrics";
 import { useUndo } from "../../hooks/ui/undo";
+import useAfterFirstPaint from "../../hooks/ui/useAfterFirstPaint";
 import ScreenContainer from "../../components/layout/ScreenContainer";
 import LoadingScreen from "../../components/shared/LoadingScreen";
 import SyncStatusPill from "../../components/shared/SyncStatusPill";
@@ -40,6 +41,8 @@ import {
 } from "../../utils/achievements";
 import { success } from "../../utils/haptics";
 import { fontSizes, fonts, spacing, type Palette } from "../../theme";
+
+perfMark("today_module");
 
 // "2 tasks · 1 supplement still open" — empty string when the day is closed out
 function buildOpenSummary(items: PlanItem[]): string {
@@ -86,6 +89,8 @@ export default function TodayScreen() {
   const { nowMinutes, nextAction, items, outcome, streak, consumed, targets } = plan;
   const { meals, mealCheckMap, toggleMeal } = plan.todayMeals;
   const metrics = useBodyMetrics();
+  // Cold start: the review section below the fold mounts after the first frame.
+  const painted = useAfterFirstPaint();
 
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
@@ -157,7 +162,7 @@ export default function TodayScreen() {
   }
 
   // ── Review data ──
-  const recap = buildYesterdayRecap(appState, supplementsList);
+  const recap = painted ? buildYesterdayRecap(appState, supplementsList) : null;
   const anythingChecked =
     Object.values(mealCheckMap).some(Boolean) ||
     Object.values(supplementChecksForToday).some(Boolean) ||
@@ -170,7 +175,7 @@ export default function TodayScreen() {
 
   // Celebrate newly-unlocked achievements (after score history is known)
   useEffect(() => {
-    if (stateLoading || scoreHistory.length === 0) return;
+    if (!painted || stateLoading || scoreHistory.length === 0) return;
     const todayScore = scoreHistory.find((s) => s.date === todayKeyValue)?.score ?? 0;
     const streakNow = scoreStreak(scoreHistory, todayKeyValue, todayScore);
     const ctx = buildAchievementCtx(scoreHistory, logEntries, streakNow);
@@ -186,7 +191,7 @@ export default function TodayScreen() {
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run on score history changes
-  }, [scoreHistory, stateLoading]);
+  }, [scoreHistory, stateLoading, painted]);
 
   // Day-close spine: debounce-snapshot today's numbers whenever they change.
   const tasksTotal = scheduleBlocks.length;
@@ -234,6 +239,11 @@ export default function TodayScreen() {
     perfMark("focus_first_render");
     requestAnimationFrame(() => perfMark("focus_interactive"));
   }, [stateLoading]);
+  // ...and once the below-the-fold review section is on screen too.
+  useEffect(() => {
+    if (stateLoading || !painted) return;
+    requestAnimationFrame(() => perfMark("focus_complete"));
+  }, [stateLoading, painted]);
 
   if (stateLoading) return <LoadingScreen />;
 
@@ -311,37 +321,41 @@ export default function TodayScreen() {
       {/* ── Below the fold: review ── */}
       {/* Check-in and getting-started render independently: getting-started can
           no longer hide the evening check-in that is its own last step (audit 06 #4). */}
-      <DayCheckInCard
-        nowMinutes={nowMinutes}
-        todayKeyValue={todayKeyValue}
-        dayLabel={dayLabel}
-        logEntries={logEntries}
-        onSave={addLogEntry}
-        showToast={showToast}
-        openSummary={buildOpenSummary(items)}
-      />
+      {painted ? (
+        <>
+          <DayCheckInCard
+            nowMinutes={nowMinutes}
+            todayKeyValue={todayKeyValue}
+            dayLabel={dayLabel}
+            logEntries={logEntries}
+            onSave={addLogEntry}
+            showToast={showToast}
+            openSummary={buildOpenSummary(items)}
+          />
 
-      <TodayTimeline
-        items={items}
-        nowMinutes={nowMinutes}
-        onToggle={toggleItem}
-        onEdit={() => router.push("/schedule")}
-      />
+          <TodayTimeline
+            items={items}
+            nowMinutes={nowMinutes}
+            onToggle={toggleItem}
+            onEdit={() => router.push("/schedule")}
+          />
 
-      <GettingStartedCard
-        programSelected={Boolean(selectedProgramId)}
-        anythingChecked={anythingChecked}
-        dayLogged={logEntries.length > 0}
-      />
-      {isMonday ? (
-        <WeeklyRecapCard
-          appState={appState}
-          supplementsList={supplementsList}
-          logEntries={logEntries}
-        />
+          <GettingStartedCard
+            programSelected={Boolean(selectedProgramId)}
+            anythingChecked={anythingChecked}
+            dayLogged={logEntries.length > 0}
+          />
+          {isMonday ? (
+            <WeeklyRecapCard
+              appState={appState}
+              supplementsList={supplementsList}
+              logEntries={logEntries}
+            />
+          ) : null}
+          {isMorning && recap ? <RecapCard recap={recap} streak={streak.count} /> : null}
+          <InsightsTeaserCard scoreHistory={scoreHistory} logEntries={logEntries} />
+        </>
       ) : null}
-      {isMorning && recap ? <RecapCard recap={recap} streak={streak.count} /> : null}
-      <InsightsTeaserCard scoreHistory={scoreHistory} logEntries={logEntries} />
     </ScreenContainer>
   );
 }

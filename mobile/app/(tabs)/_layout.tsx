@@ -8,6 +8,7 @@ import FAB from "../../components/ui/FAB";
 import { useTheme } from "../../contexts/ThemeContext";
 import { UndoProvider } from "../../hooks/ui/undo";
 import { QuickLogProvider, useQuickLog } from "../../hooks/ui/quickLog";
+import { perfMark } from "../../utils/perfMarks";
 import { fontSizes } from "../../theme";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -83,6 +84,7 @@ function TabsWithQuickLog() {
 }
 
 export default function TabLayout() {
+  perfMark("tabs_render");
   return (
     <UndoProvider>
       <QuickLogProvider>

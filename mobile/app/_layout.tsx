@@ -27,6 +27,7 @@ import {
   createPersister,
   shouldPersistQuery,
 } from "../sync/persist";
+import { prefetchSession } from "../api/session";
 import { perfMark } from "../utils/perfMarks";
 import { registerWebShell } from "../sync/webShell";
 
@@ -34,6 +35,9 @@ perfMark("js_start");
 // Keep the native splash up until fonts, the session and the cached day are
 // ready, then show Focus straight from disk (no spinner chain).
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// Disk reads start now and overlap the rest of JS init (AuthProvider and the
+// persister below pick up these promises).
+prefetchSession();
 setupConnectivity();
 registerWebShell();
 
@@ -45,6 +49,7 @@ function RootStack({ cacheReady }: { cacheReady: boolean }) {
   useEffect(() => {
     if (booted || isLoading || !cacheReady) return;
     setBooted(true);
+    perfMark("splash_hide");
     SplashScreen.hideAsync().catch(() => {});
   }, [booted, isLoading, cacheReady]);
 
@@ -101,6 +106,7 @@ const persistOptions = {
 };
 
 export default function RootLayout() {
+  perfMark("root_render");
   const [cacheReady, setCacheReady] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Archivo_700Bold,
@@ -113,7 +119,9 @@ export default function RootLayout() {
     if (fontsLoaded) perfMark("fonts_loaded");
   }, [fontsLoaded]);
 
-  // Native splash stays visible meanwhile (fonts are local; this is quick).
+  // Android/iOS: the four fonts are embedded at build time (expo-font plugin in
+  // app.json), so this is already true on the first render. Web loads them here
+  // behind the splash.
   if (!fontsLoaded && !fontError) return null;
 
   const onCacheRestored = () => {
