@@ -399,6 +399,25 @@ export function overlayIntents(domain: Domain, since: number): Intent[] {
   return recent.concat(pending).filter((i) => describeIntent(i).domain === domain);
 }
 
+const WORKOUT_AUX = "workout";
+
+/** Persist the in-progress workout position with the outbox (null clears it). */
+export async function saveWorkoutPosition(position: unknown): Promise<void> {
+  if (!rt && starting) await starting.catch(() => {});
+  const r = rt;
+  if (!r) return;
+  await r.outbox.setAux(WORKOUT_AUX, position);
+}
+
+/** The saved workout position (raw; validate with utils/workoutPosition). */
+export async function loadWorkoutPosition(): Promise<unknown> {
+  if (!rt && starting) await starting.catch(() => {});
+  const r = rt;
+  if (!r) return null;
+  if (!r.outbox.isLoaded()) await r.outbox.load();
+  return r.outbox.getAux(WORKOUT_AUX);
+}
+
 export async function flushNow(): Promise<FlushResult | null> {
   const r = rt;
   if (!r) return null;
