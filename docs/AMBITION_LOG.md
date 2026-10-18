@@ -168,3 +168,15 @@ JS (router ~100, module eval ~70, first render of provider tree + tabs + Today ~
 providers, fewer eager native modules, baseline profiles via Play install). Not measured on a
 physical mid-range phone.
 Kept bundle budget: 3,274,660 / 3,280,000 B (little headroom).
+
+## 2026-10-18 — Offline restore race fixed (details `docs/log/client-data.md`)
+Root cause: default `gcTime` = 60 days > 2³¹−1 ms, so browsers (and Playwright's clock) fire the
+GC timer immediately; restored queries without an observer yet (`appState`, `programs`) were
+dropped and the next persist wrote the loss to disk → offline reload showed an empty day.
+Fix: `gcTime: Infinity`; persist any query holding data (even after a failed refetch); write
+promptly after a quiet spell (native kill window). Offline spec: 3/40 failed → 40/40 (agent) and
+20/20 (my rerun on main). New unit tests: 4/5 failed before, 5/5 after.
+
+## 2026-10-18 — Final state of main (all judges, fresh servers, private Postgres :5442)
+backend `npm run check` PASSED · mobile `npm run check` PASSED · `E2E_ENFORCE_BUDGETS=1 npx
+playwright test` 25 passed, 2 skipped (opt-in screenshots) · offline spec ×10 20/20.
