@@ -1,13 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 import { API_PORT, API_URL, BASE_URL, REPO, WEB_PORT } from "./scripts/env.mjs";
 
-// Self-contained: Playwright starts (or reuses, when already up) both servers.
+// Self-contained: Playwright starts both servers. Reusing ones already running is opt-in
+// (E2E_REUSE_SERVERS=1): a leftover API from an older checkout once passed a run against
+// stale code.
 //  (a) API on :3201 against a local *_test DB (E2E_DATABASE_URL; schema reset + seed),
 //      rate limiting disabled.
 //  (b) Expo web dev server on :8281 pointed at that API.
 // Neither ever talks to the production API. Set E2E_BASE_URL / E2E_API_URL to drive
 // servers you started yourself (webServer is then skipped for that URL if it responds).
 const isCI = !!process.env.CI;
+const REUSE = process.env.E2E_REUSE_SERVERS === "1";
 
 export default defineConfig({
   testDir: "./tests",
@@ -30,7 +33,7 @@ export default defineConfig({
     {
       command: "node scripts/start-api.mjs",
       url: `http://localhost:${API_PORT}/api/health`,
-      reuseExistingServer: true,
+      reuseExistingServer: REUSE,
       timeout: 180_000,
       stdout: "pipe",
       stderr: "pipe",
@@ -39,7 +42,7 @@ export default defineConfig({
       command: `npx expo start --web --port ${WEB_PORT}`,
       cwd: `${REPO}/mobile`,
       url: BASE_URL,
-      reuseExistingServer: true,
+      reuseExistingServer: REUSE,
       timeout: 240_000,
       stdout: isCI ? "pipe" : "ignore",
       stderr: "pipe",
