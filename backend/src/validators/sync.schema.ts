@@ -77,6 +77,7 @@ const ts = z.string().datetime({ offset: true });
 const optTs = ts.nullable().optional();
 // Stored stamps were validated when written; a restore only checks the shape.
 const storedHlc = z.string().max(120).nullable().optional();
+const fieldClock = z.record(z.string().max(120)).nullable().optional();
 
 const v2Tables = {
   scheduleBlocks: z.object({
@@ -90,6 +91,7 @@ const v2Tables = {
     readonly: z.boolean().optional(),
     source: str(20).optional(),
     sortOrder: z.number().int().nullable().optional(),
+    fieldClock,
   }),
   supplements: z.object({
     id,
@@ -100,6 +102,7 @@ const v2Tables = {
     rule: optStr(500),
     timeAt: str(5).optional(),
     sortOrder: z.number().int().nullable().optional(),
+    fieldClock,
   }),
   mealTemplates: z.object({
     id,
@@ -109,6 +112,7 @@ const v2Tables = {
     grams: z.number().min(0).nullable().optional(),
     foodId: optStr(100),
     sortOrder: z.number().int().nullable().optional(),
+    fieldClock,
   }),
   mealTemplateTags: z.object({
     id,
@@ -121,6 +125,7 @@ const v2Tables = {
     name: str(100),
     description: optStr(500),
     goal: str(20),
+    fieldClock,
   }),
   programDays: z.object({
     id,
@@ -148,6 +153,7 @@ const v2Tables = {
     startedAt: ts.optional(),
     endedAt: optTs,
     durationSeconds: z.number().int().nullable().optional(),
+    markedDone: z.boolean().optional(),
   }),
   workoutSetLogs: z.object({
     id,
@@ -193,7 +199,7 @@ const v2Tables = {
     steps: optStr(20),
     top: optStr(1000),
     notes: optStr(2000),
-    fieldClock: z.record(z.string().max(120)).nullable().optional(),
+    fieldClock,
     createdAt: ts.optional(),
     updatedAt: ts.optional(),
   }),
@@ -260,6 +266,28 @@ export const importV2Schema = z.object(
           goalRateKgPerWeek: z.number().nullable().optional(),
         })
         .nullable()
+        .optional(),
+      /** Deleted ids (docs/log/backend-sync-api.md §2.3): delete wins on import. */
+      tombstones: z
+        .array(
+          z.object({
+            entity: z.enum([
+              'block',
+              'supplement',
+              'meal',
+              'program',
+              'programDay',
+              'programExercise',
+              'session',
+              'set',
+              'userFood',
+            ]),
+            entityId: id,
+            hlc: z.string().max(120),
+            deletedAt: ts.optional(),
+          })
+        )
+        .max(MAX_ROWS)
         .optional(),
       refs: z
         .object({

@@ -16,6 +16,7 @@ import {
   completionsQuerySchema,
 } from '../validators/schedule.schema.js';
 import { idParams } from '../validators/common.js';
+import { deleteBodySchema } from '../validators/common.schema.js';
 
 const id = validate(idParams, 'params');
 
@@ -26,7 +27,7 @@ router.use(authMiddleware);
 router.get('/', getBlocks);
 router.post('/', validate(createBlockSchema), createBlock);
 router.put('/:id', id, validate(updateBlockSchema), updateBlock);
-router.delete('/:id', id, deleteBlock);
+router.delete('/:id', id, validate(deleteBodySchema), deleteBlock);
 
 // Completions
 router.get('/completions', validate(completionsQuerySchema, 'query'), getCompletions);

@@ -42,8 +42,12 @@ compatible: new fields are optional, old clients keep working.
 | `POST /supplements/:id/log` | `hlc?`, `id?` | same |
 | `POST /meals/:id/log` | `hlc?`, `id?` | same |
 | `POST /workouts/sessions` | `id?`, `startedAt?` (ISO) | idempotent; `startedAt` lets an offline device send the real start |
-| `POST /workouts/sessions/:id/sets` | `id?`, `hlc?` | upsert per (session, exercise, setNumber); values replaced only by a newer `hlc` |
-| `PATCH /workouts/sessions/:id/finish` | `endedAt?` (ISO) | idempotent; keeps the first `endedAt` unless one is sent |
+| `POST /workouts/sessions/:id/sets` | `id?`, `hlc?` | upsert per (session, exercise, setNumber); values replaced only by a newer `hlc`; `410` if the session or the set `id` was deleted |
+| `PATCH /workouts/sessions/:id/finish` | `endedAt?` (ISO), `markedDone?: boolean` | idempotent; keeps the first `endedAt` unless one is sent; `markedDone: true` ("Mark done", trained but didn't log) is sticky and counts as the planned sets (§4); `410` if the session was deleted |
+| `DELETE /workouts/sessions/:id` (**new**) | `hlc?` | deletes the session and its sets, tombstones all of them (§2.3) |
+| `POST /schedule`, `/supplements`, `/meals/templates`, `/programs` | `hlc?` | the create stamps every field it sets in `fieldClock` (§2.2); `410` if the `id` (or a program day/exercise id) was deleted |
+| `PUT /schedule/:id`, `/supplements/:id`, `/meals/templates/:id`, `/programs/:id` | `hlc?` | **per-field last-writer-wins** (§2.2). Response row + `fieldClock`, `applied` (all sent fields applied), `appliedFields`, `staleFields`. `404` missing, `410` deleted |
+| every `DELETE` of a deletable entity | body `{ hlc? }` | records a tombstone (§2.3) |
 | `PATCH /logs/:date` (**new**) | any of `day,bw,sleep,steps,top,notes` + `hlc?`, `id?` | field-level: absent fields untouched; `""` clears. With `hlc`, each field applies only if newer than that field's clock. Response: row + `fieldClock`, `appliedFields`, `staleFields`. `201` if the row was created, else `200`. |
 | `POST /logs` | same fields + `date`, `hlc?`, `id?` | now the same field-level semantics (absent fields are no longer overwritten with `""`). Returns `201` + row. |
 | `PUT /preferences` | `proteinTargetG?`, `calorieTargetKcal?`, `goalRateKgPerWeek?` (numbers or null) | targets for the Outcome Score |
@@ -51,8 +55,45 @@ compatible: new fields are optional, old clients keep working.
 | `PUT /auth/profile`, `POST /auth/register` | `heightCm?` (100–250), `sex?` (`male`/`female`) | returned by `/auth/me` and `/today` |
 | `POST /scores` | unchanged (still validated) | **ignored** except `date`: triggers a server recompute and returns the server row. Client values can no longer overwrite anything. Plan to stop calling it. |
 
-Deletes are not tombstoned: the client outbox must coalesce (drop a queued create/set
-POST once its delete is queued) — a delayed retry of a set POST after its DELETE recreates it.
+### 2.2 Entity edits: per-field HLC last-writer-wins
+
+`ScheduleBlock`, `Supplement`, `MealTemplate` and `GymProgram` carry `fieldClock`
+(`{field: hlc}`), like `DailyLog`. Clocked fields: blocks `start end title purpose good tag
+readonly source sortOrder`; supplements `item goal dose tier rule timeAt sortOrder`; meal
+templates `dayOfWeek name examples grams foodId sortOrder tags` (tags = one field, replaced
+as a whole); programs `name description goal days` (days = the whole day/exercise tree).
+
+- A create with `hlc` stamps every field it sets (defaults included). A PUT with `hlc`
+  applies each sent field only if `hlc` is strictly newer than that field's stamp (row lock,
+  plain string comparison); stale fields are left alone and listed in `staleFields`.
+  Concurrent edits from two devices therefore converge to the max-HLC value per field,
+  whatever the arrival order.
+- A PUT **without** `hlc` (legacy client) always applies and leaves the clock untouched.
+- `PATCH /meals/templates/:id/grams` stays legacy (unclocked).
+- Clients must stamp each field with the HLC of the edit that set it: the app's outbox keeps
+  one stamp per field when it coalesces partial edits and sends one PUT per distinct stamp
+  (programs are whole documents: one PUT, one stamp).
+
+### 2.3 Delete tombstones (delete wins)
+
+Deleting a user-owned row records `Tombstone {entity, entityId, hlc, deletedAt}` in the same
+transaction: `block`, `supplement`, `meal` (template, incl. one-off foods), `program`
+(+ `programDay`, `programExercise` of it), `session` (+ every `set` of it), `set`, `userFood`.
+The DELETE body may carry `{hlc}` (else the server stamps `<now>-0000-server`).
+
+- Ids are never reused, so a delete is final: any later write that names a tombstoned id —
+  a create replay, PUT, toggle (`/schedule/completions`, `/supplements/:id/log`,
+  `/meals/:id/log`), set POST, session finish, one-off food — answers
+  **`410 {success:false, error:"Record was deleted"}`** and changes nothing. (Chosen over
+  `200 {deleted:true}` so an old client never mistakes it for a stored row.) An id that never
+  existed is still `404`; a repeated DELETE is `404` (nothing left to delete).
+- Saving the same food again, or re-doing a set with the same number, uses a **new** id.
+- Only the owner's delete records a tombstone (a foreign id is `404`, nothing recorded).
+- `/today` and export v2 never list a tombstoned row (it is deleted and cannot come back).
+- Not tombstoned: daily logs (`DELETE /logs/:id`; they are date-keyed and field-LWW — a later
+  field write with a newer `hlc` re-creates that date's row), toggles (they are values).
+
+Client rule: `410` → drop the op (the entity is gone; do not dead-letter it).
 
 ## 3. `GET /api/today?date=YYYY-MM-DD`
 
@@ -89,6 +130,7 @@ timezone). Measured p50 16.8 ms / p95 23.8 ms over 200 requests on one seeded ye
 }
 ```
 `Score = { date, outcomeScore (0..100|null=unscored), kept, scored, components {T,Pr,Ca,Bw}, routinePct, plan, setsDone, setsPlanned, protein, calories, workoutDone, tasksDone, tasksTotal, suppDone, suppTotal, mealsDone, mealsTotal, computedAt }`.
+Workout sessions carry `markedDone: boolean`.
 Decimals (`grams`, `weight`, `weightKg`) are numbers here (other legacy endpoints still return strings).
 
 Errors: `400` bad date; `401 {code: "ACCOUNT_NOT_FOUND"}` when the token is valid but the
@@ -103,6 +145,10 @@ account no longer exists on the server (see §5).
   targets = `proteinTargetG` (else lower bound of the text `proteinTarget`),
   `calorieTargetKcal`, `goalRateKgPerWeek`; bw slope = OLS of the last 14 weigh-ins ≤ date,
   needs ≥ 3 spanning ≥ 7 days.
+- **Mark done**: a session finished with `markedDone: true`, or a finished session with no
+  sets at all (clients before the flag), makes T = 1 on a train day — it counts as the planned
+  sets, whatever was logged and even without planned sets (contract input `markedDone`,
+  `contracts/README.md`, vectors 15–18).
 - Planned train/rest: (1) selected program has `weekdays` → train iff a day lists the ISO
   weekday; (2) else `DailyLog.day == "Rest"` → rest; (3) else a WorkoutSession that date →
   train (planned sets from the day whose name = `programDayName`); (4) else non-empty
@@ -130,14 +176,21 @@ account no longer exists on the server (see §5).
 
 ## 6. Backup v2
 
-- `GET /api/sync/export?v=2` → `{ version: 2, exportedAt, dataEpoch, user, preferences, refs:{foods:[{id,name,brand}], selectedProgram}, scheduleBlocks, supplements, mealTemplates, mealTemplateTags, programs, programDays, programExercises, workoutSessions, workoutSetLogs, completions, supplementLogs, mealLogs, dailyLogs, userFoods, dailyScores }`.
-  Rows carry ids, timestamps (ISO), `hlc`/`fieldClock`; `userId` omitted. Sorted by id.
+- `GET /api/sync/export?v=2` → `{ version: 2, exportedAt, dataEpoch, user, preferences, refs:{foods:[{id,name,brand}], selectedProgram}, scheduleBlocks, supplements, mealTemplates, mealTemplateTags, programs, programDays, programExercises, workoutSessions, workoutSetLogs, completions, supplementLogs, mealLogs, dailyLogs, userFoods, dailyScores, tombstones:[{entity,entityId,hlc,deletedAt}] }`.
+  Rows carry ids, timestamps (ISO), `hlc`/`fieldClock`; `userId` omitted. Sorted by id
+  (tombstones by entityId).
 - `POST /api/sync/import?v=2` (same shape, body ≤ 10 MB) → upsert by id, never re-IDs.
   Counterpart = same id, else same natural key (block+date, supplement+date, meal+date,
   session+exercise+set, log date, food, score date). Merge: toggles/sets → greater hlc wins
-  (server row without hlc loses to the import); daily logs → per field by `fieldClock`;
-  everything else → import wins. Idempotent (re-import = no changes).
-  Response: `{ created, updated, unchanged, replaced, skipped, remapped }` per table.
+  (server row without hlc loses to the import); daily logs, blocks, supplements, meal
+  templates, programs → per field by `fieldClock` (a field without a server stamp loses);
+  a template's tags / a program's days+exercises follow the parent's `tags` / `days` stamp
+  (the losing side's children are dropped, never mixed); everything else → import wins.
+  **Tombstones are applied first** (union with the stored ones): rows with a tombstoned id are
+  skipped and an existing live row with such an id is deleted — so a rehydrate or an older
+  backup from another device never resurrects a deleted row. Idempotent (re-import = no changes).
+  Response: `{ created, updated, unchanged, replaced, skipped, deleted, remapped }` per table
+  (`created.tombstones` / `unchanged.tombstones` too).
   Rows pointing at parents you don't own are skipped; ids owned by another account → `409`.
   Reference foods / system programs are re-linked by name when their ids differ (re-seeded DB).
 - `GET /sync/export` (v1) now includes meal `grams`/`foodId`; `POST /sync/import` (v1) keeps

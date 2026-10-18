@@ -16,6 +16,7 @@ import {
   supplementLogsQuerySchema,
 } from '../validators/supplements.schema.js';
 import { idParams } from '../validators/common.js';
+import { deleteBodySchema } from '../validators/common.schema.js';
 
 const id = validate(idParams, 'params');
 
@@ -26,7 +27,7 @@ router.use(authMiddleware);
 router.get('/', getSupplements);
 router.post('/', validate(createSupplementSchema), createSupplement);
 router.put('/:id', id, validate(updateSupplementSchema), updateSupplement);
-router.delete('/:id', id, deleteSupplement);
+router.delete('/:id', id, validate(deleteBodySchema), deleteSupplement);
 
 // Logs
 router.get('/logs', validate(supplementLogsQuerySchema, 'query'), getLogs);

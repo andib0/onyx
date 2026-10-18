@@ -4,6 +4,14 @@ import { AppError } from '../utils/errors.js';
 import { hlcWins } from '../utils/hlc.js';
 import { createIdempotent } from '../utils/idempotent.js';
 import { scoreService } from './score/score.service.js';
+import { writeTime } from './sync/toggle.js';
+import {
+  assertNotTombstoned,
+  deleteStamp,
+  goneError,
+  isTombstoned,
+  recordTombstones,
+} from './sync/tombstones.js';
 import type {
   StartSessionInput,
   LogSetInput,
@@ -11,8 +19,10 @@ import type {
 } from '../validators/workouts.schema.js';
 
 export class WorkoutsService {
-  /** Idempotent when the client sends its own `id` (a retried start returns the same session). */
+  /** Idempotent when the client sends its own `id` (a retried start returns the same
+   *  session); 410 when that session was deleted. */
   async startSession(userId: string, data: StartSessionInput) {
+    await assertNotTombstoned(userId, 'session', data.id);
     const result = await createIdempotent(
       userId,
       data.id,
@@ -37,14 +47,19 @@ export class WorkoutsService {
    * set instead of inserting a duplicate (docs/audit/02 §2.1). With an `hlc`,
    * the values are replaced only by a newer stamp. A client `id` is used for a
    * new row; posting an existing id updates that row. Returns null if the
-   * session is missing or not the user's.
+   * session is missing or not the user's; 410 if the session or the set id
+   * was deleted (an undone set is never resurrected by a delayed retry).
    */
   async logSet(userId: string, sessionId: string, data: LogSetInput) {
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, userId },
       select: { id: true, date: true },
     });
-    if (!session) return null;
+    if (!session) {
+      if (await isTombstoned(userId, 'session', sessionId)) throw goneError();
+      return null;
+    }
+    await assertNotTombstoned(userId, 'set', data.id);
 
     const values = {
       weightKg: data.weightKg ?? null,
@@ -81,7 +96,8 @@ export class WorkoutsService {
         ("id", "userId", "sessionId", "exerciseName", "setNumber", "weightKg", "reps", "rir", "hlc", "createdAt")
       VALUES (${data.id ?? randomUUID()}, ${userId}, ${sessionId}, ${data.exerciseName},
               ${data.setNumber}, ${values.weightKg}::numeric, ${values.reps}::int, ${values.rir},
-              ${data.hlc ?? null}, (now() AT TIME ZONE 'UTC'))
+              ${data.hlc ?? null},
+              COALESCE(${writeTime(data.hlc)}::timestamp, (now() AT TIME ZONE 'UTC')))
       ON CONFLICT ("sessionId", "exerciseName", "setNumber") DO UPDATE
         SET "weightKg" = EXCLUDED."weightKg",
             "reps" = EXCLUDED."reps",
@@ -107,35 +123,72 @@ export class WorkoutsService {
     return { row, created: rows.length > 0 && rows[0].inserted };
   }
 
-  /** Idempotent: a repeated finish keeps the first endedAt unless a new one is sent. */
+  /** Idempotent: a repeated finish keeps the first endedAt unless a new one is sent.
+   *  `markedDone` is sticky (a later plain finish does not clear it). */
   async finishSession(userId: string, sessionId: string, data: FinishSessionInput) {
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, userId },
       select: { id: true, date: true, endedAt: true },
     });
-    if (!session) return null;
+    if (!session) {
+      if (await isTombstoned(userId, 'session', sessionId)) throw goneError();
+      return null;
+    }
 
     const updated = await prisma.workoutSession.update({
       where: { id: sessionId },
       data: {
         endedAt: data.endedAt ? new Date(data.endedAt) : (session.endedAt ?? new Date()),
         durationSeconds: data.durationSeconds,
+        markedDone: data.markedDone ? true : undefined,
       },
     });
     await scoreService.afterWrite(userId, session.date);
     return updated;
   }
 
-  async deleteSet(userId: string, setId: string) {
+  /** Deletes the set and tombstones its id. */
+  async deleteSet(userId: string, setId: string, hlc?: string) {
     const set = await prisma.workoutSetLog.findFirst({
       where: { id: setId, userId },
       select: { session: { select: { date: true } } },
     });
-    const result = await prisma.workoutSetLog.deleteMany({
-      where: { id: setId, userId },
+    const count = await prisma.$transaction(async (tx) => {
+      const result = await tx.workoutSetLog.deleteMany({ where: { id: setId, userId } });
+      if (result.count > 0)
+        await recordTombstones(
+          tx,
+          userId,
+          [{ entity: 'set', entityId: setId }],
+          deleteStamp(hlc)
+        );
+      return result.count;
     });
     if (set) await scoreService.afterWrite(userId, set.session.date);
-    return result.count > 0;
+    return count > 0;
+  }
+
+  /** Deletes a session with its sets and tombstones all of their ids. */
+  async deleteSession(userId: string, sessionId: string, hlc?: string) {
+    const session = await prisma.workoutSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { date: true, sets: { select: { id: true } } },
+    });
+    if (!session) return false;
+    await prisma.$transaction(async (tx) => {
+      await tx.workoutSession.delete({ where: { id: sessionId } });
+      await recordTombstones(
+        tx,
+        userId,
+        [
+          { entity: 'session', entityId: sessionId },
+          ...session.sets.map((s) => ({ entity: 'set' as const, entityId: s.id })),
+        ],
+        deleteStamp(hlc)
+      );
+    });
+    await scoreService.afterWrite(userId, session.date);
+    return true;
   }
 
   async getSessions(userId: string, limit = 30, offset = 0) {

@@ -2,13 +2,16 @@
 //
 // Two simulated devices, each with its own persisted outbox and HLC clock
 // (wall-clock skew up to ±10 min), issue random writes: supplement/schedule
-// toggles, daily-log field edits, create→delete of blocks, supplement edits,
-// workout sessions + sets + undo. The network drops requests, loses responses
+// toggles, daily-log field edits, creates of blocks/supplements, concurrent
+// per-field supplement edits from both devices, workout sessions + sets + undo,
+// and deletes of blocks, supplements, sessions and sets from EITHER device
+// (the server keeps tombstones: a delayed create retry gets 410 and is dropped). The network drops requests, loses responses
 // after the server applied them, and delivers duplicates; devices go offline,
 // get killed (outbox reloaded from storage), even mid-flush. At the end both
 // come online and sync. Both devices' caches and the server must equal a
 // reference model built from the issued writes with the contract's rules:
-// per key / per field, the write with the greatest HLC wins.
+// per key / per field, the write with the greatest HLC wins; a deleted entity
+// is gone for good (delete wins), along with its toggles and sets.
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 
@@ -58,6 +61,10 @@ type Stats = {
   drops: number;
   requests: number;
   cancelled: number;
+  /** deletes issued by the device that did not create the entity */
+  deletesByOtherDevice: number;
+  /** 410 Gone answers (write to a tombstoned id) */
+  gone: number;
 };
 
 class Device {
@@ -71,6 +78,8 @@ class Device {
   killAfterDeliveries = -1;
   duringDelivery: (() => Promise<void>) | null = null;
   sessionId: string | null = null;
+  /** sessions this device knows from the server (refetch) */
+  knownSessions = new Set<string>();
   setCounter = 0;
   lastSetId: string | null = null;
   idCounter = 0;
@@ -106,6 +115,7 @@ class Device {
         }
         const res = this.server.handle(req);
         this.stats.requests++;
+        if (res.status === 410) this.stats.gone++;
         if (this.duringDelivery) {
           const hook = this.duringDelivery;
           this.duringDelivery = null;
@@ -160,6 +170,7 @@ class Device {
         { id: s.id, weightKg: s.weightKg },
       ])
     );
+    this.knownSessions = new Set(this.server.sessions.keys());
   }
 
   pendingIntents(): Intent[] {
@@ -201,8 +212,10 @@ type Cmd =
   | { c: "createBlock"; d: number }
   | { c: "deleteBlock"; d: number; pick: number }
   | { c: "createSupp"; d: number }
-  | { c: "updateSupp"; pick: number; dose: string }
+  | { c: "updateSupp"; d: number; pick: number; field: number; value: number }
   | { c: "deleteSupp"; d: number; pick: number }
+  | { c: "deleteSession"; d: number; pick: number }
+  | { c: "deleteSet"; d: number; pick: number }
   | { c: "startSession"; d: number }
   | { c: "logSet"; d: number; weight: number }
   | { c: "undoSet"; d: number }
@@ -248,11 +261,29 @@ const cmdArb: fc.Arbitrary<Cmd> = fc.oneof(
   },
   { weight: 2, arbitrary: fc.record({ c: fc.constant("createSupp" as const), d: dev }) },
   {
-    weight: 1,
+    weight: 3,
     arbitrary: fc.record({
       c: fc.constant("updateSupp" as const),
+      d: dev,
       pick: fc.nat(10),
-      dose: fc.constantFrom("5 g", "10 g", "1 cap"),
+      field: fc.nat(1),
+      value: fc.nat(2),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("deleteSession" as const),
+      d: dev,
+      pick: fc.nat(10),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      c: fc.constant("deleteSet" as const),
+      d: dev,
+      pick: fc.nat(10),
     }),
   },
   {
@@ -333,7 +364,9 @@ function canonical(
   }
   return {
     blocks: Array.from(blocks).sort(),
-    supplements: (state.supplementsList || []).map((s) => `${s.id}:${s.dose}`).sort(),
+    supplements: (state.supplementsList || [])
+      .map((s) => `${s.id}:${s.dose}:${s.timeAt}`)
+      .sort(),
     completion: ticks(state.completion || {}, blocks),
     suppLog: ticks(state.suppLog || {}, supps),
     log,
@@ -344,6 +377,12 @@ function canonical(
 }
 
 type Issued = { key: string; value: string | boolean; hlc: string };
+
+const SUPP_FIELDS = ["dose", "timeAt"] as const;
+const SUPP_VALUES = {
+  dose: ["5 g", "10 g", "1 cap"],
+  timeAt: ["07:00", "12:00", "21:00"],
+};
 
 async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
   const server = new FakeServer();
@@ -357,12 +396,14 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
     drops: 0,
     requests: 0,
     cancelled: 0,
+    deletesByOtherDevice: 0,
+    gone: 0,
   };
   // A shared catalog both devices already know, so their edits collide.
   for (const id of ["block-seed-1", "block-seed-2"])
     server.blocks.set(id, { id, title: id });
   for (const id of ["supp-seed-1", "supp-seed-2"])
-    server.supplements.set(id, { id, item: id, dose: "1 g" });
+    server.supplements.set(id, { id, item: id, dose: "1 g", timeAt: "08:00", clock: {} });
   const devices = [
     new Device("devA", skews[0], server, time, rnd, stats),
     new Device("devB", skews[1], server, time, rnd, stats),
@@ -374,13 +415,16 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
   const created = {
     block: new Set<string>(["block-seed-1", "block-seed-2"]),
     supplement: new Set<string>(["supp-seed-1", "supp-seed-2"]),
-    set: new Map<string, number>(),
+    set: new Map<string, { weight: number; session: string }>(),
   };
   const deleted = new Set<string>();
-  const doses = new Map<string, string>([
-    ["supp-seed-1", "1 g"],
-    ["supp-seed-2", "1 g"],
-  ]);
+  // Seed values carry no clock: any stamped edit beats them.
+  for (const id of ["supp-seed-1", "supp-seed-2"]) {
+    issued.push({ key: `supp|${id}|dose`, value: "1 g", hlc: "" });
+    issued.push({ key: `supp|${id}|timeAt`, value: "08:00", hlc: "" });
+  }
+  const creator = (id: string) =>
+    id.includes("-devA-") ? "devA" : id.includes("-devB-") ? "devB" : "seed";
 
   const record = (ops: Array<Op | null>, intents: Intent[]) => {
     intents.forEach((intent, i) => {
@@ -402,7 +446,24 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
             value: intent.fields[f as LogField]!,
             hlc: op.fieldHlc![f],
           });
+      if (intent.t === "create" && intent.entity === "supplement")
+        for (const f of SUPP_FIELDS)
+          issued.push({
+            key: `supp|${intent.id}|${f}`,
+            value: String(intent.data[f]),
+            hlc: op.hlc,
+          });
+      if (intent.t === "update" && intent.entity === "supplement")
+        for (const f of Object.keys(intent.data))
+          issued.push({
+            key: `supp|${intent.id}|${f}`,
+            value: String(intent.data[f]),
+            hlc: op.fieldHlc![f],
+          });
     });
+  };
+  const noteDelete = (d: Device, id: string) => {
+    if (creator(id) !== d.name) stats.deletesByOtherDevice++;
   };
   const enqueue = async (d: Device, intents: Intent[]) => {
     const ops = await d.outbox.enqueue(intents);
@@ -459,22 +520,19 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         break;
       }
       case "deleteBlock": {
-        // Deletes are issued by the creating device only: without server
-        // tombstones a delete from another device can race a delayed create
-        // retry and resurrect the row (documented contract limitation).
-        const own = (view.schedule || [])
-          .map((b) => b.id!)
-          .filter((id) => id.includes(`-${d.name}-`));
-        if (!own.length) break;
-        const id = own[cmd.pick % own.length];
+        // Any device may delete anything it sees (server tombstones make a
+        // delayed create retry from the other device a no-op).
+        const list = (view.schedule || []).map((b) => b.id!);
+        if (!list.length) break;
+        const id = list[cmd.pick % list.length];
         deleted.add(`block:${id}`);
+        noteDelete(d, id);
         await enqueue(d, [{ t: "delete", entity: "block", id }]);
         break;
       }
       case "createSupp": {
         const id = d.newId("supp");
         created.supplement.add(id);
-        doses.set(id, "1 g");
         await enqueue(d, [
           {
             t: "create",
@@ -486,25 +544,50 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         break;
       }
       case "updateSupp": {
-        // Single writer (device A): entity edits are last-arrival-wins on the server.
-        const a = devices[0];
-        const list = (a.view().supplementsList || []).map((s) => s.id!);
+        // Both devices edit the same supplements concurrently, field by field:
+        // the server keeps the greatest HLC per field.
+        const list = (view.supplementsList || []).map((s) => s.id!);
         if (!list.length) break;
-        const id = list[cmd.pick % list.length];
-        doses.set(id, cmd.dose);
-        await enqueue(a, [
-          { t: "update", entity: "supplement", id, data: { dose: cmd.dose } },
+        const id = list[cmd.pick % Math.min(3, list.length)];
+        const field = SUPP_FIELDS[cmd.field];
+        const value = SUPP_VALUES[field][cmd.value];
+        await enqueue(d, [
+          { t: "update", entity: "supplement", id, data: { [field]: value } },
         ]);
         break;
       }
       case "deleteSupp": {
-        const own = (view.supplementsList || [])
-          .map((s) => s.id!)
-          .filter((id) => id.includes(`-${d.name}-`));
-        if (!own.length) break;
-        const id = own[cmd.pick % own.length];
+        const list = (view.supplementsList || []).map((s) => s.id!);
+        if (!list.length) break;
+        const id = list[cmd.pick % list.length];
         deleted.add(`supplement:${id}`);
+        noteDelete(d, id);
         await enqueue(d, [{ t: "delete", entity: "supplement", id }]);
+        break;
+      }
+      case "deleteSession": {
+        // A session this device knows: its own, or one read from the server.
+        const list = Array.from(d.knownSessions);
+        if (d.sessionId && !list.includes(d.sessionId)) list.push(d.sessionId);
+        if (!list.length) break;
+        const id = list.sort()[cmd.pick % list.length];
+        deleted.add(`session:${id}`);
+        noteDelete(d, id);
+        if (d.sessionId === id) {
+          d.sessionId = null;
+          d.lastSetId = null;
+        }
+        await enqueue(d, [{ t: "delete", entity: "session", id }]);
+        break;
+      }
+      case "deleteSet": {
+        const list = Array.from(d.setsView().keys()).sort();
+        if (!list.length) break;
+        const id = list[cmd.pick % list.length];
+        deleted.add(`set:${id}`);
+        noteDelete(d, id);
+        if (d.lastSetId === id) d.lastSetId = null;
+        await enqueue(d, [{ t: "delete", entity: "set", id }]);
         break;
       }
       case "startSession": {
@@ -530,7 +613,7 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
         const id = d.newId("set");
         d.setCounter += 1;
         d.lastSetId = id;
-        created.set.set(id, cmd.weight);
+        created.set.set(id, { weight: cmd.weight, session: d.sessionId });
         await enqueue(d, [
           {
             t: "create",
@@ -649,15 +732,20 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
     }
     if (Object.keys(fields).length) log[date] = fields;
   }
+  const field = (id: string, f: string) => winners.get(`supp|${id}|${f}`)?.value;
   const reference = {
     blocks: liveBlocks,
-    supplements: liveSupps.map((id) => `${id}:${doses.get(id)}`).sort(),
+    supplements: liveSupps
+      .map((id) => `${id}:${field(id, "dose")}:${field(id, "timeAt")}`)
+      .sort(),
     completion: ticks("completion", liveBlocks),
     suppLog: ticks("supplement", liveSupps),
     log,
     sets: Array.from(created.set.entries())
-      .filter(([id]) => !deleted.has(`set:${id}`))
-      .map(([id, w]) => `${id}:${w}`)
+      .filter(
+        ([id, s]) => !deleted.has(`set:${id}`) && !deleted.has(`session:${s.session}`)
+      )
+      .map(([id, s]) => `${id}:${s.weight}`)
       .sort(),
   };
 
@@ -670,13 +758,8 @@ async function runScenario(cmds: Cmd[], skews: [number, number], seed: number) {
   const serverView = canonical(server.toAppState(), serverSets);
   expect(serverView).toEqual(reference);
   for (const d of devices) expect(canonical(d.view(), d.setsView())).toEqual(serverView);
-  // Nothing was dead-lettered except edits of a supplement deleted meanwhile.
-  for (const d of devices)
-    for (const op of d.outbox.dead())
-      expect(
-        op.intent.t === "update" &&
-          deleted.has(`supplement:${(op.intent as { id: string }).id}`)
-      ).toBe(true);
+  // Nothing was dead-lettered: writes to deleted entities are 410 → dropped.
+  for (const d of devices) expect(d.outbox.dead()).toEqual([]);
   return stats;
 }
 
@@ -690,6 +773,8 @@ describe("outbox convergence (two devices, fast-check)", () => {
       drops: 0,
       requests: 0,
       cancelled: 0,
+      deletesByOtherDevice: 0,
+      gone: 0,
     };
     let runs = 0;
     await fc.assert(
@@ -709,6 +794,8 @@ describe("outbox convergence (two devices, fast-check)", () => {
       { numRuns: 300 }
     );
     console.info(`convergence: ${runs} runs`, totals);
-    expect(runs).toBeGreaterThanOrEqual(200);
+    expect(runs).toBeGreaterThanOrEqual(300);
+    expect(totals.deletesByOtherDevice).toBeGreaterThan(0);
+    expect(totals.gone).toBeGreaterThan(0);
   }, 120_000);
 });

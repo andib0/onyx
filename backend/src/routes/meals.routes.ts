@@ -21,6 +21,7 @@ import {
   oneOffMealSchema,
 } from '../validators/meals.schema.js';
 import { idParams } from '../validators/common.js';
+import { deleteBodySchema } from '../validators/common.schema.js';
 
 const id = validate(idParams, 'params');
 
@@ -32,7 +33,7 @@ router.get('/templates', validate(templatesQuerySchema, 'query'), getTemplates);
 router.post('/templates', validate(createMealTemplateSchema), createTemplate);
 router.put('/templates/:id', id, validate(updateMealTemplateSchema), updateTemplate);
 router.patch('/templates/:id/grams', id, validate(updateGramsSchema), updateGrams);
-router.delete('/templates/:id', id, deleteTemplate);
+router.delete('/templates/:id', id, validate(deleteBodySchema), deleteTemplate);
 
 // Logs
 // One-off food eaten today (dated template + eaten log, one request)

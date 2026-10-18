@@ -56,7 +56,7 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
 
 export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
   try {
-    await mealsService.deleteTemplate(req.userId!, req.params.id);
+    await mealsService.deleteTemplate(req.userId!, req.params.id, req.body?.hlc);
     return sendSuccess(res, null, 'Meal template deleted');
   } catch (error) {
     const appError = handleServiceError(error);

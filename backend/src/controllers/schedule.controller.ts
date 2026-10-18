@@ -36,7 +36,7 @@ export async function updateBlock(req: AuthenticatedRequest, res: Response) {
 
 export async function deleteBlock(req: AuthenticatedRequest, res: Response) {
   try {
-    await scheduleService.deleteBlock(req.userId!, req.params.id);
+    await scheduleService.deleteBlock(req.userId!, req.params.id, req.body?.hlc);
     return sendSuccess(res, null, 'Block deleted');
   } catch (error) {
     const appError = handleServiceError(error);

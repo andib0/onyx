@@ -36,7 +36,8 @@ export type Intent =
   | {
       t: "finishSession";
       id: string;
-      data: { durationSeconds?: number; endedAt?: string };
+      /** markedDone: "trained but didn't log" — counts as the planned sets */
+      data: { durationSeconds?: number; endedAt?: string; markedDone?: boolean };
     }
   | { t: "scoreTrigger"; date: string; data: Record<string, unknown> };
 
@@ -230,10 +231,30 @@ const ENTITY_PATH: Record<Entity, string> = {
   oneOffMeal: "/meals/templates",
 };
 
+/** Splits fields into one group per distinct stamp (oldest stamp first). */
+function groupByStamp(
+  fields: Record<string, unknown>,
+  hlc: string,
+  fieldHlc?: Record<string, string>
+): Array<{ stamp: string; fields: Record<string, unknown> }> {
+  const groups = new Map<string, Record<string, unknown>>();
+  for (const field of Object.keys(fields)) {
+    const stamp = (fieldHlc && fieldHlc[field]) || hlc;
+    const group = groups.get(stamp) || {};
+    group[field] = fields[field];
+    groups.set(stamp, group);
+  }
+  if (groups.size === 0) groups.set(hlc, {});
+  return Array.from(groups.keys())
+    .sort()
+    .map((stamp) => ({ stamp, fields: groups.get(stamp)! }));
+}
+
 /**
- * HTTP request(s) for an op. Daily-log fields coalesced from different writes
- * keep their own HLC, so they are sent as one PATCH per distinct stamp (sending
- * an older field under a newer stamp would let it beat a newer remote edit).
+ * HTTP request(s) for an op. Daily-log fields and partial entity edits
+ * coalesced from different writes keep their own HLC, so they are sent as one
+ * PATCH/PUT per distinct stamp (sending an older field under a newer stamp
+ * would let it beat a newer remote edit — the server is per-field LWW).
  */
 export function requestsFor(
   intent: Intent,
@@ -272,22 +293,12 @@ export function requestsFor(
           body: { date: intent.date, isEaten: intent.value, hlc },
         },
       ];
-    case "logFields": {
-      const groups = new Map<string, Record<string, unknown>>();
-      for (const field of Object.keys(intent.fields)) {
-        const stamp = (fieldHlc && fieldHlc[field]) || hlc;
-        const group = groups.get(stamp) || {};
-        group[field] = intent.fields[field as LogField];
-        groups.set(stamp, group);
-      }
-      return Array.from(groups.keys())
-        .sort()
-        .map((stamp) => ({
-          method: "PATCH" as const,
-          path: `/logs/${intent.date}`,
-          body: Object.assign({}, groups.get(stamp), { hlc: stamp, id: intent.logId }),
-        }));
-    }
+    case "logFields":
+      return groupByStamp(intent.fields, hlc, fieldHlc).map((g) => ({
+        method: "PATCH" as const,
+        path: `/logs/${intent.date}`,
+        body: Object.assign({}, g.fields, { hlc: g.stamp, id: intent.logId }),
+      }));
     case "logDelete":
       return [{ method: "DELETE", path: `/logs/${intent.logId}` }];
     case "create": {
@@ -315,15 +326,21 @@ export function requestsFor(
       ];
     }
     case "update":
+      // Programs are whole documents (fieldHlc unset): one PUT, one stamp.
+      return groupByStamp(intent.data, hlc, fieldHlc).map((g) => ({
+        method: "PUT" as const,
+        path: `${ENTITY_PATH[intent.entity]}/${intent.id}`,
+        body: Object.assign({}, g.fields, { hlc: g.stamp }),
+      }));
+    case "delete":
+      // The stamp is recorded on the server's tombstone.
       return [
         {
-          method: "PUT",
+          method: "DELETE",
           path: `${ENTITY_PATH[intent.entity]}/${intent.id}`,
-          body: Object.assign({}, intent.data, { hlc }),
+          body: { hlc },
         },
       ];
-    case "delete":
-      return [{ method: "DELETE", path: `${ENTITY_PATH[intent.entity]}/${intent.id}` }];
     case "prefs":
       return [{ method: "PUT", path: "/preferences", body: intent.data }];
     case "profile":

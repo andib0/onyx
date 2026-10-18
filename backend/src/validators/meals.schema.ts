@@ -16,6 +16,8 @@ export const createMealTemplateSchema = z.object({
   foodId: recordId.optional().nullable(),
   sortOrder: z.number().int().optional(),
   tags: z.array(mealTagSchema).max(20).optional().default([]),
+  /** HLC of this write: stamps every field (per-field last-writer-wins). */
+  hlc: hlc.optional(),
 });
 
 export const updateMealTemplateSchema = createMealTemplateSchema

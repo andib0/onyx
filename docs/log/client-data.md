@@ -162,3 +162,51 @@ the API and all DB judges of this final round ran on a throwaway cluster in the 
 - Water and "achievements seen" stay device-local (no server endpoint).
 - The rehydrate path is unit-level + manual reasoning; no automated "wipe server → reopen app"
   e2e yet (the server side is covered by backend `backup.api.test.ts`).
+
+## 2026-10-18 — sync gaps closed (tombstones, entity LWW, workout resume, mark done, wipe e2e)
+
+Branch `worktree-agent-a07738b640c84b261`. Contract: [`backend-sync-api.md`](backend-sync-api.md)
+§2.2 (entity LWW), §2.3 (tombstones), §4 (mark done), §6 (backup v2 tombstones). The four
+"Not done" items above are closed as follows.
+
+1. **Delete tombstones** — `Tombstone` table (migration `20261018000000_tombstones_field_clocks`).
+   Every delete of a block / supplement / meal template / program (+ days, exercises) /
+   session (+ sets; new `DELETE /workouts/sessions/:id`) / set / saved food records
+   `(entity, id, hlc)`. Any later write naming the id → **410** (chosen over `200 {deleted:true}`
+   so old clients never treat it as a stored row); `/today` and export v2 never show it;
+   export v2 carries `tombstones`, import v2 applies them first (skip + delete). Client: the
+   outbox drops an op on 410 (create retry, edit, toggle, set, finish), deletes send their hlc.
+2. **Entity edits are per-field HLC LWW** — `fieldClock` on blocks, supplements, meal templates
+   (tags = one field), programs (name/description/goal/days). Creates stamp their fields; PUT
+   applies only newer fields (row lock), returns `appliedFields` / `staleFields`. The outbox keeps
+   one stamp per field when coalescing partial edits and sends one PUT per stamp; `/today`
+   field clocks feed the device HLC. Import v2 merges these tables per field; tags / days follow
+   the parent's clock.
+3. **Workout position survives a kill** — exercise/set/rest mode/timers/pending next/sets/PRs
+   saved in the outbox's persisted record (`setAux`, same storage write as the queue) on every
+   change; restored on launch when the date and program rows match (`utils/workoutPosition.ts`).
+4. **Mark done counts for T** — contract input `markedDone` → T = 1 on a train day (Python
+   reference first, vectors 14 → 18, both packages load them). Server: finish `{markedDone:true}`
+   (sticky), legacy finished sessions without sets count too. App: Mark done sends the flag;
+   Today passes `markedDone` instead of inflating `setsDone`.
+5. **Server-wiped e2e** — `e2e/tests/sync-resilience.spec.ts` (a): user logs via UI after the
+   backup → rows wiped in the e2e DB + epoch rotated while the app stays loaded → reload →
+   epoch mismatch → import + journal replay → `GET /sync/export?v=2` deep-equals the pre-wipe
+   export on all 16 tables (only score bookkeeping timestamps and the prefs row id excluded).
+   It first failed on 5 fields: replayed toggle rows got new random ids and arrival-time
+   `completedAt`/`eatenAt`/`createdAt`. Fixed at the source: a toggle row without a client id gets
+   an id derived from its natural key, and toggle/set times come from the write's HLC (the tap).
+   (b): workout at set 2 resting → reload → still resting before set 3.
+
+Evidence:
+
+| Judge | Result |
+|---|---|
+| mobile convergence (fast-check) | **300/300** runs, deletes from EITHER device: 3146 requests, 252 deletes by the non-creating device, 94 × 410 dropped, 144 kills (42 mid-flush), 79 drops, 104 lost responses, 73 dupes; nothing dead-lettered. Mutations caught: server without tombstones; coalesced edit fields sent under one stamp |
+| backend entity convergence (real API, fast-check) | **60/60** runs, 777 requests, 224 concurrent batches, 263 stale-field edits, 82 × 410; per-field max-HLC + delete-wins model holds |
+| backend API tests | + `tombstones` (17), `entityLww` (6), `markDone` (4), `replay` (3); IDOR matrix covers the new route |
+
+Still not done: daily-log deletes are not tombstoned (date-keyed, field-LWW: a newer field write
+re-creates the date); `PATCH /meals/templates/:id/grams` is unclocked; the rehydrate e2e keeps
+the account (the "account deleted → re-register" path is unit/backend-tested only); undo of the
+last set is not restored with the workout position.

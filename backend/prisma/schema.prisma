@@ -41,6 +41,7 @@ model User {
   workoutSetLogs  WorkoutSetLog[]
   dailyScores     DailyScore[]
   gymPrograms     GymProgram[]
+  tombstones      Tombstone[]
 }
 
 model UserPreferences {
@@ -95,6 +96,9 @@ model ScheduleBlock {
   readonly  Boolean @default(false)
   source    String  @default("schedule") // schedule|supplement|program|nutrition
   sortOrder Int?
+  // Per-field HLC of the last applied write (entity edits are last-writer-wins
+  // per field), e.g. {"title":"1760000000000-0000-dev1"}. Null = legacy row.
+  fieldClock Json?
 
   completions Completion[]
 
@@ -131,6 +135,9 @@ model Supplement {
   rule      String?
   timeAt    String  @default("08:00")
   sortOrder Int?
+  // Per-field HLC of the last applied write (entity edits are last-writer-wins
+  // per field), e.g. {"title":"1760000000000-0000-dev1"}. Null = legacy row.
+  fieldClock Json?
 
   logs SupplementLog[]
 
@@ -166,6 +173,9 @@ model MealTemplate {
   grams     Decimal?
   foodId    String?
   sortOrder Int?
+  // Per-field HLC of the last applied write (entity edits are last-writer-wins
+  // per field), e.g. {"title":"1760000000000-0000-dev1"}. Null = legacy row.
+  fieldClock Json?
 
   tags MealTemplateTag[]
   logs MealLog[]
@@ -323,6 +333,9 @@ model WorkoutSession {
   startedAt       DateTime  @default(now())
   endedAt         DateTime?
   durationSeconds Int?
+  // "Trained but didn't log": finished via "Mark done" (counts as the planned
+  // sets for the Outcome Score T component, contracts/README.md).
+  markedDone      Boolean   @default(false)
 
   sets WorkoutSetLog[]
 
@@ -375,6 +388,9 @@ model GymProgram {
   isSystem    Boolean @default(true)
   userId      String? // null for system programs
   user        User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Per-field HLC of the last applied write (entity edits are last-writer-wins
+  // per field), e.g. {"title":"1760000000000-0000-dev1"}. Null = legacy row.
+  fieldClock  Json?
 
   days ProgramDay[]
 
@@ -405,4 +421,26 @@ model ProgramExercise {
   notes        String?
   progression  String?
   sortOrder    Int
+}
+
+// ============================================
+// DELETE TOMBSTONES (sync)
+// ============================================
+
+// A deleted user-owned row, remembered so a delayed create/edit retry (another
+// device, a lost response) can never resurrect it, and so a rehydrate import
+// does not bring it back. Ids are never reused: delete wins over any later
+// write to the same id. entity = block | supplement | meal | program |
+// programDay | programExercise | session | set | userFood.
+model Tombstone {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity    String
+  entityId  String
+  hlc       String
+  deletedAt DateTime @default(now())
+
+  @@unique([userId, entity, entityId])
+  @@index([userId, entityId])
 }

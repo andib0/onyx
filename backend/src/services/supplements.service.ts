@@ -1,6 +1,20 @@
 import { prisma } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
 import { createIdempotent } from '../utils/idempotent.js';
 import { applyToggle } from './sync/toggle.js';
+import {
+  clockColumn,
+  createClock,
+  editOutcome,
+  lockOwnedRow,
+  mergeFieldWrite,
+} from './sync/fieldClock.js';
+import {
+  assertNotTombstoned,
+  deleteStamp,
+  goneOr,
+  recordTombstones,
+} from './sync/tombstones.js';
 import { scoreService } from './score/score.service.js';
 
 interface SupplementFields {
@@ -12,6 +26,17 @@ interface SupplementFields {
   timeAt?: string;
   sortOrder?: number;
 }
+
+/** Editable columns, each with its own HLC in `fieldClock`. */
+export const SUPPLEMENT_FIELDS = [
+  'item',
+  'goal',
+  'dose',
+  'tier',
+  'rule',
+  'timeAt',
+  'sortOrder',
+] as const;
 
 // Only model columns reach Prisma (the create schema also accepts reference
 // fields such as `category` that are not stored on Supplement).
@@ -39,11 +64,18 @@ export class SupplementsService {
     });
   }
 
-  /** Idempotent when the client sends its own `id`. */
+  /** Idempotent when the client sends its own `id`; 410 if that id was deleted. */
   async createSupplement(
     userId: string,
-    data: SupplementFields & { id?: string; item: string; goal: string; dose: string }
+    data: SupplementFields & {
+      id?: string;
+      hlc?: string;
+      item: string;
+      goal: string;
+      dose: string;
+    }
   ) {
+    await assertNotTombstoned(userId, 'supplement', data.id);
     const fields = pickFields(data);
     const result = await createIdempotent(
       userId,
@@ -61,6 +93,11 @@ export class SupplementsService {
             rule: fields.rule,
             timeAt: fields.timeAt,
             sortOrder: fields.sortOrder,
+            fieldClock: createClock(
+              SUPPLEMENT_FIELDS,
+              fields as Record<string, unknown>,
+              data.hlc
+            ),
           },
         })
     );
@@ -68,16 +105,53 @@ export class SupplementsService {
     return result;
   }
 
-  async updateSupplement(userId: string, supplementId: string, data: SupplementFields) {
-    return prisma.supplement.update({
-      where: { id: supplementId, userId },
-      data: pickFields(data),
+  /** Per-field last-writer-wins by `hlc`; 404 missing, 410 deleted. */
+  async updateSupplement(
+    userId: string,
+    supplementId: string,
+    data: SupplementFields & { hlc?: string }
+  ) {
+    return prisma.$transaction(async (tx) => {
+      if (!(await lockOwnedRow(tx, 'Supplement', supplementId, userId)))
+        return goneOr(
+          userId,
+          'supplement',
+          supplementId,
+          new AppError('Record not found', 404)
+        );
+      const current = await tx.supplement.findUniqueOrThrow({
+        where: { id: supplementId },
+      });
+      const w = mergeFieldWrite(
+        SUPPLEMENT_FIELDS,
+        current.fieldClock,
+        pickFields(data) as Record<string, unknown>,
+        data.hlc
+      );
+      const row =
+        Object.keys(w.data).length > 0
+          ? await tx.supplement.update({
+              where: { id: supplementId },
+              data: Object.assign({}, w.data, {
+                fieldClock: clockColumn(w.clock ?? undefined),
+              }),
+            })
+          : current;
+      return Object.assign(row, editOutcome(w));
     });
   }
 
-  async deleteSupplement(userId: string, supplementId: string) {
-    const deleted = await prisma.supplement.delete({
-      where: { id: supplementId, userId },
+  /** Deletes and remembers the id (tombstone), so it can never come back. */
+  async deleteSupplement(userId: string, supplementId: string, hlc?: string) {
+    const deleted = await prisma.$transaction(async (tx) => {
+      const row = await tx.supplement.delete({ where: { id: supplementId, userId } });
+      await recordTombstones(
+        tx,
+        userId,
+        [{ entity: 'supplement', entityId: supplementId }],
+        deleteStamp(hlc)
+      );
+      return row;
     });
     await scoreService.afterCatalogChange(userId);
     return deleted;

@@ -220,9 +220,19 @@ export function stampsInToday(payload: TodayPayload): string[] {
   const add = (rows: Row[]) => {
     for (const r of rows) if (typeof r.hlc === "string") out.push(r.hlc);
   };
+  // Entity edits are per-field LWW: later local edits must sort after these.
+  const addClocks = (rows: Row[]) => {
+    for (const r of rows) {
+      const fc = r.fieldClock as Record<string, string> | null | undefined;
+      if (fc && typeof fc === "object") out.push(...Object.values(fc));
+    }
+  };
   add(payload.schedule.completions);
   add(payload.supplements.logs);
   add(payload.meals.logs);
+  addClocks(payload.schedule.blocks);
+  addClocks(payload.supplements.items);
+  addClocks(payload.meals.templates);
   const fc = payload.dailyLog
     ? (payload.dailyLog.fieldClock as Record<string, string> | null)
     : null;

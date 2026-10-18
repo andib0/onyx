@@ -149,7 +149,7 @@ describe('audit 02 regressions', () => {
     expect([row.bw, row.sleep]).toEqual(['81.2', '7.5']);
   });
 
-  it('R8 §2.8 toggling a supplement deleted on the other device is a clean 404', async () => {
+  it('R8 §2.8 toggling a supplement deleted on the other device is a clean 410 (tombstone)', async () => {
     const supp = (
       await http().post('/api/supplements').set(auth(A)).send({ item: 'Gone' })
     ).body.data;
@@ -158,7 +158,8 @@ describe('audit 02 regressions', () => {
       .post(`/api/supplements/${supp.id}/log`)
       .set(auth(B))
       .send({ date: '2026-09-14', isTaken: true });
-    expect(res.status).toBe(404);
+    // 410 Gone (was 404 before tombstones): the outbox drops it either way.
+    expect(res.status).toBe(410);
   });
 
   it('R9 §2.9 import on one device keeps ids, so the other device keeps working', async () => {

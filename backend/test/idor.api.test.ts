@@ -79,6 +79,9 @@ const MATRIX: Record<string, Call> = {
     url: (i) => `/api/workouts/sessions/${i.session}/finish`,
     body: () => ({ durationSeconds: 1 }),
   },
+  'DELETE /api/workouts/sessions/:id': {
+    url: (i) => `/api/workouts/sessions/${i.session}`,
+  },
   'DELETE /api/workouts/sets/:id': { url: (i) => `/api/workouts/sets/${i.set}` },
   'DELETE /api/user-foods/:id': { url: (i) => `/api/user-foods/${i.userFood}` },
 };
@@ -125,6 +128,7 @@ async function snapshot(userId: string) {
     sessions: await prisma.workoutSession.findMany({ where, orderBy: byId }),
     sets: await prisma.workoutSetLog.findMany({ where, orderBy: byId }),
     userFoods: await prisma.userFood.findMany({ where, orderBy: byId }),
+    tombstones: await prisma.tombstone.findMany({ where, orderBy: byId }),
     prefs: await prisma.userPreferences.findMany({ where }),
   });
 }

@@ -10,6 +10,11 @@ Source: `docs/audit/04-score-and-prediction.md` §A4.
 
 - Components, each 0..1 or unknown:
   - `T`  = rest day ? 1 : min(1, setsDone / (0.8 · setsPlanned)); unknown if no planned sets.
+    **Mark done** (`markedDone`, "trained but didn't log"): on a train day T = 1, whatever
+    was logged and even without planned sets. Server: a session finished with
+    `markedDone: true` (`PATCH /workouts/sessions/:id/finish`), or — clients before the flag —
+    a finished session with no sets. App: the day's workout was marked done (≥ 80 % logged or
+    the Mark done button).
   - `Pr` = min(1, protein / proteinTarget); unknown if nothing logged.
   - `Ca` = 1 within ±5% of calorieTarget, linear to 0 at ±20%; unknown if nothing logged.
   - `Bw` = max(0, 1 − |bwSlope − goalRate| / 0.5) (kg/week, OLS over last 14 weigh-ins).

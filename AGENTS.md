@@ -105,11 +105,13 @@ PostgreSQL via Prisma is the server of record; the device holds a full copy (§5
 - Meals: `MealTemplate` (+ `grams`, `foodId`; `dayOfWeek` is a weekday **or an ISO date** for
   one-off foods), `MealTemplateTag` (macros per 100 g), `MealLog`, reference `Food`, `UserFood`.
 - `DailyLog` (bw, sleep, steps, top sets, notes) with per-field `fieldClock` JSON.
-- Workouts: `WorkoutSession`, `WorkoutSetLog` (unique per session + exercise + set number),
+- Workouts: `WorkoutSession` (+ `markedDone`), `WorkoutSetLog` (unique per session + exercise + set number),
   reference `ExerciseLibrary`. Programs: `GymProgram` (system + user, FK to user),
   `ProgramDay` (`weekdays Int[]`, ISO 1 = Mon), `ProgramExercise`.
 - `DailyScore` — **server-computed** Outcome Score per day (`outcomeScore` null = unscored,
   `kept`, components, `routinePct`; legacy `score` = routine %).
+- `Tombstone` — deleted ids (`entity`, `entityId`, `hlc`), unique per user + entity + id.
+- `ScheduleBlock`, `Supplement`, `MealTemplate`, `GymProgram` carry a per-field `fieldClock` JSON.
 
 Sync primitives:
 - **Client ids**: every create accepts an optional UUID `id`; a replay returns the same row
@@ -118,10 +120,20 @@ Sync primitives:
 - **HLC** `<13-digit ms>-<4-digit counter>-<deviceId>` (`backend/src/utils/hlc.ts`, mirror in
   `mobile/sync/hlc.ts`), compared as strings. Toggles (`Completion`, `SupplementLog`, `MealLog`)
   and sets carry `hlc`; last-writer-wins by HLC, not arrival. Stamps > 24 h ahead → 400.
-  Daily logs merge per field (`PATCH /api/logs/:date`). Entity edits (PUT) are still
-  last-arrival-wins.
-- **No tombstones**: deletes are hard deletes; the client outbox must cancel a never-sent
-  create + delete pair.
+  Daily logs merge per field (`PATCH /api/logs/:date`). Entity edits (PUT on blocks,
+  supplements, meal templates, programs) are **per-field HLC last-writer-wins** via
+  `fieldClock` (creates stamp every field they set; a PUT without `hlc` always applies;
+  `backend/src/services/sync/fieldClock.ts`). The outbox keeps one stamp per field when it
+  coalesces edits and sends one PUT per stamp. Toggle rows without a client id get an id
+  derived from their natural key; toggle/set timestamps come from the HLC.
+- **Tombstones** (`backend/src/services/sync/tombstones.ts`): deleting a block, supplement,
+  meal template, program (+ days, exercises), session (+ sets), set or saved food records
+  `(entity, id, hlc)`; DELETE bodies may carry `{hlc}`. Delete wins: any later create, edit,
+  toggle, set or finish naming that id answers **410** and changes nothing; the outbox drops
+  ops on 410. Export v2 carries `tombstones`; import v2 applies them first. Daily logs are not
+  tombstoned (date-keyed, field-LWW). A never-sent create + delete pair still cancels locally.
+- **Mark done** (`PATCH /api/workouts/sessions/:id/finish {markedDone:true}`, or a finished
+  session with no sets): T = 1 on a train day — contract input `markedDone`.
 - **Outcome Score** (spec `contracts/README.md`): 0.40 training vs plan + 0.30 protein +
   0.20 calories + 0.10 bodyweight trend; kept day = training done AND protein ≥ 85 %;
   streak with one grace day per ISO week. Recomputed on every relevant write and on
@@ -189,7 +201,7 @@ Mounted under `/api` in `backend/src/routes/index.ts`; each resource is
 /api/supplements  CRUD · GET /logs · POST /:id/log (HLC toggle)
 /api/meals     /templates CRUD · PATCH /templates/:id/grams · POST /one-off · GET /logs · POST /:id/log
 /api/logs      GET / · /stats · /:date · POST / · PATCH /:date (field-level, HLC) · DELETE /:id
-/api/workouts  /sessions · /sessions/:id/sets · /sessions/:id/finish · /sets/:id · /exercise-history · /exercise-sessions
+/api/workouts  /sessions · DELETE /sessions/:id · /sessions/:id/sets · /sessions/:id/finish · /sets/:id · /exercise-history · /exercise-sessions
 /api/programs  CRUD (days[].weekdays)        /api/preferences  GET · PUT
 /api/scores    GET ?days= (v1) | ?v=2 · POST (recompute trigger only)
 /api/sync      GET /export[?v=2] · POST /import[?v=2] · GET /state · POST /seed-starter
@@ -328,10 +340,14 @@ cd mobile && npm run check:docs   # only the AGENTS.md judge (same script in bac
 
 ## 12. Known limits (don't rediscover them)
 
-- No delete tombstones; PUT edits are last-arrival-wins; no delta sync.
-- An in-progress workout's position (exercise/set/timer) is in memory; its sets are durable.
+- No delta sync. Daily-log deletes are not tombstoned (a newer field write re-creates the date).
+- `PATCH /api/meals/templates/:id/grams` is an unclocked legacy edit.
+- The in-progress workout position (exercise/set/rest/timers, `mobile/utils/workoutPosition.ts`)
+  is saved in the outbox record (aux) and restored after a kill only when the day and the
+  program rows match; undo of the last set is not restored.
 - Water and "achievements seen" are device-only.
-- No automated "wipe server → reopen app" e2e; rehydrate is covered by unit + backend tests.
+- Rehydrate e2e (`e2e/tests/sync-resilience.spec.ts`) wipes rows + rotates the epoch with the
+  account kept; the "account deleted → re-register" path is unit/backend-tested only.
 - Early-warning nudge is off (`FEATURE_FLAGS` in `mobile/utils/reminderPlan.ts`) until a real-data
   rerun justifies it.
 

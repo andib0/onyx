@@ -45,6 +45,16 @@ describe("computeTodayOutcome", () => {
     expect(out.score).toBe(100);
   });
 
+  it("Mark done with no sets logged counts as the planned training (contract)", () => {
+    const out = computeTodayOutcome(Object.assign({}, base, { markedDone: true }));
+    expect(out.components.T).toBe(1);
+    expect(out.kept).toBe(true);
+    const unplanned = computeTodayOutcome(
+      Object.assign({}, base, { plan: null, markedDone: true })
+    );
+    expect(unplanned.components.T).toBe(1);
+  });
+
   it("zero targets are unknown, not divide-by-zero", () => {
     const out = computeTodayOutcome(
       Object.assign({}, base, { proteinTarget: 0, calorieTarget: 0 })

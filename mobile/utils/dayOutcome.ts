@@ -15,6 +15,8 @@ export type TodayOutcomeArgs = {
   plan: DayPlan | null; // null = no program selected → training unknown
   setsDone: number;
   setsPlanned: number;
+  /** "Mark done" (trained, didn't log): counts as the planned training (T = 1) */
+  markedDone?: boolean;
   consumed: { protein: number; calories: number } | null; // null = nothing logged
   proteinTarget: number;
   calorieTarget: number;
@@ -27,6 +29,7 @@ export function buildTodayOutcomeInput(a: TodayOutcomeArgs): OutcomeInput {
     plan: a.plan === "rest" ? "rest" : "train",
     setsDone: a.setsDone,
     setsPlanned: a.plan === null ? 0 : a.setsPlanned,
+    markedDone: !!a.markedDone,
     protein: a.consumed ? a.consumed.protein : null,
     proteinTarget: a.proteinTarget || null,
     calories: a.consumed ? a.consumed.calories : null,

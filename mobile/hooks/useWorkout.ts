@@ -22,8 +22,13 @@ import {
 } from "../utils/workoutClock";
 import type { SessionLog } from "../utils/progression";
 import { getWorkoutSessions, type ExerciseHistory } from "../api/workouts";
-import { enqueueWrite } from "../sync/runtime";
+import { enqueueWrite, loadWorkoutPosition, saveWorkoutPosition } from "../sync/runtime";
 import { uuidv4 } from "../sync/uuid";
+import {
+  programSignature,
+  restorablePosition,
+  type WorkoutPosition,
+} from "../utils/workoutPosition";
 
 export type WorkoutMode = "lifting" | "rest";
 
@@ -152,6 +157,7 @@ export default function useWorkout(
   const pauseStartedAtRef = useRef<number | null>(null);
   const finishedAtRef = useRef<number | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const sessionDateRef = useRef<string>("");
   const restNotificationRef = useRef<string | null>(null);
   const restNotifyEnabledRef = useRef(false);
   const prTrackerRef = useRef<PrTracker>(createPrTracker({}));
@@ -207,6 +213,7 @@ export default function useWorkout(
   }, []);
 
   const rowCount = programRows.length;
+  const signature = programSignature(programRows);
   const currentRow = programRows[exerciseIndex];
   const totalSets = parseSetsCount(currentRow ? currentRow.sets : "");
   const plannedSets = programRows.reduce((sum, row) => sum + parseSetsCount(row.sets), 0);
@@ -288,7 +295,104 @@ export default function useWorkout(
     sessionIdRef.current = null;
     prTrackerRef.current = createPrTracker({});
     setTiming(EMPTY_TIMING);
+    // The session is over (or being replaced): nothing to resume after a kill.
+    saveWorkoutPosition(null).catch(() => {});
   }, []);
+
+  // Full recent history (one request): last session per lift for prefill,
+  // the session sequence for stall detection, all sets for all-time PRs.
+  // Names fold onto canonical library names (legacy rows migrate on read).
+  const loadHistory = useCallback(() => {
+    getWorkoutSessions(HISTORY_SESSIONS)
+      .then((result) => {
+        if (!result.success || !result.data) return;
+        const timeline = buildExerciseTimeline(result.data, sessionIdRef.current);
+        setHistoryByExercise(timeline.last);
+        setSessionsByExercise(timeline.sessions);
+        // Keep PRs already flagged this session if history arrives late
+        const fresh = createPrTracker(timeline.allSets);
+        fresh.prThisSession = prTrackerRef.current.prThisSession;
+        prTrackerRef.current = fresh;
+      })
+      .catch(() => {});
+  }, []);
+
+  // Resume an in-progress workout after an app kill: the position is saved
+  // with the outbox (same storage record as the queued sets), restored once
+  // the same program rows are loaded on the same day.
+  const restoreTriedRef = useRef(false);
+  useEffect(() => {
+    if (restoreTriedRef.current || isActive || programRows.length === 0) return;
+    restoreTriedRef.current = true;
+    const rows = programRows;
+    loadWorkoutPosition()
+      .then((raw) => {
+        const p = restorablePosition(raw, todayKey(), rows);
+        if (!p || sessionIdRef.current) return;
+        sessionIdRef.current = p.sessionId;
+        sessionDateRef.current = p.date;
+        sessionStartRef.current = p.timing.sessionStartedAt;
+        pausedAccumMsRef.current = p.timing.pausedAccumMs;
+        pauseStartedAtRef.current = p.timing.pauseStartedAt;
+        restEndsAtRef.current = p.timing.restEndsAt;
+        pausedRestRemainingMsRef.current = p.timing.pausedRestRemainingMs;
+        finishedAtRef.current = p.timing.finishedAt;
+        pendingNextRef.current = p.pendingNext;
+        setIsActive(true);
+        setIsPaused(p.isPaused);
+        setIsFinished(p.isFinished);
+        setMode(p.mode);
+        setExerciseIndex(p.exerciseIndex);
+        setCurrentSet(p.currentSet);
+        setRestTotalSeconds(p.restTotalSeconds);
+        setCompletedExercises(new Set(p.completedExercises));
+        setSetsThisSession(p.setsThisSession);
+        setPrCount(p.prCount);
+        setLastPrExercise(p.lastPrExercise);
+        syncTiming();
+        loadHistory();
+      })
+      .catch(() => {});
+  }, [isActive, programRows, syncTiming, loadHistory]);
+
+  // Persist the position on every change while a session is open.
+  useEffect(() => {
+    const sessionId = sessionIdRef.current;
+    if (!isActive || !sessionId || timing.sessionStartedAt === null) return;
+    const position: WorkoutPosition = {
+      v: 1,
+      date: sessionDateRef.current || todayKey(),
+      sessionId,
+      signature,
+      isPaused,
+      isFinished,
+      mode,
+      exerciseIndex,
+      currentSet,
+      restTotalSeconds,
+      timing,
+      pendingNext: pendingNextRef.current,
+      completedExercises: Array.from(completedExercises),
+      setsThisSession,
+      prCount,
+      lastPrExercise,
+    };
+    saveWorkoutPosition(position).catch(() => {});
+  }, [
+    isActive,
+    isPaused,
+    isFinished,
+    mode,
+    exerciseIndex,
+    currentSet,
+    restTotalSeconds,
+    timing,
+    completedExercises,
+    setsThisSession,
+    prCount,
+    lastPrExercise,
+    signature,
+  ]);
 
   const start = useCallback(() => {
     if (programRows.length === 0) return;
@@ -304,6 +408,7 @@ export default function useWorkout(
     // even offline (sets were silently lost when the start request failed).
     const sessionId = uuidv4();
     sessionIdRef.current = sessionId;
+    sessionDateRef.current = todayKey();
     enqueueWrite({
       t: "create",
       entity: "session",
@@ -315,31 +420,18 @@ export default function useWorkout(
       },
     }).catch(() => {});
 
-    // Full recent history (one request): last session per lift for prefill,
-    // the session sequence for stall detection, all sets for all-time PRs.
-    // Names fold onto canonical library names (legacy rows migrate on read).
-    getWorkoutSessions(HISTORY_SESSIONS)
-      .then((result) => {
-        if (!result.success || !result.data) return;
-        const timeline = buildExerciseTimeline(result.data, sessionIdRef.current);
-        setHistoryByExercise(timeline.last);
-        setSessionsByExercise(timeline.sessions);
-        // Keep PRs already flagged this session if history arrives late
-        const fresh = createPrTracker(timeline.allSets);
-        fresh.prThisSession = prTrackerRef.current.prThisSession;
-        prTrackerRef.current = fresh;
-      })
-      .catch(() => {});
-  }, [programRows, programLabel, resetAll, syncTiming]);
+    loadHistory();
+  }, [programRows, programLabel, resetAll, syncTiming, loadHistory]);
 
-  const finishSession = useCallback((durationSeconds: number) => {
+  const finishSession = useCallback((durationSeconds: number, markedDone?: boolean) => {
     const sessionId = sessionIdRef.current;
     if (sessionId) {
-      enqueueWrite({
-        t: "finishSession",
-        id: sessionId,
-        data: { durationSeconds, endedAt: new Date().toISOString() },
-      }).catch(() => {});
+      const data: { durationSeconds: number; endedAt: string; markedDone?: boolean } = {
+        durationSeconds,
+        endedAt: new Date().toISOString(),
+      };
+      if (markedDone) data.markedDone = true;
+      enqueueWrite({ t: "finishSession", id: sessionId, data }).catch(() => {});
     }
   }, []);
 
@@ -660,7 +752,7 @@ export default function useWorkout(
   const markWorkoutDone = useCallback(() => {
     const now = new Date();
     if (isActive && sessionIdRef.current) {
-      finishSession(currentSessionSeconds());
+      finishSession(currentSessionSeconds(), true);
       markCompleted();
       resetAll();
       return;
@@ -680,7 +772,7 @@ export default function useWorkout(
       {
         t: "finishSession",
         id,
-        data: { durationSeconds: 0, endedAt: now.toISOString() },
+        data: { durationSeconds: 0, endedAt: now.toISOString(), markedDone: true },
       },
     ]).catch(() => {});
     markCompleted();
