@@ -210,3 +210,67 @@ Still not done: daily-log deletes are not tombstoned (date-keyed, field-LWW: a n
 re-creates the date); `PATCH /meals/templates/:id/grams` is unclocked; the rehydrate e2e keeps
 the account (the "account deleted → re-register" path is unit/backend-tested only); undo of the
 last set is not restored with the workout position.
+
+## 2026-10-18 — offline reload intermittently showed an empty day (root cause: gcTime overflow)
+
+Symptom: `e2e/tests/offline.spec.ts` "API unreachable on reload…" failed ~2/8 when the whole
+file ran (reproduced here: 3/40 at `--repeat-each=20`; the sibling "offline reload" test
+failed the same way). The reloaded Today had the cached user and outbox but an empty day.
+
+**Root cause.** The QueryClient default `gcTime` was `CACHE_MAX_AGE_MS` (60 days =
+5 184 000 000 ms). Browsers (and the Playwright / sinon fake clocks) store timer delays as a
+signed 32-bit int: anything above 2^31-1 ms (~24.8 days) fires **immediately**. Every query
+restored from disk is built by `hydrate()` with that default and schedules its gc at once, so
+it was removed on the next tick unless a `useQuery` observer had already subscribed (or a
+fetch was running — `optionalRemove` skips fetching queries). `["appState", userId]` is only
+observed once auth has produced the user id and `DataProvider` re-rendered: a race lost a few
+% of the time → empty day. The next persist then wrote the cache without it, so the loss
+reached disk as well. `["programs", userId]` was lost on every reload (its observer mounts
+later), hidden by the online refetch.
+
+Evidence (instrumented debug copy of the spec; persister write/restore logs + query cache
+dump before and after reload):
+- Before reload, failing and passing runs alike: blob 9 720 bytes with `programs`, `appState`,
+  `today` all `success`.
+- After reload, failing run: restore read 9 720 bytes, then the live cache held
+  `appState/<id>: pending, dataUpdatedAt 0` and `programs/<id>: pending`; only `today`
+  survived (its launch refetch was in flight, so gc skipped it). The next persist wrote
+  `today` only. Passing run: `appState/<id>: success`.
+- Unit repro (`sync/__tests__/persist.test.ts`): dehydrate → hydrate into a client with the
+  old default → 250 ms of fake time → `appState` gone. Passes with the fix.
+
+Rejected hypotheses:
+- *Throttled write not flushed before reload* — the blob contained all three roots 0.9 s
+  before reload; `pagehide`/`beforeunload` writes are synchronous on web (AsyncStorage web
+  calls `localStorage.setItem` inside the Promise executor).
+- *Installed clock / persisted timestamps* — Playwright replays `clock.install` on reload
+  and time continued forward (restore `Date.now()` > blob `timestamp`); no maxAge/buster
+  drop, the restore returned the full blob, and the day key (`2026-10-19`) matched.
+- *Hydrate skipped as "older than existing"* — the pre-existing `appState` query on reload
+  had `dataUpdatedAt 0`, so hydrate wrote it; it disappeared afterwards (gc), not before.
+- *The "1 to sync" op* — it is the debounced `POST /scores` (1.5 s) queued by the reloaded,
+  already-empty Today; a consequence, not the cause.
+
+Why the sibling test raised the rate: it only changes timing (warm bundle and server), i.e.
+how many ms pass between hydrate and `DataProvider` subscribing with the real user id.
+
+Fix (`sync/persist.ts`, `app/_layout.tsx`):
+1. `QUERY_GC_MS = Infinity` as the default gcTime (covers the 60-day max age, no timer).
+   The per-query `gcTime: TODAY_GC_MS` (3 days) is unchanged.
+2. `shouldPersistQuery` persists any query of a persisted root that holds data, also when
+   its latest refetch failed (`status: "error"` keeps the data) — a 5xx while the device is
+   online no longer drops the day from disk on the next write.
+3. Native kill window: the 500 ms throttle now has a leading edge — a change after a quiet
+   spell (e.g. `/today` arriving) is written on the next tick; bursts still coalesce. Native
+   timers do not overflow, so (1) was web-only, but (2) and (3) apply to the phone.
+
+| Judge | Before | After |
+|---|---|---|
+| `offline.spec.ts --repeat-each=20` (both tests) | 3/40 failed | **40/40** |
+| `sync/__tests__/persist.test.ts` | 4/5 failed (gc, leading edge, error-with-data) | 5/5 |
+| mobile `npm run check` | — | pass (tsc, eslint, prettier, unit, config, bundle, e2e, docs) |
+| `E2E_ENFORCE_BUDGETS=1 npx playwright test` | — | 25 passed, 2 skipped (screens, opt-in) |
+
+Not done: old `today/<date>` queries are never garbage-collected in a session now (also true
+on native before: 60 days without overflow), so the persisted cache keeps one small day
+payload per day the app was opened; pruning by key date is a follow-up.

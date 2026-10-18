@@ -10,18 +10,29 @@ import { PERSISTED_ROOTS } from "./queryKeys";
 /** Bump when a persisted shape changes so an app update never reads an old one. */
 export const CACHE_BUSTER = "onyx-cache-v1";
 export const CACHE_MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
+/**
+ * QueryClient default gcTime. Must cover CACHE_MAX_AGE_MS, and must NOT be a
+ * finite number above 2^31-1 ms (~24.8 days): browsers (and fake timers) run
+ * such a setTimeout immediately, so every query restored from disk was
+ * garbage-collected on the next tick unless a screen had already subscribed to
+ * it — Focus then opened offline on an empty day, and the next persist wiped
+ * the day from disk too. Infinity schedules no gc timer at all.
+ */
+export const QUERY_GC_MS = Infinity;
 const BLOB = "onyx-query-cache";
 const THROTTLE_MS = 500;
 
 export function createPersister(): Persister {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let latest: PersistedClient | null = null;
+  let lastWriteAt = -Infinity;
   const write = () => {
     if (timer) clearTimeout(timer);
     timer = null;
     if (!latest) return;
     const text = JSON.stringify(latest);
     latest = null;
+    lastWriteAt = Date.now();
     writeBlob(BLOB, text).catch(() => {});
   };
   // Don't lose the last second of changes when the app goes to the background
@@ -40,7 +51,13 @@ export function createPersister(): Persister {
   return {
     persistClient: (client) => {
       latest = client;
-      if (!timer) timer = setTimeout(write, THROTTLE_MS);
+      if (timer) return;
+      // Throttle with a leading edge: a change after a quiet spell (e.g. /today
+      // arriving) is written on the next tick, so a kill right after the data
+      // shows up cannot leave the previous day on disk; bursts are coalesced
+      // to one write per THROTTLE_MS.
+      const wait = Math.max(0, lastWriteAt + THROTTLE_MS - Date.now());
+      timer = setTimeout(write, wait);
     },
     restoreClient: async () => {
       const pending = early;
@@ -62,10 +79,11 @@ export function createPersister(): Persister {
   };
 }
 
+/**
+ * Persist every query of a persisted root that holds data — including one whose
+ * latest background refetch failed (status "error" keeps the last data): the
+ * server being down must not drop the day from disk.
+ */
 export function shouldPersistQuery(query: Query): boolean {
-  return (
-    query.state.status === "success" &&
-    query.state.data !== undefined &&
-    PERSISTED_ROOTS.has(String(query.queryKey[0]))
-  );
+  return query.state.data !== undefined && PERSISTED_ROOTS.has(String(query.queryKey[0]));
 }
