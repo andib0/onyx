@@ -1,13 +1,13 @@
 // Turns an implementation intention into the plan: saved on the device, the
 // schedule's training block moved to the chosen time (created if missing) and the
-// training reminder switched on. Uses the existing api wrappers; callers reload
-// state afterwards (useData().reloadState).
+// training reminder switched on. Schedule writes go through the outbox
+// (offline-safe, applied to the cached day at once).
 import { Platform } from "react-native";
-import {
-  createScheduleBlock,
-  getScheduleBlocks,
-  updateScheduleBlock,
-} from "../../api/schedule";
+import { getScheduleBlocks } from "../../api/schedule";
+import { enqueueWrite, syncContextReady } from "../../sync/runtime";
+import { qk } from "../../sync/queryKeys";
+import { uuidv4 } from "../../sync/uuid";
+import type { AppState } from "../../types/appTypes";
 import {
   ensurePermission,
   loadNotificationPrefs,
@@ -34,14 +34,26 @@ export async function applyTrainingIntention(
     end: addMinutesToTime(intention.time, SESSION_MINUTES),
     purpose,
   };
-  const blocks = await getScheduleBlocks();
-  const existing = blocks.success && blocks.data ? blocks.data.find(isTraining) : null;
-  if (existing) {
-    await updateScheduleBlock(existing.id, patch);
+  // The device's copy of the schedule (server list as a fallback before the first sync).
+  const ctx = await syncContextReady();
+  const cached = ctx ? ctx.qc.getQueryData<AppState>(qk.appState(ctx.userId)) : undefined;
+  let list: Array<{ id?: string; title?: string | null; tag?: string | null }> = cached
+    ? cached.schedule
+    : [];
+  if (!cached) {
+    const blocks = await getScheduleBlocks();
+    list = blocks.success && blocks.data ? blocks.data : [];
+  }
+  const existing = list.find(isTraining);
+  if (existing && existing.id) {
+    await enqueueWrite({ t: "update", entity: "block", id: existing.id, data: patch });
   } else {
-    await createScheduleBlock(
-      Object.assign({ title: "Train", tag: "Training", good: "" }, patch)
-    );
+    await enqueueWrite({
+      t: "create",
+      entity: "block",
+      id: uuidv4(),
+      data: Object.assign({ title: "Train", tag: "Training", good: "" }, patch),
+    });
   }
 
   if (opts.enableReminder && Platform.OS !== "web") {

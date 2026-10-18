@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProgram, listPrograms } from "../api/programs";
 import { updatePreferences } from "../api/preferences";
+import { qk } from "../sync/queryKeys";
+import useTrainingIntention from "./ui/useTrainingIntention";
+import { isTrainingDate } from "../utils/trainingIntention";
 import type { ProgramDetail, ProgramSummary } from "../api/programs";
 import type { UserWithPreferences } from "../types/appTypes";
 import { canonicalExerciseName } from "../utils/exerciseNames";
@@ -15,16 +19,20 @@ import {
 import { todayKey } from "../utils/storage";
 
 const LAST_COMPLETION_KEY = "onyx_program_last_completion_v1";
+const EMPTY_PROGRAMS: ProgramSummary[] = [];
+// Programs change rarely and every local edit updates the cache directly, so a
+// launch reads them from the persisted cache (no request on the startup path).
+const PROGRAMS_STALE_MS = 6 * 60 * 60 * 1000;
 
 export default function useProgram(
   isAuthenticated: boolean,
   authLoading: boolean,
   user: UserWithPreferences | null | undefined
 ) {
-  const [programs, setPrograms] = useState<ProgramSummary[]>([]);
+  const queryClient = useQueryClient();
+  const userId = user ? user.id : "";
   const [selectedProgramId, setSelectedProgramId] = useState("");
   const [selectedProgramDayId, setSelectedProgramDayId] = useState("");
-  const [programDetail, setProgramDetail] = useState<ProgramDetail | null>(null);
   const [prefsReady, setPrefsReady] = useState(false);
   const [programSetupDismissed, setProgramSetupDismissed] = useState(false);
   const [lastCompletion, setLastCompletion] = useState<LastCompletion>(null);
@@ -47,68 +55,83 @@ export default function useProgram(
     };
   }, []);
 
-  // Load programs list
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) return undefined;
-    let cancelled = false;
-    listPrograms().then((result) => {
-      if (cancelled) return;
-      if (result.success && result.data) {
-        setPrograms(result.data);
-      } else {
-        setPrograms([]);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated]);
+  const enabled = isAuthenticated && !authLoading && !!userId;
 
-  // Load user preferences
+  // Programs list (persisted query; server ⊕ pending local edits)
+  const programsQuery = useQuery<ProgramSummary[]>({
+    queryKey: qk.programs(userId),
+    enabled,
+    staleTime: PROGRAMS_STALE_MS,
+    queryFn: async () => {
+      const result = await listPrograms();
+      if (!result.success || !result.data) throw new Error(result.error || "programs");
+      return result.data;
+    },
+  });
+  const programs = programsQuery.data ?? EMPTY_PROGRAMS;
+
+  // Load user preferences (selection) once per session
   useEffect(() => {
     if (!isAuthenticated) return;
     const prefs = user?.preferences;
     if (!prefs || prefsReady) return;
+    lastSyncedRef.current = {
+      programId: prefs.selectedProgramId || "",
+      dayId: prefs.selectedProgramDayId || "",
+    };
     setSelectedProgramId(prefs.selectedProgramId || "");
     setSelectedProgramDayId(prefs.selectedProgramDayId || "");
     setPrefsReady(true);
   }, [isAuthenticated, prefsReady, user?.preferences]);
 
-  // Sync preferences to backend
+  // Persist the selection only when it actually changes (it used to PUT
+  // /preferences on every launch, so the last-launched device always won).
+  const lastSyncedRef = useRef<{ programId: string; dayId: string } | null>(null);
   useEffect(() => {
     if (!isAuthenticated || !prefsReady) return;
+    const last = lastSyncedRef.current;
+    if (
+      last &&
+      last.programId === selectedProgramId &&
+      last.dayId === selectedProgramDayId
+    )
+      return;
+    lastSyncedRef.current = { programId: selectedProgramId, dayId: selectedProgramDayId };
     updatePreferences({
       selectedProgramId: selectedProgramId || null,
       selectedProgramDayId: selectedProgramDayId || null,
-    });
+    }).catch(() => {});
   }, [isAuthenticated, prefsReady, selectedProgramDayId, selectedProgramId]);
 
-  // Load program detail
+  // Program detail (persisted query)
+  const detailQuery = useQuery<ProgramDetail | null>({
+    queryKey: qk.program(userId, selectedProgramId),
+    enabled: enabled && !!selectedProgramId,
+    staleTime: PROGRAMS_STALE_MS,
+    queryFn: async () => {
+      const result = await getProgram(selectedProgramId);
+      if (result.success && result.data) return result.data;
+      if (result.networkError) throw new Error(result.error || "offline");
+      return null; // deleted or not visible
+    },
+  });
+  const programDetail = selectedProgramId ? (detailQuery.data ?? null) : null;
+
+  // Keep the selected day valid for the loaded detail
   useEffect(() => {
     if (!selectedProgramId) {
-      setProgramDetail(null);
       setSelectedProgramDayId("");
       return;
     }
-    let cancelled = false;
-    getProgram(selectedProgramId).then((result) => {
-      if (cancelled) return;
-      if (result.success && result.data) {
-        setProgramDetail(result.data);
-        setSelectedProgramDayId((prev) => {
-          const dayExists = result.data!.days.some((day) => day.id === prev);
-          if (dayExists) return prev;
-          return result.data!.days[0]?.id || "";
-        });
-      } else {
-        setProgramDetail(null);
-        setSelectedProgramDayId("");
-      }
+    if (!detailQuery.isSuccess) return;
+    const detail = detailQuery.data;
+    setSelectedProgramDayId((prev) => {
+      if (!detail) return "";
+      const dayExists = detail.days.some((day) => day.id === prev);
+      if (dayExists) return prev;
+      return detail.days[0]?.id || "";
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProgramId]);
+  }, [selectedProgramId, detailQuery.isSuccess, detailQuery.data]);
 
   const handleSelectProgram = (id: string) => {
     setSelectedProgramId(id);
@@ -146,12 +169,19 @@ export default function useProgram(
     [selectedProgramDayId]
   );
 
-  // Planned rest days from the program's weekly frequency
+  // Planned rest days: the user's implementation intention ("I will train on
+  // Mon/Wed/Fri") when set, else spread from the program's weekly frequency.
+  // Today, Train and past-day streak scoring all read this, so they agree.
+  const intention = useTrainingIntention();
   const perWeek = programDetail ? sessionsPerWeek(programDetail) : 0;
   const planFor = useCallback(
-    (date: string): DayPlan | null =>
-      programDetail && perWeek > 0 ? planForDate(date, perWeek) : null,
-    [programDetail, perWeek]
+    (date: string): DayPlan | null => {
+      if (!programDetail) return null;
+      if (intention && intention.weekdays.length > 0)
+        return isTrainingDate(intention, date) ? "train" : "rest";
+      return perWeek > 0 ? planForDate(date, perWeek) : null;
+    },
+    [programDetail, perWeek, intention]
   );
   const todayPlan = planFor(today);
   const trainAnyway = useCallback(() => setTrainAnywayDate(todayKey()), []);
@@ -186,26 +216,28 @@ export default function useProgram(
 
   // Refetch after creating/editing/deleting a custom program
   const refreshPrograms = useCallback(async () => {
-    const result = await listPrograms();
-    if (result.success && result.data) {
-      setPrograms(result.data);
-    }
+    if (!userId) return;
+    await queryClient.invalidateQueries({ queryKey: qk.programs(userId) });
     if (selectedProgramId) {
-      const detail = await getProgram(selectedProgramId);
-      if (detail.success && detail.data) {
-        setProgramDetail(detail.data);
-      } else {
+      await queryClient.invalidateQueries({
+        queryKey: qk.program(userId, selectedProgramId),
+      });
+      const detail = queryClient.getQueryData<ProgramDetail | null>(
+        qk.program(userId, selectedProgramId)
+      );
+      const listed = (
+        queryClient.getQueryData<ProgramSummary[]>(qk.programs(userId)) || []
+      ).some((p) => p.id === selectedProgramId);
+      if (detail === null || (!detail && !listed)) {
         // Selected program was deleted
         setSelectedProgramId("");
         setSelectedProgramDayId("");
-        setProgramDetail(null);
       }
     }
-  }, [selectedProgramId]);
+  }, [queryClient, userId, selectedProgramId]);
 
   const resetProgram = useCallback(() => {
-    setPrograms([]);
-    setProgramDetail(null);
+    lastSyncedRef.current = null;
     setSelectedProgramId("");
     setSelectedProgramDayId("");
     setPrefsReady(false);

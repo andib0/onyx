@@ -1,50 +1,42 @@
-﻿import { useState, type Dispatch, type SetStateAction } from "react";
-import {
-  createMealTemplate,
-  deleteMealTemplate,
-  toggleMealLog,
-  updateMealTemplate,
-} from "../api/meals";
-import { ensureState } from "../utils/storage";
-import { enqueueToggle } from "../utils/mutationQueue";
+import { useState, type Dispatch, type SetStateAction } from "react";
+
+import { enqueueWrite } from "../sync/runtime";
+import { uuidv4 } from "../sync/uuid";
 import { getWeekdayName } from "../utils/time";
 import type { AppState, MealTemplate } from "../types/appTypes";
 
+// Writes go through the durable outbox (optimistic + offline-safe).
 export default function useMeals(
-  appState: AppState,
-  setAppState: Dispatch<SetStateAction<AppState>>,
+  _appState: AppState,
+  _setAppState: Dispatch<SetStateAction<AppState>>,
   todayKeyValue: string,
   showToast: (message: string) => void
 ) {
   const weekdayName = getWeekdayName();
   const [selectedMealDay, setSelectedMealDay] = useState(weekdayName);
 
-  const setMealChecked = async (mealId: string, isChecked: boolean) => {
-    // Optimistic: reflect the toggle immediately; the server call follows.
-    const applyLocal = (value: boolean) =>
-      setAppState((prev) => {
-        const next = ensureState(Object.assign({}, prev));
-        next.mealLog = Object.assign({}, next.mealLog, {
-          [todayKeyValue]: Object.assign({}, next.mealLog[todayKeyValue] || {}, {
-            [mealId]: value,
-          }),
-        });
-        return next;
-      });
-
-    applyLocal(isChecked);
-
-    const result = await toggleMealLog(mealId, todayKeyValue, isChecked);
-    if (result.success) return;
-
-    if (result.networkError) {
-      await enqueueToggle("meal", mealId, todayKeyValue, isChecked);
-      showToast("Offline — saved locally, will sync");
-      return;
+  const write = async (fn: () => Promise<void>, failMessage: string) => {
+    try {
+      await fn();
+      return true;
+    } catch {
+      showToast(failMessage);
+      return false;
     }
+  };
 
-    applyLocal(!isChecked);
-    showToast(result.error || "Couldn't update meal log — try again");
+  const setMealChecked = async (mealId: string, isChecked: boolean) => {
+    await write(
+      () =>
+        enqueueWrite({
+          t: "toggle",
+          kind: "meal",
+          targetId: mealId,
+          date: todayKeyValue,
+          value: isChecked,
+        }),
+      "Couldn't update meal log — try again"
+    );
   };
 
   const updateMealTemplateForDay = async (
@@ -52,84 +44,44 @@ export default function useMeals(
     mealId: string,
     patch: Partial<MealTemplate>
   ) => {
-    const result = await updateMealTemplate(
-      mealId,
-      Object.assign({}, patch, { dayOfWeek: dayName })
+    const data = Object.assign({}, patch, { dayOfWeek: dayName }) as Record<
+      string,
+      unknown
+    >;
+    delete data.id;
+    await write(
+      () => enqueueWrite({ t: "update", entity: "meal", id: mealId, data }),
+      "Couldn't update meal template — try again"
     );
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't update meal template — try again");
-      return;
-    }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const current = (next.mealTemplatesByDay && next.mealTemplatesByDay[dayName]) || [];
-      const updated = current.map((item) => {
-        if (item.id !== mealId) return item;
-        return Object.assign({}, item, {
-          name: data.name,
-          examples: data.examples || "",
-          grams: data.grams,
-          foodId: data.foodId,
-          tags: data.tags || [],
-        });
-      });
-      next.mealTemplatesByDay = Object.assign({}, next.mealTemplatesByDay, {
-        [dayName]: updated,
-      });
-      return next;
-    });
   };
 
   const addMealTemplateForDay = async (dayName: string, template: MealTemplate) => {
-    const result = await createMealTemplate({
+    const data: Record<string, unknown> = {
       dayOfWeek: dayName,
       name: template.name,
       examples: template.examples,
-      grams: template.grams != null ? Number(template.grams) : undefined,
-      foodId: template.foodId || undefined,
       tags: template.tags,
-    });
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't add meal template — try again");
-      return;
-    }
-    const addData = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const current = (next.mealTemplatesByDay && next.mealTemplatesByDay[dayName]) || [];
-      next.mealTemplatesByDay = Object.assign({}, next.mealTemplatesByDay, {
-        [dayName]: current.concat([
-          {
-            id: addData.id,
-            name: addData.name,
-            examples: addData.examples || "",
-            grams: addData.grams,
-            foodId: addData.foodId,
-            tags: addData.tags || [],
-          },
-        ]),
-      });
-      return next;
-    });
-    showToast("Meal template added.");
+    };
+    if (template.grams != null) data.grams = Number(template.grams);
+    if (template.foodId) data.foodId = template.foodId;
+    const ok = await write(
+      () => enqueueWrite({ t: "create", entity: "meal", id: uuidv4(), data }),
+      "Couldn't add meal template — try again"
+    );
+    if (ok) showToast("Meal template added.");
   };
 
   const removeMealTemplateForDay = async (dayName: string, mealId: string) => {
-    const result = await deleteMealTemplate(mealId);
-    if (!result.success) {
-      showToast(result.error || "Couldn't remove meal template — try again");
-      return;
-    }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const current = (next.mealTemplatesByDay && next.mealTemplatesByDay[dayName]) || [];
-      const updated = current.filter((item) => item.id !== mealId);
-      next.mealTemplatesByDay = Object.assign({}, next.mealTemplatesByDay, {
-        [dayName]: updated,
-      });
-      return next;
-    });
+    await write(
+      () =>
+        enqueueWrite({
+          t: "delete",
+          entity: "meal",
+          id: mealId,
+          data: { dayOfWeek: dayName },
+        }),
+      "Couldn't remove meal template — try again"
+    );
   };
 
   return {

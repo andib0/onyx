@@ -14,6 +14,5 @@ export async function getPreferences() {
   return api.get<Preferences>("/preferences");
 }
 
-export async function updatePreferences(patch: Partial<Preferences>) {
-  return api.put<Preferences>("/preferences", patch);
-}
+// Writes go through the outbox (offline-safe, coalesced): see sync/writes.ts.
+export { updatePreferences } from "../sync/writes";

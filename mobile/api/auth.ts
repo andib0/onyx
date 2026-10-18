@@ -1,13 +1,7 @@
-import { api, setAccessToken, setRefreshToken } from "./client";
+import type { UserWithPreferences } from "../types/appTypes";
+import { api, getRefreshToken, setAccessToken, setRefreshToken } from "./client";
 
-interface User {
-  id: string;
-  email: string;
-  username?: string;
-  age?: number;
-  weight?: number;
-  createdAt: string;
-}
+type User = UserWithPreferences;
 
 interface AuthResponse {
   user: User;
@@ -16,15 +10,7 @@ interface AuthResponse {
 }
 
 interface MeResponse {
-  user: User & {
-    preferences?: {
-      timezone: string;
-      caffeineCutoff: string;
-      sleepTarget: string;
-      proteinTarget: string;
-      hydrationTarget: string;
-    };
-  };
+  user: User;
 }
 
 type RegisterProfile = {
@@ -75,22 +61,14 @@ export async function login(email: string, password: string) {
 }
 
 export async function logout() {
-  const response = await api.post("/auth/logout");
+  // Send this device's refresh token so only its token family is revoked.
+  const refreshToken = await getRefreshToken();
+  const response = await api.post(
+    "/auth/logout",
+    refreshToken ? { refreshToken } : undefined
+  );
   setAccessToken(null);
   await setRefreshToken(null);
-  return response;
-}
-
-export async function refreshToken() {
-  const response = await api.post<AuthResponse>("/auth/refresh");
-
-  if (response.success && response.data) {
-    setAccessToken(response.data.accessToken);
-    if (response.data.refreshToken) {
-      await setRefreshToken(response.data.refreshToken);
-    }
-  }
-
   return response;
 }
 
@@ -98,6 +76,10 @@ export async function getMe() {
   return api.get<MeResponse>("/auth/me");
 }
 
-export async function updateProfile(profile: RegisterProfile) {
+/** Direct (online) profile update — screens go through the outbox version in
+ *  sync/writes.ts, re-exported as `updateProfile` below. */
+export async function updateProfileNow(profile: RegisterProfile) {
   return api.put<MeResponse>("/auth/profile", profile);
 }
+
+export { updateProfile } from "../sync/writes";

@@ -41,28 +41,40 @@ vi.mock("../../utils/notifications", () => ({
 }));
 vi.mock("../../components/ui/Toast", () => ({ default: () => null }));
 
-// ── Network ──
-vi.mock("../../api/sync", () => ({
-  exportUserData: async () => ({
-    success: true,
-    data: {
+// ── Network: /today is the only read; it fills the per-user day cache ──
+vi.mock("../../sync/dayData", () => ({
+  fetchToday: async (
+    qc: import("@tanstack/react-query").QueryClient,
+    userId: string,
+    date: string
+  ) => {
+    qc.setQueryData(["appState", userId], {
+      completion: {},
+      top3: {},
+      mechanism: {},
       schedule: [
         { id: "b1", start: "09:00", end: "10:00", title: "Deep work", tag: "Work" },
       ],
+      supp: {},
+      suppLog: {},
+      mealTemplatesByDay: {},
+      mealLog: {},
       supplementsList: [{ id: "s1", item: "Creatine", dose: "5 g", timeAt: "08:00" }],
-    },
-  }),
+      log: [],
+    });
+    return { date, weekday: "Monday", score: { today: null, streak: {}, history: [] } };
+  },
+  latestCachedToday: () => undefined,
+  refreshHistory: async () => true,
+  readLocalBackup: async () => null,
+  onServerUser: () => () => {},
+  onAccountLost: () => () => {},
+}));
+vi.mock("../../api/sync", () => ({
   importAppData: async () => ({ success: true }),
 }));
-vi.mock("../../api/scores", () => ({
-  getScores: async () => ({ success: true, data: [] }),
-}));
-vi.mock("../../api/meals", () => ({
-  toggleMealLog: async () => ({ success: true }),
-  updateMealTemplate: async () => ({ success: true }),
-  createMealTemplate: async () => ({ success: true }),
-  deleteMealTemplate: async () => ({ success: true }),
-}));
+// Writes never reach a network in this harness: the outbox just queues them.
+globalThis.fetch = (() => Promise.reject(new Error("offline"))) as typeof fetch;
 
 // ── Auth (stable session) ──
 const AUTH = {
@@ -126,6 +138,7 @@ vi.mock("../../hooks/useWorkout", () => ({
 }));
 
 import { AppStateProvider } from "../AppStateContext";
+import { startSync, stopSync } from "../../sync/runtime";
 import { useToastContext } from "../ToastContext";
 import { useData } from "../DataContext";
 import { useProgram } from "../ProgramContext";
@@ -139,8 +152,12 @@ const renders: Record<string, number> = {};
 const bump = (name: string) => {
   renders[name] = (renders[name] ?? 0) + 1;
 };
-const api: { showToast?: (m: string) => void; setMealChecked?: (id: string) => void } =
-  {};
+const api: {
+  showToast?: (m: string) => void;
+  setMealChecked?: (id: string) => void;
+  setBlockCompletion?: (id: string, v: boolean) => Promise<void>;
+  ticks?: Record<string, boolean>;
+} = {};
 
 function FocusLike() {
   bump("FocusScreen");
@@ -171,7 +188,9 @@ function TabLayoutLike() {
 }
 function ScheduleLike() {
   bump("ScheduleScreen");
-  useSchedule();
+  const { setBlockCompletion, completionByBlockId } = useSchedule();
+  api.setBlockCompletion = setBlockCompletion;
+  api.ticks = completionByBlockId;
   useToastContext();
   return null;
 }
@@ -198,9 +217,11 @@ const CONSUMERS = [
 ];
 
 function Tree({ children }: { children: ReactNode }) {
-  const [client] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  );
+  const [client] = useState(() => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    startSync("u1", qc).catch(() => {});
+    return qc;
+  });
   return (
     <QueryClientProvider client={client}>
       <AppStateProvider>{children}</AppStateProvider>
@@ -266,8 +287,9 @@ describe("provider render counts", () => {
     expect(ready).toBe(true);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     act(() => root.unmount());
+    await stopSync({ clear: true });
     vi.useRealTimers();
   });
 
@@ -297,6 +319,19 @@ describe("provider render counts", () => {
     expect(d.ScheduleScreen).toBe(0);
     expect(d.WorkoutSection).toBe(0);
     for (const name of CONSUMERS) expect(d[name]).toBeLessThanOrEqual(1);
+  });
+
+  // Regression (machinery B3): the old hook mutated the cached state in place,
+  // so structural sharing saw no change and the tick never rendered.
+  it("a schedule tick re-renders the schedule and shows as completed", async () => {
+    expect(api.ticks!.b1).toBeFalsy();
+    const d = await measure(() => api.setBlockCompletion!("b1", true));
+    console.info("schedule tick", d);
+    expect(d.ScheduleScreen).toBe(1);
+    expect(api.ticks!.b1).toBe(true);
+    const back = await measure(() => api.setBlockCompletion!("b1", false));
+    expect(back.ScheduleScreen).toBe(1);
+    expect(api.ticks!.b1).toBe(false);
   });
 
   it("a workout tick only reaches program consumers", async () => {

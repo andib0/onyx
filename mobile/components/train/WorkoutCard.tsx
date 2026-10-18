@@ -33,6 +33,7 @@ export default function WorkoutCard({
     undoLastWorkoutSet,
     jumpToWorkoutExercise,
     extendWorkoutRest,
+    markWorkoutDone,
   } = useProgram();
   const { todayKeyValue } = useData();
   const { showUndo, pendingKey } = useUndo();
@@ -81,6 +82,7 @@ export default function WorkoutCard({
       onUndoSet={undoLastWorkoutSet}
       onJumpExercise={jumpToWorkoutExercise}
       onExtendRest={extendWorkoutRest}
+      onMarkDone={markWorkoutDone}
       compact={compact}
     />
   );

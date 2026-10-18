@@ -69,6 +69,7 @@ export default function Checkbox({
       accessibilityRole="checkbox"
       accessibilityLabel={label}
       accessibilityState={{ checked }}
+      aria-checked={checked}
     >
       <Animated.View style={[styles.box, { width: size, height: size }, boxStyle]}>
         <Animated.Text style={[styles.checkmark, { fontSize: size * 0.58 }, markStyle]}>

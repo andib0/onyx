@@ -31,6 +31,8 @@ interface ProgramContextType {
   startWorkout: () => void;
   togglePauseWorkout: () => void;
   stopWorkout: () => void;
+  /** trained but didn't log the sets: count today as a workout */
+  markWorkoutDone: () => void;
   completeWorkoutSet: (values?: LoggedSetValues) => void;
   skipWorkoutRest: () => void;
   undoLastWorkoutSet: () => void;
@@ -70,6 +72,7 @@ export function ProgramProvider({
     startWorkout: w.startWorkout,
     togglePauseWorkout: w.togglePauseWorkout,
     stopWorkout: w.stopWorkout,
+    markWorkoutDone: w.markWorkoutDone,
     completeWorkoutSet: w.completeWorkoutSet,
     skipWorkoutRest: w.skipWorkoutRest,
     undoLastWorkoutSet: w.undoLastWorkoutSet,

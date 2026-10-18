@@ -29,6 +29,7 @@ import DayCheckInCard from "../../components/focus/DayCheckInCard";
 import GettingStartedCard from "../../components/focus/GettingStartedCard";
 import WeeklyRecapCard from "../../components/focus/WeeklyRecapCard";
 import { postScore } from "../../api/scores";
+import { perfMark } from "../../utils/perfMarks";
 import type { PlanItem } from "../../utils/dayPlan";
 import { MORNING_CARD_UNTIL_MINUTES, morningDoneFor } from "../../utils/reminderPlan";
 import { buildYesterdayRecap, scoreStreak } from "../../utils/trends";
@@ -226,6 +227,13 @@ export default function TodayScreen() {
     consumed.protein,
     consumed.calories,
   ]);
+
+  // Startup marks for scripts/measure-tti.sh (first render with data).
+  useEffect(() => {
+    if (stateLoading) return;
+    perfMark("focus_first_render");
+    requestAnimationFrame(() => perfMark("focus_interactive"));
+  }, [stateLoading]);
 
   if (stateLoading) return <LoadingScreen />;
 

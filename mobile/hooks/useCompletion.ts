@@ -1,17 +1,19 @@
-﻿import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
-import { ensureState } from "../utils/storage";
-import { enqueueToggle } from "../utils/mutationQueue";
+import { enqueueWrite } from "../sync/runtime";
+import { uuidv4 } from "../sync/uuid";
 import type { AppState, ScheduleBlock } from "../types/appTypes";
-import * as scheduleApi from "../api/schedule";
 
 // Shared empty defaults keep identities stable when the slice is missing.
 const EMPTY_MAP: Record<string, boolean> = {};
 const EMPTY_BLOCKS: ScheduleBlock[] = [];
 
+// Every write goes through the durable outbox (sync/runtime.ts), which applies
+// it to the cached day immediately (new objects, so React re-renders) and
+// sends it when the server is reachable.
 function useCompletion(
   appState: AppState,
-  setAppState: Dispatch<SetStateAction<AppState>>,
+  _setAppState: Dispatch<SetStateAction<AppState>>,
   todayKeyValue: string,
   showToast: (message: string) => void
 ) {
@@ -21,112 +23,49 @@ function useCompletion(
       : EMPTY_MAP;
   const scheduleBlocks = appState.schedule || EMPTY_BLOCKS;
 
-  const setBlockCompletion = async (blockId: string, isComplete: boolean) => {
-    // Optimistic: reflect the toggle immediately; the server call follows.
-    const applyLocal = (value: boolean) =>
-      setAppState((prev) => {
-        const next = ensureState(Object.assign({}, prev));
-        next.completion[todayKeyValue] = Object.assign(
-          {},
-          next.completion[todayKeyValue] || {},
-          { [blockId]: value }
-        );
-        return next;
-      });
-
-    applyLocal(isComplete);
-
-    const result = await scheduleApi.toggleCompletion(blockId, todayKeyValue, isComplete);
-    if (result.success) return;
-
-    if (result.networkError) {
-      // Offline: keep the optimistic state and queue the write for replay.
-      await enqueueToggle("completion", blockId, todayKeyValue, isComplete);
-      showToast("Offline — saved locally, will sync");
-      return;
+  const write = async (fn: () => Promise<void>, failMessage: string) => {
+    try {
+      await fn();
+    } catch {
+      showToast(failMessage);
     }
-
-    // Server rejected it (block deleted, auth) — roll back.
-    applyLocal(!isComplete);
-    showToast(result.error || "Couldn't save — try again");
   };
 
-  const updateScheduleBlock = async (blockId: string, patch: Partial<ScheduleBlock>) => {
-    const result = await scheduleApi.updateScheduleBlock(blockId, patch);
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't update schedule block — try again");
-      return;
-    }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.schedule = (next.schedule || []).map((item) =>
-        item.id === blockId
-          ? Object.assign({}, item, {
-              start: data.start,
-              end: data.end,
-              title: data.title,
-              purpose: data.purpose || "",
-              good: data.good || "",
-              tag: data.tag || "",
-              readonly: data.readonly,
-              source: data.source as ScheduleBlock["source"],
-            })
-          : item
-      );
-      return next;
-    });
-  };
-
-  const removeScheduleBlock = async (blockId: string) => {
-    const result = await scheduleApi.deleteScheduleBlock(blockId);
-    if (!result.success) {
-      showToast(result.error || "Couldn't remove schedule block — try again");
-      return;
-    }
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      next.schedule = (next.schedule || []).filter((item) => item.id !== blockId);
-      if (next.completion && next.completion[todayKeyValue]) {
-        const nextCompletion = Object.assign({}, next.completion[todayKeyValue]);
-        delete nextCompletion[blockId];
-        next.completion = Object.assign({}, next.completion, {
-          [todayKeyValue]: nextCompletion,
-        });
-      }
-      return next;
-    });
-  };
-
-  const addScheduleBlock = async (block: ScheduleBlock) => {
-    const payload = Object.assign({}, block);
-    delete (payload as Partial<ScheduleBlock>).id;
-    const result = await scheduleApi.createScheduleBlock(
-      payload as Omit<ScheduleBlock, "id">
+  const setBlockCompletion = (blockId: string, isComplete: boolean) =>
+    write(
+      () =>
+        enqueueWrite({
+          t: "toggle",
+          kind: "completion",
+          targetId: blockId,
+          date: todayKeyValue,
+          value: isComplete,
+        }),
+      "Couldn't save — try again"
     );
-    if (!result.success || !result.data) {
-      showToast(result.error || "Couldn't add schedule block — try again");
-      return;
-    }
-    const data = result.data;
-    setAppState((prev) => {
-      const next = ensureState(Object.assign({}, prev));
-      const list = next.schedule || [];
-      next.schedule = list.concat([
-        {
-          id: data.id,
-          start: data.start,
-          end: data.end,
-          title: data.title,
-          purpose: data.purpose || "",
-          good: data.good || "",
-          tag: data.tag || "",
-          readonly: data.readonly,
-          source: data.source as ScheduleBlock["source"],
-        },
-      ]);
-      return next;
-    });
+
+  const updateScheduleBlock = (blockId: string, patch: Partial<ScheduleBlock>) => {
+    const data = Object.assign({}, patch) as Record<string, unknown>;
+    delete data.id;
+    return write(
+      () => enqueueWrite({ t: "update", entity: "block", id: blockId, data }),
+      "Couldn't update schedule block — try again"
+    );
+  };
+
+  const removeScheduleBlock = (blockId: string) =>
+    write(
+      () => enqueueWrite({ t: "delete", entity: "block", id: blockId }),
+      "Couldn't remove schedule block — try again"
+    );
+
+  const addScheduleBlock = (block: ScheduleBlock) => {
+    const data = Object.assign({}, block) as Record<string, unknown>;
+    delete data.id;
+    return write(
+      () => enqueueWrite({ t: "create", entity: "block", id: uuidv4(), data }),
+      "Couldn't add schedule block — try again"
+    );
   };
 
   return {

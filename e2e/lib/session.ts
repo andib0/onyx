@@ -16,26 +16,6 @@ export interface OpenFocusOptions {
   dayOffset?: number;
 }
 
-/**
- * Web-only shim, NOT a product behaviour: `api/auth.ts refreshToken()` posts no body and
- * relies on the httpOnly refresh cookie. A cross-origin fetch from Expo web (:8281 →
- * :3201) neither sends nor stores that cookie, so every session restore 401s on web and
- * the AuthProvider drops the user right after login (Focus then renders an empty state).
- * Native keeps the cookie in its jar. Here we put the stored refresh token in the body —
- * which the endpoint already accepts — to emulate that jar. Remove when the client sends
- * the token itself (see docs/log/machinery.md, "Findings").
- */
-export async function installRefreshShim(page: Page) {
-  await page.route("**/api/auth/refresh", async (route) => {
-    const body = route.request().postData();
-    if (body) return route.continue();
-    const rt = await page
-      .evaluate(() => localStorage.getItem("onyx_refresh_token"))
-      .catch(() => null);
-    return route.continue({ postData: JSON.stringify({ refreshToken: rt }) });
-  });
-}
-
 export function fixedTime(at: { h: number; m: number }, dayOffset = 0): Date {
   const d = e2eNow();
   d.setDate(d.getDate() + dayOffset);
@@ -58,7 +38,6 @@ export async function openFocus(page: Page, o: OpenFocusOptions): Promise<Sessio
       }
     });
   }
-  await installRefreshShim(page);
   page.on("pageerror", (e) => console.log(`[page error] ${e.message.slice(0, 300)}`));
   if (process.env.E2E_DEBUG) {
     page.on("console", (m) => {

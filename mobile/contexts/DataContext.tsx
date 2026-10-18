@@ -4,25 +4,28 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import { AppState as RNAppState } from "react-native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { useToastContext } from "./ToastContext";
 import useLog from "../hooks/useLog";
 import useStableHandlers from "../hooks/useStableHandlers";
 import useImportExport from "../hooks/useImportExport";
-import { exportUserData } from "../api/sync";
-import { getScores, type DailyScore } from "../api/scores";
+import type { DailyScore } from "../api/scores";
 import { DATA } from "../data/weekdayData";
 import { todayKey } from "../utils/storage";
 import { normalizeState } from "../utils/normalize";
 import { resolveNutritionTargets } from "../utils/adaptiveTargets";
-import { flushMutationQueue } from "../utils/mutationQueue";
+import { fetchToday, latestCachedToday, refreshHistory } from "../sync/dayData";
+import { reapplyPending } from "../sync/runtime";
+import { qk } from "../sync/queryKeys";
+import { scoresFromToday, type TodayPayload } from "../sync/serverData";
 import type { AppState, LogEntry, MetaData, NutritionTarget } from "../types/appTypes";
 
 interface DataContextType {
@@ -50,10 +53,9 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | null>(null);
 
-const APP_STATE_KEY = ["appState"];
-const SCORES_KEY = ["scores"];
 const EMPTY_STATE = normalizeState({});
 const EMPTY_SCORES: DailyScore[] = [];
+const TODAY_GC_MS = 3 * 24 * 60 * 60 * 1000;
 
 export function DataProvider({
   children,
@@ -67,9 +69,10 @@ export function DataProvider({
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { showToast } = useToastContext();
   const queryClient = useQueryClient();
+  const userId = user ? user.id : "";
 
-  // Poll the date so a session left open past midnight rolls over to the new
-  // day instead of writing completions/meals against yesterday's key.
+  // The day key is the device's local date. Polled so a session left open past
+  // midnight reads (and writes) the new day; re-checked on foreground.
   const [todayKeyValue, setTodayKeyValue] = useState(() => todayKey());
   useEffect(() => {
     const syncKey = () => {
@@ -77,7 +80,6 @@ export function DataProvider({
       setTodayKeyValue((prev) => (prev === key ? prev : key));
     };
     const intervalId = setInterval(syncKey, 60_000);
-    // Timers don't fire while backgrounded — re-check on foreground.
     const sub = RNAppState.addEventListener("change", (status) => {
       if (status === "active") syncKey();
     });
@@ -87,90 +89,81 @@ export function DataProvider({
     };
   }, []);
 
-  // Replay writes queued while offline: on foreground and once a minute.
-  // flushMutationQueue no-ops when the queue is empty or a flush is running.
-  useEffect(() => {
-    if (!isAuthenticated) return undefined;
-    const flush = () => flushMutationQueue().catch(() => {});
-    flush();
-    const intervalId = setInterval(flush, 60_000);
-    const sub = RNAppState.addEventListener("change", (status) => {
-      if (status === "active") flush();
-    });
-    return () => {
-      clearInterval(intervalId);
-      sub.remove();
-    };
-  }, [isAuthenticated]);
+  const enabled = isAuthenticated && !authLoading && !!userId;
 
-  const enabled = isAuthenticated && !authLoading;
-
-  const stateQuery = useQuery({
-    queryKey: APP_STATE_KEY,
-    enabled,
-    queryFn: async (): Promise<AppState> => {
-      const result = await exportUserData();
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to load state");
-      }
-      return normalizeState(result.data);
-    },
+  // The device's copy of the user's days (history + today + pending writes).
+  // Never fetched by itself: /today and the daily export write into it, the
+  // outbox applies optimistic writes to it, and it is persisted to disk.
+  const appStateQuery = useQuery<AppState>({
+    queryKey: qk.appState(userId),
+    queryFn: skipToken,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
-  const scoresQuery = useQuery({
-    queryKey: SCORES_KEY,
+  // ONE request for everything Focus needs, keyed by date (midnight-safe).
+  const todayQuery = useQuery<TodayPayload>({
+    queryKey: qk.today(userId, todayKeyValue),
     enabled,
-    queryFn: async (): Promise<DailyScore[]> => {
-      const result = await getScores(30);
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to load scores");
-      }
-      return result.data;
-    },
+    queryFn: () => fetchToday(queryClient, userId, todayKeyValue),
+    staleTime: 30_000,
+    gcTime: TODAY_GC_MS,
+    // The provider mounts once per launch: always revalidate the restored day
+    // in the background (it renders from the disk copy meanwhile).
+    refetchOnMount: "always",
+    retry: 1,
+    // After midnight (or offline) keep showing the newest day we have.
+    placeholderData: () => (userId ? latestCachedToday(queryClient, userId) : undefined),
   });
 
-  // Drop cached account data on logout so the next sign-in starts clean.
+  const appState = appStateQuery.data ?? EMPTY_STATE;
+
+  // Once the day cache is back from disk, lay the queued writes over it.
+  const hasAppState = appStateQuery.data !== undefined;
   useEffect(() => {
-    if (authLoading || isAuthenticated) return;
-    queryClient.removeQueries({ queryKey: APP_STATE_KEY });
-    queryClient.removeQueries({ queryKey: SCORES_KEY });
-    resetProgram();
-  }, [authLoading, isAuthenticated, queryClient, resetProgram]);
+    if (userId && hasAppState) reapplyPending().catch(() => {});
+  }, [userId, hasAppState]);
 
-  const appState = stateQuery.data ?? EMPTY_STATE;
-
-  // Same contract as the old useState setter — domain hooks mutate the cached
-  // state directly after their API call resolves.
+  // Kept for the domain hooks' signature; writes go through the outbox.
   const setAppState = useCallback<Dispatch<SetStateAction<AppState>>>(
     (action) => {
-      queryClient.setQueryData<AppState>(APP_STATE_KEY, (prev) => {
+      if (!userId) return;
+      queryClient.setQueryData<AppState>(qk.appState(userId), (prev) => {
         const base = prev ?? EMPTY_STATE;
         return typeof action === "function" ? action(base) : action;
       });
     },
-    [queryClient]
+    [queryClient, userId]
   );
 
-  // refetch is stable per observer, so these keep their identity.
-  const refetchState = stateQuery.refetch;
-  const refetchScores = scoresQuery.refetch;
+  const refetchToday = todayQuery.refetch;
+
+  // Revalidate the restored day once per launch. The query mounts disabled
+  // (session still restoring) and enabling a query with fresh cached data does
+  // not refetch, so do it explicitly — in the background, Focus already shows.
+  const launchRefetched = useRef("");
+  useEffect(() => {
+    if (!enabled || launchRefetched.current === userId) return;
+    launchRefetched.current = userId;
+    refetchToday().catch(() => {});
+  }, [enabled, userId, refetchToday]);
   const reloadState = useCallback(async () => {
-    await Promise.allSettled([refetchState(), refetchScores()]);
-  }, [refetchState, refetchScores]);
+    await Promise.allSettled([
+      refetchToday(),
+      userId ? refreshHistory(queryClient, userId) : Promise.resolve(false),
+    ]);
+  }, [refetchToday, queryClient, userId]);
 
   const refreshScores = useCallback(async () => {
-    await refetchScores();
-  }, [refetchScores]);
+    await refetchToday();
+  }, [refetchToday]);
 
   // Log
   const log = useLog(appState, setAppState, showToast);
   const { logEntries } = log;
 
   // Import/Export
-  const importExport = useImportExport(
-    (state: AppState) => setAppState(state),
-    showToast
-  );
+  const importExport = useImportExport(userId, reloadState, showToast);
 
   const { showImportModal } = importExport;
   const handlers = useStableHandlers({
@@ -184,10 +177,19 @@ export function DataProvider({
     resetProgram,
   });
 
+  // Signed out: forget program state (caches are cleared by AuthContext).
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    resetProgram();
+  }, [authLoading, isAuthenticated, resetProgram]);
+
   // Derived
   const meta = user?.preferences || DATA.meta;
-  // Goal-aware targets: trend weight, MSJ when known, adaptive TDEE from logs
-  const scoreRows = scoresQuery.data;
+  const todayData = todayQuery.data;
+  const scoreRows = useMemo(
+    () => (todayData ? scoresFromToday(todayData) : EMPTY_SCORES),
+    [todayData]
+  );
   const nutritionTargets = useMemo(
     () =>
       resolveNutritionTargets({
@@ -196,7 +198,7 @@ export function DataProvider({
         hydrationTarget: meta.hydrationTarget,
         goal: programGoal,
         logEntries,
-        scoreHistory: scoreRows ?? [],
+        scoreHistory: scoreRows,
         todayKey: todayKeyValue,
         ageYears: user?.age ?? null,
       }),
@@ -211,9 +213,16 @@ export function DataProvider({
       todayKeyValue,
     ]
   );
-  const stateLoading = stateQuery.isLoading;
-  const loadError = stateQuery.isError;
-  const scoreHistory = scoresQuery.data ?? EMPTY_SCORES;
+  // Loading only on a cold cache (first sign-in on this device) while the
+  // first /today is in flight; otherwise Focus renders from disk at once.
+  const stateLoading =
+    enabled && appStateQuery.data === undefined && todayQuery.fetchStatus === "fetching";
+  // An error banner only when there is nothing cached to show.
+  const loadError =
+    todayQuery.isError &&
+    !todayQuery.isPlaceholderData &&
+    appStateQuery.data === undefined;
+  const scoreHistory = scoreRows;
 
   const value = useMemo<DataContextType>(
     () =>

@@ -21,6 +21,7 @@ import ScreenContainer from "../components/layout/ScreenContainer";
 import Button from "../components/ui/Button";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { SettingsGroup, GroupTitle, Row } from "../components/ui/SettingsGroup";
+import SyncStatusRows from "../components/shared/SyncStatusRows";
 import Segmented from "../components/ui/Segmented";
 import { useTheme, type ThemeMode } from "../contexts/ThemeContext";
 import { spacing, fontSizes, radii, type Palette } from "../theme";
@@ -240,12 +241,13 @@ export default function SettingsScreen() {
 
       <GroupTitle label="Data" />
       <SettingsGroup>
-        <Row first icon="download-outline" label="Export backup" onPress={exportJson} />
+        <Row first icon="download-outline" label="Export my data" onPress={exportJson} />
         <Row
           icon="cloud-upload-outline"
           label="Import backup"
           onPress={handleImportClick}
         />
+        <SyncStatusRows />
       </SettingsGroup>
 
       {/* ACCOUNT */}

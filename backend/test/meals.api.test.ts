@@ -64,13 +64,57 @@ describe('/api/meals', () => {
       .set(H)
       .send({ grams: 200 });
     expect(res.status).toBe(200);
+    // Tags stay per 100 g (the convention the app and the server score use);
+    // only `grams` carries the portion, so macros are scaled exactly once.
     const protein = res.body.data.tags.find(
       (t: { label: string }) => t.label === 'Protein'
     );
-    expect(protein.value).toBe('14');
+    expect(protein.value).toBe('7');
+    expect(Number(res.body.data.grams)).toBe(200);
     expect(
       (await http().patch(`/api/meals/templates/${id}/grams`).set(H).send({})).status
     ).toBe(400);
+  });
+
+  it('PATCH grams then eat: /today counts the portion once (no double scaling)', async () => {
+    const created = await http()
+      .post('/api/meals/templates')
+      .set(H)
+      .send({
+        dayOfWeek: 'Monday',
+        name: 'Rice portion',
+        foodId,
+        grams: 100,
+        tags: [
+          { label: 'Protein', value: '7' },
+          { label: 'Calories', value: '130' },
+        ],
+      });
+    expect(created.status).toBe(201);
+    const tid = created.body.data.id;
+    const patched = await http()
+      .patch(`/api/meals/templates/${tid}/grams`)
+      .set(H)
+      .send({ grams: 250 });
+    expect(patched.status).toBe(200);
+    const monday = '2026-10-12';
+    expect(
+      (
+        await http()
+          .post(`/api/meals/${tid}/log`)
+          .set(H)
+          .send({ date: monday, isEaten: true })
+      ).status
+    ).toBeLessThan(300);
+    const today = await http().get(`/api/today?date=${monday}`).set(H);
+    expect(today.status).toBe(200);
+    const meal = today.body.data.meals.templates.find(
+      (t: { id: string }) => t.id === tid
+    );
+    // 7 g protein / 100 g × 250 g = 17.5 g; 130 kcal / 100 g × 250 g = 325 kcal
+    expect(meal.macros.protein).toBe(17.5);
+    expect(meal.macros.calories).toBe(325);
+    expect(today.body.data.meals.consumed.protein).toBe(17.5);
   });
 
   it('POST /:id/log toggles; GET /logs reads; validation failures', async () => {

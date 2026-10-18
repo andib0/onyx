@@ -301,13 +301,8 @@ test.describe("core actions", () => {
       seed: seedDay,
       ready: /Take all/,
     });
-    // Known bug B3 (data layer, hooks/useCompletion.ts): the completion is mutated in
-    // place, so TanStack Query keeps the old reference and the tick never renders
-    // (the server stores it). Owned by the client-data rewrite. Flips when fixed.
-    test.fail(
-      !process.env.E2E_SHOW_KNOWN_BUGS,
-      "schedule tick saved server-side but never rendered (in-place mutation, B3)"
-    );
+    // Was bug B3 (in-place mutation of the cached state); fixed by the outbox's
+    // pure reducers (mobile/sync/applyDay.ts).
     const f = new Flow(page, {
       id: "tick-block",
       n: "7",

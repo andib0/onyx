@@ -46,6 +46,8 @@ interface WorkoutSectionProps {
   onUndoSet?: () => void;
   onJumpExercise?: (index: number) => void;
   onExtendRest?: () => void;
+  // Trained but didn't log: count today as done (useWorkout.markWorkoutDone)
+  onMarkDone?: () => void;
   // Planned rest day: optional escape hatch to start the session anyway
   onTrainAnyway?: () => void;
   // Idle state hides the full exercise preview (used on Focus)
@@ -68,6 +70,7 @@ export default function WorkoutSection({
   onUndoSet,
   onJumpExercise,
   onExtendRest,
+  onMarkDone,
   onTrainAnyway,
   compact = false,
 }: WorkoutSectionProps) {
@@ -200,13 +203,23 @@ export default function WorkoutSection({
 
   if (!workout.isActive) {
     return (
-      <IdleView
-        workout={workout}
-        programRows={programRows}
-        programLabel={programLabel}
-        compact={compact}
-        onStart={onStart}
-      />
+      <View>
+        <IdleView
+          workout={workout}
+          programRows={programRows}
+          programLabel={programLabel}
+          compact={compact}
+          onStart={onStart}
+        />
+        {onMarkDone ? (
+          <Button
+            label="Trained already? Mark done"
+            variant="ghost"
+            size="sm"
+            onPress={onMarkDone}
+          />
+        ) : null}
+      </View>
     );
   }
 
