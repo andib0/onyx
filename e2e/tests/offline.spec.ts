@@ -1,8 +1,6 @@
 // Offline cold start (plan Bet 1): logged in, Focus loaded once, network gone, reload.
-// Baseline (2026-10-17): the app has no persisted state and refreshes the session
-// before rendering, so the reload cannot show Focus with yesterday's data.
-// test.fail() keeps CI green today and flips to "unexpectedly passed" once
-// local-first lands — then delete the test.fail line.
+// Baseline (2026-10-17) failed: no persisted state + refresh-before-render meant the
+// reload could not show Focus. Since the local-first client (2026-10-18) it must pass.
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { openFocus } from "../lib/session";

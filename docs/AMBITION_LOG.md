@@ -106,3 +106,30 @@ Tap/time — judge: `E2E_ENFORCE_BUDGETS=1 npx playwright test` (rerun by me on 
 | Others (set, supplement, check-in, what's next) | pass | pass |
 Result: 11/12 measurable actions ≤ 2 taps & ≤ 5 s (barcode: device-only).
 Verified on merged main: mobile + backend `npm run check` PASSED (174 API tests, route coverage 62/62).
+
+## 2026-10-18 — Bets 1, 2, 13 client: local-first data layer (details `docs/log/client-data.md`)
+| Metric | Before | After | Judge |
+|---|---|---|---|
+| Requests before Today can render | 7 (serial refresh → me → 5) | 0 (renders from disk; 1 background `GET /today`) | `startup-requests.spec.ts` |
+| Offline cold start, logged in | Login screen (web + Android) | Today with cached data (web + Android airplane mode) | `offline.spec.ts`; `docs/audit/evidence/android-offline-coldstart-after-bet1.png` |
+| Write types that work offline | 3 / ~25 | all (one durable HLC outbox; create→delete cancels; dead-letter list visible in Settings) | `offline-sync.spec.ts` (b) reload offline → sync; (c) two browsers converge |
+| Two-device convergence (client+server) | broken (stale replays, field wipes) | 300/300 property runs; catches 4/4 injected bugs | fast-check outbox test |
+| Server wiped (Render free) | data gone | device re-hydrates server via import v2 | unit tests (no e2e wipe drill yet) |
+| Cold start → interactive Today (emulator, JS marks, p50/p90) | ≈2.3–3.9 s (Maestro bracket) | 2335 / 2758 ms online, 2349 / 3265 ms airplane | `npm run perf:tti` |
+Bugs B1 (web logout) and B3 (tick not re-rendered) fixed; meal grams double-scaling fixed;
+GymProgram.userId FK added.
+
+## 2026-10-18 — UI polish + security leftovers
+- FAB/toast layering via `floating` tokens; stepper units inside fields; barcode in quick-log
+  ("+" → Scan). Screens re-taken in `docs/log/screens/nav/`.
+- F8: access tokens rejected immediately after logout / family revocation (cached check,
+  p50 0.027 ms). F7: `TRUST_PROXY_HOPS` env (default 1, validated), spoofed XFF test; Render
+  hop count must be confirmed from the boot log (see `docs/log/backend-security.md`).
+
+## 2026-10-18 — Final integration verification (main)
+- backend `npm run check`: tsc, eslint, prettier, unit, API (all routes 2xx+4xx), migrations — PASSED.
+- mobile `npm run check`: tsc, eslint, prettier, unit, config, bundle, e2e smoke — PASSED.
+- `E2E_ENFORCE_BUDGETS=1 npx playwright test`: 23 passed, 2 skipped (opt-in screenshots), 0 expected-fail markers left.
+- Core actions: 12/12 web-measurable ≤ 2 taps & ≤ 5 s (barcode device-only: "+" → Scan).
+(Postgres service was stopped after a reboot and needs admin to start; these runs used a
+user-level cluster on port 5442.)
