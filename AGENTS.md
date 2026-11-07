@@ -348,6 +348,8 @@ cd mobile && npm run check:docs   # only the AGENTS.md judge (same script in bac
 - Water and "achievements seen" are device-only.
 - Rehydrate e2e (`e2e/tests/sync-resilience.spec.ts`) wipes rows + rotates the epoch with the
   account kept; the "account deleted → re-register" path is unit/backend-tested only.
+- `mobile/metro.config.cjs` resolves `assert` for `@ide/backoff` (expo-notifications) to
+  `mobile/shims/assert.js`; the npm `assert`/`util` polyfills cost ~74 KB of Hermes bytecode.
 - Early-warning nudge is off (`FEATURE_FLAGS` in `mobile/utils/reminderPlan.ts`) until a real-data
   rerun justifies it.
 
